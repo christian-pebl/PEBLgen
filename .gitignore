@@ -1,0 +1,11 @@
+# Backup files
+*_backup.html
+
+# Large PDF files
+*.pdf
+
+# API keys
+key.txt
+
+# Claude files
+.claude/
