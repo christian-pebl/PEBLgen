@@ -6,275 +6,444 @@
     <title>Timesheet</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        .nav-banner { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 30px; margin-bottom: 0; }
-        .nav-banner .page-title { color: white; font-size: 28px; font-weight: 600; margin: 0; }
-        .nav-buttons { display: flex; gap: 15px; }
-        .nav-btn { background-color: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); padding: 10px 25px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; text-decoration: none; transition: all 0.3s ease; display: inline-block; }
-        .nav-btn:hover { background-color: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); transform: translateY(-2px); }
-        .nav-btn.active { background-color: white; color: #667eea; border-color: white; }
-        .content-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
             background: linear-gradient(to bottom, #e3f2fd 0%, #ffffff 100%);
             min-height: 100vh;
         }
-        .system-prompt-section {
-            margin-bottom: 30px;
-            padding: 20px;
-            background-color: #e0f7fa;
-            border-radius: 8px;
-            border-left: 4px solid #00acc1;
-        }
-        .system-prompt-section h2 {
-            margin-top: 0;
-            font-size: 18px;
-            color: #333;
-        }
-        .system-prompt-container {
+
+        /* Navigation Banner */
+        .nav-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             display: flex;
-            gap: 10px;
-            align-items: flex-start;
-        }
-        #systemPrompt {
-            flex: 1;
-            padding: 10px;
-            border: 2px solid #2196F3;
-            border-radius: 4px;
-            resize: vertical;
-            min-height: 80px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        td {
-            border: 1px solid #ddd;
-            padding: 0;
-            vertical-align: top;
-            position: relative;
-        }
-        td:nth-child(1) {
-            width: 22%;
-        }
-        td:nth-child(2) {
-            width: 22%;
-        }
-        td:nth-child(3) {
-            width: 46%;
-            text-align: center;
-        }
-        td:nth-child(4) {
-            width: 10%;
-            text-align: center;
-            vertical-align: middle;
-        }
-        td input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            box-sizing: border-box;
-            outline: none;
-        }
-        td input[type="text"]:focus {
-            background-color: #f0f8ff;
-        }
-        textarea {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            resize: vertical;
-            min-height: 60px;
-            font-family: Arial, sans-serif;
-        }
-        .generate-btn {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-        .generate-btn:hover {
-            background-color: #45a049;
-        }
-        .generate-btn:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .regenerate-btn {
-            background-color: #FF5722;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            white-space: nowrap;
-        }
-        .regenerate-btn:hover {
-            background-color: #E64A19;
-        }
-        .regenerate-btn:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .add-row-btn {
-            background-color: #2196F3;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
-        }
-        .add-row-btn:hover {
-            background-color: #0b7dda;
-        }
-        .batch-generate-btn {
-            background-color: #FF9800;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
-        }
-        .batch-generate-btn:hover {
-            background-color: #F57C00;
-        }
-        .batch-generate-btn:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .paste-list-btn {
-            background-color: #9C27B0;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .paste-list-btn:hover {
-            background-color: #7B1FA2;
-        }
-        .button-container {
-            margin-bottom: 20px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto;
-            padding: 30px;
-            border-radius: 8px;
-            width: 80%;
-            max-width: 600px;
-        }
-        .modal-content h2 {
-            margin-top: 0;
-        }
-        .modal-content textarea {
-            width: 100%;
-            min-height: 200px;
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-        .modal-buttons button {
-            padding: 10px 20px;
-        }
-        .image-container {
-            max-width: 300px;
-            margin: 0 auto;
-        }
-        .image-container img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-            display: block;
-            border: 1px solid #e0e0e0;
-        }
-        td.image-cell {
-            padding: 12px;
-            vertical-align: middle;
-        }
-        .loading {
-            color: #666;
-            font-style: italic;
-        }
-        .error {
-            color: #d32f2f;
-            padding: 10px;
-            background-color: #ffebee;
-            border-radius: 4px;
-        }
-        .header-container {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            gap: 30px;
+            margin-bottom: 0;
         }
-        .page-title {
-            color: #01579b;
-            font-size: 32px;
+        .nav-banner h1 {
+            color: white;
+            font-size: 28px;
+            font-weight: 600;
             margin: 0;
         }
-        .page-title::before {
-            content: "⏰ ";
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
         }
-        .cost-tracker {
-            background-color: #e1f5fe;
-            padding: 15px 20px;
+        .nav-btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        .nav-btn.active {
+            background-color: white;
+            color: #667eea;
+            border-color: white;
+        }
+
+        /* Content Container */
+        .content-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Section Styles */
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background-color: white;
             border-radius: 8px;
-            border: 2px solid #0288d1;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .cost-tracker h3 {
+
+        .section h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 10px;
+        }
+
+        /* System Prompt Section */
+        .system-prompt-section {
+            background-color: #e0f7fa;
+            border-left: 4px solid #00acc1;
+        }
+
+        #systemPrompt {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #2196F3;
+            border-radius: 4px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        /* Staff Mapping Section */
+        .staff-mapping-section {
+            background-color: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .mapping-input-group {
+            margin-bottom: 15px;
+        }
+
+        .mapping-input-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .mapping-input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* Forecast Data Section */
+        .forecast-section {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+
+        .instructions {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        #forecastInput {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 2px solid #ff9800;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .preview-table th {
+            background-color: #2196F3;
+            color: white;
+            font-weight: 600;
+        }
+
+        .preview-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Gantt Section */
+        .gantt-section {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .gantt-dropdown {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .gantt-summary {
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+        }
+
+        .gantt-summary h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #4caf50;
+        }
+
+        .gantt-summary p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        /* Generate Section */
+        .generate-section {
+            background-color: #e1f5fe;
+            border-left: 4px solid #03a9f4;
+        }
+
+        .cost-estimate {
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 2px solid #03a9f4;
+            text-align: center;
+        }
+
+        .cost-estimate h3 {
             margin: 0 0 5px 0;
             font-size: 14px;
             color: #666;
         }
+
         .cost-amount {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
             color: #0277bd;
             margin: 0;
         }
-        .cost-details {
+
+        /* Output Section */
+        .output-section {
+            background-color: #fce4ec;
+            border-left: 4px solid #e91e63;
+        }
+
+        .timesheet-table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 12px;
-            color: #888;
-            margin-top: 5px;
+            margin-top: 15px;
+        }
+
+        .timesheet-table th,
+        .timesheet-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .timesheet-table th {
+            background-color: #e91e63;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .timesheet-table td {
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+
+        .timesheet-table td.editable {
+            cursor: cell;
+        }
+
+        .timesheet-table td.editable:hover {
+            background-color: #fff8e1;
+            box-shadow: 0 0 0 1px #2196F3 inset;
+        }
+
+        .timesheet-table td.editing {
+            cursor: text;
+            outline: 2px solid #2196F3;
+            background-color: #e3f2fd;
+        }
+
+        /* Selection highlighting for copying to Excel */
+        .timesheet-table td::selection,
+        .timesheet-table td *::selection {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .timesheet-table td::-moz-selection,
+        .timesheet-table td *::-moz-selection {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .week-group {
+            background-color: #f5f5f5;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-primary {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #0b7dda;
+        }
+
+        .btn-success {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background-color: #45a049;
+        }
+
+        .btn-warning {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .btn-warning:hover:not(:disabled) {
+            background-color: #F57C00;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background-color: #d32f2f;
+        }
+
+        .btn-info {
+            background-color: #00BCD4;
+            color: white;
+        }
+
+        .btn-info:hover:not(:disabled) {
+            background-color: #0097A7;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #323232;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast.success {
+            background-color: #4CAF50;
+        }
+
+        .toast.error {
+            background-color: #f44336;
+        }
+
+        .toast.warning {
+            background-color: #FF9800;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+
+        /* Validation Warning */
+        .validation-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 10px 0;
+            color: #856404;
+        }
+
+        .validation-warning strong {
+            display: block;
+            margin-bottom: 5px;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 </head>
 <body>
     <!-- Navigation Banner -->
@@ -284,277 +453,1534 @@
             <a href="index.html" class="nav-btn">Sketcher</a>
             <a href="timesheet.html" class="nav-btn active">Timesheet</a>
             <a href="spend.html" class="nav-btn">Spend</a>
+            <a href="gantt.html" class="nav-btn">Gantt</a>
+            <a href="grants.html" class="nav-btn">Grants</a>
         </div>
     </div>
-    
+
     <div class="content-container">
-    <div class="header-container">
-        <h2 class="page-title">Timesheet</h2>
-        <div class="cost-tracker">
-            <h3>Total Cost</h3>
-            <p class="cost-amount">$<span id="totalCost">0.00</span></p>
-            <p class="cost-details"><span id="imageCount">0</span> images generated</p>
+        <!-- Section 1: System Prompt -->
+        <div class="section system-prompt-section">
+            <h2 onclick="toggleSystemPrompt()" style="cursor: pointer;">1. System Prompt Configuration <span id="promptToggle">▼ Show</span></h2>
+            <textarea id="systemPrompt" style="display: none;" placeholder="Enter AI system prompt...">Generate technical work descriptions for weekly timesheets based on Gantt chart tasks.
+
+Keep it simple and technical:
+- Use plain language, no corporate jargon
+- Avoid words like: "Focused on", "Conducted", "Executed", "Spearheaded"
+- Focus on WHAT was done technically, not HOW it was managed
+- Be specific: mention actual components, APIs, features, tests, bugs
+- Vary the descriptions naturally - don't repeat phrases
+
+Examples of good descriptions:
+- "Built REST API endpoints for user authentication. Set up database schemas and migration scripts."
+- "Fixed bugs in data processing pipeline. Added unit tests for edge cases."
+- "Integrated third-party payment gateway. Updated documentation."
+
+Examples to AVOID:
+- "Focused on implementing key deliverables" (too vague)
+- "Conducted extensive testing procedures" (too formal)
+- "Executed project milestones successfully" (meaningless)
+
+Return ONLY valid JSON:
+{
+  "weeks": [
+    {
+      "weekNum": 1,
+      "description": "Built user authentication module. Wrote API docs."
+    }
+  ]
+}
+
+Do not include markdown, code blocks, or explanatory text.</textarea>
+        </div>
+
+        <!-- Section 2: Forecast Data -->
+        <div class="section forecast-section">
+            <h2>2. Forecast Data Input</h2>
+            <p class="instructions">Paste forecast data rows below the headers (without headers). Data should be tab-separated.</p>
+
+            <!-- Fixed Header Table -->
+            <table class="preview-table" style="margin-bottom: 15px;">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Staff</th>
+                        <th>Days Forecast</th>
+                        <th>Rate/day</th>
+                        <th>Hrs Forecast</th>
+                        <th>Hrs Remaining</th>
+                        <th>Hrs Spent</th>
+                        <th>Ref</th>
+                        <th>Cost per month</th>
+                    </tr>
+                </thead>
+            </table>
+
+            <!-- Paste Area -->
+            <textarea id="forecastPasteArea" placeholder="Example (paste data rows only):
+Apr    Hardware / Consulation Lead / CW    7.92    162.00    63.33    0.00    63.33        1282.43
+Apr    Project Manager / CB    7.17    172.00    57.33    0.00    57.33        1232.60
+Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77" style="width: 100%; min-height: 120px; padding: 10px; border: 2px solid #ff9800; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; resize: vertical; margin-bottom: 10px;"></textarea>
+
+            <button class="btn btn-primary" onclick="parseForecastData()">Parse Forecast Data</button>
+
+            <!-- Preview Table -->
+            <div id="forecastPreview"></div>
+        </div>
+
+        <!-- Section 3: Load Gantt -->
+        <div class="section gantt-section">
+            <h2>3. Load Gantt Chart</h2>
+            <p class="instructions">Load from localStorage or from a JSON file saved on your computer</p>
+            <p style="color: #666; font-size: 12px;">💡 <strong>Tip:</strong> Gantt JSON files are auto-saved to <code>PEBLGen/GanttCharts/</code> if you clicked "Set Save Folder" in the Gantt page.</p>
+            
+            <div style="margin-bottom: 15px;">
+                <label><strong>Option 1: Load from localStorage</strong></label>
+                <select id="ganttDropdown" class="gantt-dropdown">
+                    <option value="">-- Select a Gantt project --</option>
+                </select>
+                <button class="btn btn-success" onclick="loadGanttProject()">Load Selected Gantt</button>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label><strong>Option 2: Load from JSON File</strong></label><br>
+                <button class="btn btn-info" onclick="document.getElementById('ganttFileInput').click()">Choose Gantt JSON File</button>
+                <input type="file" id="ganttFileInput" accept=".json" style="display:none" onchange="loadGanttFromFile(event)">
+                <span id="selectedFileName" style="margin-left: 10px; color: #666;"></span>
+            </div>
+            
+            <div id="ganttSummary"></div>
+        </div>
+
+        <!-- Section 5: Processing Log -->
+        <div class="section log-section">
+            <h2>5. Processing Log</h2>
+            <div id="processingLog" style="background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;"></div>
+        </div>
+
+                <!-- Section 4: Generate Timesheet -->
+        <div class="section generate-section">
+            <h2>4. Generate Timesheet Descriptions</h2>
+            <div class="cost-estimate">
+                <h3>Estimated Cost</h3>
+                <p class="cost-amount">$<span id="estimatedCost">0.00</span></p>
+                <p style="margin-top: 5px; font-size: 12px; color: #666;">Based on GPT-4o pricing (~$0.005-0.015 per timesheet entry)</p>
+            </div>
+            <button class="btn btn-success" id="generateBtn" onclick="generateTimesheets()">
+                Generate Timesheet Descriptions
+            </button>
+        </div>
+
+        <!-- Section 5: Processing Log -->
+        <div class="section output-section">
+            <h2>6. Timesheet Output</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
+                💡 <strong>Tips:</strong>
+                • <strong>Drag to select</strong> multiple cells, then Ctrl+C to copy directly to Excel
+                • <strong>Double-click</strong> any cell to edit it (Enter or click away to save)
+                • "Copy Week Data Only" button copies all week columns without headers (starts from Week 1 In/Out)
+            </p>
+            <div id="validationWarnings"></div>
+            <div id="timesheetOutput">
+                <p class="empty-state">Generate timesheet data to see output here.</p>
+            </div>
+        </div>
+
+        <!-- Section 6: Timesheet Output -->
+        <div class="section">
+            <h2>7. Export Options</h2>
+            <button class="btn btn-info" onclick="copyForExcel()">Copy Week Data Only (No Headers)</button>
+            <button class="btn btn-warning" onclick="downloadCSV()">Download CSV</button>
+            <button class="btn btn-success" onclick="showHistory()">Show Generation History</button>
+            <button class="btn btn-danger" onclick="clearTimesheet()">Clear Timesheet</button>
+        </div>
+
+        <!-- History Modal (hidden by default) -->
+        <div id="historyModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+            <div style="background:white; margin:50px auto; padding:30px; max-width:800px; border-radius:8px; max-height:80vh; overflow-y:auto;">
+                <h2>Generation History</h2>
+                <div id="historyList"></div>
+                <button class="btn btn-secondary" onclick="closeHistory()">Close</button>
+            </div>
         </div>
     </div>
 
-    <div class="system-prompt-section">
-        <h2>System Prompt (Style Instructions)</h2>
-        <div class="system-prompt-container">
-            <textarea id="systemPrompt">Create a SIMPLE, MINIMALIST scientific illustration in black and white line art style showing a side profile view of the organism. The drawing should be anatomically accurate but USE MINIMAL DETAIL - only include the most essential features needed to identify the species (basic body shape, major appendages, primary markings). Use CLEAN, SIMPLE OUTLINES with very minimal or no stippling/shading - keep it like a basic line drawing or simple sketch. CRITICAL: Show EXACTLY ONE single organism only - absolutely no multiple specimens, no multiple views, no background elements, no decorative objects, no text, no labels, no scale bars, no habitat context. Pure white background only. EXTREMELY IMPORTANT: The organism must be SMALL and CENTERED, taking up only 30-40% of the total image canvas. There must be MASSIVE amounts of empty white space around it - at least 30% empty white space on ALL FOUR SIDES (top, bottom, left, right). The organism MUST BE SURROUNDED by a huge white border and must NEVER touch or come anywhere near the edges of the image. Think of the organism as a small subject in the center of a large white page.</textarea>
+        <!-- Section 8: Save Merged Payslips (Compact) -->
+        <div class="section" style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px;">
+            <h2 style="margin-bottom: 8px; font-size: 18px;">8. Merge Payslips</h2>
+            <p style="color: #666; font-size: 12px; margin: 0 0 10px 0;">Select parent "02 - Employees" folder. Check months per member, fetch, and merge PDFs.</p>
+
+            <!-- Compact Folder Selection -->
+            <div style="margin-bottom: 10px; padding: 8px; background: white; border-radius: 3px;">
+                <button class="btn btn-success" onclick="selectPayslipFolder()" style="padding: 4px 12px; font-size: 12px;">📁 Select "02 - Employees" Folder</button>
+                <span id="payslipFolderStatus" style="margin-left: 10px; color: #666; font-size: 11px;"></span>
+            </div>
+
+            <!-- Compact Table with Per-Member Month Selection -->
+            <div style="margin-bottom: 10px; padding: 8px; background: white; border-radius: 3px; overflow-x: auto;">
+                <div style="margin-bottom: 8px;">
+                    <label style="font-weight: 500; font-size: 12px; margin-right: 8px;">Year:</label>
+                    <select id="payslipYear" style="padding: 3px; font-size: 11px; border-radius: 3px; border: 1px solid #ccc;">
+                        <option value="2025" selected>2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                </div>
+                <table style="border-collapse: collapse; width: 100%; font-size: 11px;">
+                    <thead>
+                        <tr>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Member</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Jan</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Feb</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Mar</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Apr</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">May</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Jun</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Jul</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Aug</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Sep</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Oct</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Nov</th>
+                            <th style="border: 1px solid #ddd; padding: 4px; background: #4caf50; color: white;">Dec</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 4px; font-weight: 500;">CW - Craig</td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="01"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="02"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="03"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="04"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="05"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="06"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="07"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="08"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="09"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="10"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="11"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CW" data-month="12"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 4px; font-weight: 500;">CB - Christian</td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="01"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="02"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="03"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="04"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="05"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="06"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="07"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="08"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="09"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="10"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="11"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="CB" data-month="12"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 4px; font-weight: 500;">JG - Jack</td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="01"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="02"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="03"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="04"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="05"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="06"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="07"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="08"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="09"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="10"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="11"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="JG" data-month="12"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 4px; font-weight: 500;">AK - Anjali</td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="01"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="02"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="03"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="04"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="05"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="06"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="07"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="08"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="09"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="10"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="11"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="AK" data-month="12"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 4px; font-weight: 500;">HM - Huw</td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="01"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="02"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="03"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="04"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="05"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="06"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="07"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="08"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="09"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="10"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="11"></td>
+                            <td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" data-member="HM" data-month="12"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Compact Action Buttons -->
+            <div style="margin-bottom: 8px;">
+                <button class="btn btn-primary" id="fetchPayslipsBtn" onclick="fetchPayslips()" disabled style="padding: 4px 12px; font-size: 12px;">📄 Fetch</button>
+                <button class="btn btn-success" id="mergePayslipsBtn" onclick="mergePayslips()" style="display: none; padding: 4px 12px; font-size: 12px;">📦 Merge</button>
+                <span id="payslipCount" style="margin-left: 10px; font-size: 11px; color: #666;"></span>
+            </div>
+
+            <!-- Compact Fetched Display -->
+            <div id="fetchedPayslipsDisplay" style="display: none; padding: 6px; background: white; border-radius: 3px; font-size: 11px;">
+                <div id="fetchedPayslipsList"></div>
+            </div>
         </div>
-    </div>
 
-    <table id="dataTable">
-        <tbody id="tableBody">
-            <tr>
-                <td><input type="text" placeholder="Latin name..."></td>
-                <td><input type="text" placeholder="Common name..."></td>
-                <td class="image-cell"></td>
-                <td><button class="regenerate-btn" onclick="regenerateImage(this)" style="display:none;">Regenerate</button></td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div class="button-container">
-        <button class="add-row-btn" onclick="addRow()">Add Row</button>
-        <button class="add-row-btn" onclick="addMultipleRows(5)">Add 5 Rows</button>
-        <button class="batch-generate-btn" onclick="batchGenerate()">Batch Generate All</button>
-    </div>
 
     <script>
-        const API_KEY = 'YOUR_API_KEY_HERE';
-
-        // Cost tracking
-        const COST_PER_IMAGE = 0.04; // DALL-E 3 standard 1024x1024 costs $0.04 per image
-        let totalCost = 0;
-        let imageCount = 0;
-
-        function updateCostTracker() {
-            document.getElementById('totalCost').textContent = totalCost.toFixed(2);
-            document.getElementById('imageCount').textContent = imageCount;
-        }
-
-        function incrementCost() {
-            imageCount++;
-            totalCost += COST_PER_IMAGE;
-            updateCostTracker();
-        }
-
-        function addRow() {
-            const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
-            const newRow = table.insertRow();
-
-            const cell1 = newRow.insertCell(0);
-            const cell2 = newRow.insertCell(1);
-            const cell3 = newRow.insertCell(2);
-            const cell4 = newRow.insertCell(3);
-
-            cell1.innerHTML = '<input type="text" placeholder="Latin name...">';
-            cell2.innerHTML = '<input type="text" placeholder="Common name...">';
-            cell3.className = 'image-cell';
-            cell4.innerHTML = '<button class="regenerate-btn" onclick="regenerateImage(this)" style="display:none;">Regenerate</button>';
-        }
-
-        function addMultipleRows(count) {
-            for (let i = 0; i < count; i++) {
-                addRow();
+        // API key from localStorage (user must set it)
+        let API_KEY = localStorage.getItem('openai_api_key') || '';
+        
+        // Prompt for API key if not set
+        if (!API_KEY) {
+            const key = prompt('Please enter your OpenAI API key:
+(It will be saved in browser localStorage)');
+            if (key) {
+                localStorage.setItem('openai_api_key', key);
+                API_KEY = key;
             }
         }
 
-        async function generateImageForRow(row) {
-            const inputs = row.querySelectorAll('input[type="text"]');
-            const imageCell = row.querySelector('.image-cell');
-            const latinName = inputs[0] ? inputs[0].value.trim() : '';
-            const commonName = inputs[1] ? inputs[1].value.trim() : '';
-            const systemPrompt = document.getElementById('systemPrompt').value.trim();
+        // Data storage
+        let forecastData = [];
 
-            if (!latinName && !commonName) {
-                return; // Skip if both fields are empty
+        // Toggle system prompt visibility
+        function toggleSystemPrompt() {
+            const textarea = document.getElementById('systemPrompt');
+            const toggle = document.getElementById('promptToggle');
+            
+            if (textarea.style.display === 'none') {
+                textarea.style.display = 'block';
+                toggle.textContent = '▲ Hide';
+            } else {
+                textarea.style.display = 'none';
+                toggle.textContent = '▼ Show';
             }
-            let fullPrompt = `${systemPrompt}`;
-            if (latinName && commonName) {
-                fullPrompt += ` Marine organism Latin name: ${latinName}. Common name: ${commonName}. Use both the Latin name and common name to ensure correct species identification.`;
-            } else if (latinName) {
-                fullPrompt += ` Marine organism Latin name: ${latinName}`;
-            } else if (commonName) {
-                fullPrompt += ` Marine organism common name: ${commonName}`;
+        }
+
+                // Processing log helper
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('processingLog');
+            const colors = {
+                info: '#00bfff',
+                success: '#00ff00',
+                warning: '#ffaa00',
+                error: '#ff4444'
+            };
+            const color = colors[type] || colors.info;
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>
+`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('processingLog').innerHTML = '';
+        }
+
+        // Parse month string to index (0-11)
+        function parseMonthToIndex(monthStr) {
+            const monthMap = {
+                'jan': 0, 'january': 0,
+                'feb': 1, 'february': 1,
+                'mar': 2, 'march': 2,
+                'apr': 3, 'april': 3,
+                'may': 4,
+                'jun': 5, 'june': 5,
+                'jul': 7, 'july': 7,
+                'aug': 8, 'august': 8,
+                'sep': 9, 'september': 9,
+                'oct': 10, 'october': 10,
+                'nov': 11, 'november': 11,
+                'dec': 12, 'december': 12
+            };
+            
+            const lower = monthStr.toLowerCase().trim();
+            
+            // Check if it's already a month name
+            if (monthMap[lower] !== undefined) {
+                return monthMap[lower];
+            }
+            
+            // Check if it's YYYY-MM format
+            if (monthStr.includes('-')) {
+                const parts = monthStr.split('-');
+                return parseInt(parts[1]) - 1;
+            }
+            
+            return -1;
+        }
+
+        // Get active tasks for a specific month
+        function getActiveTasksForMonth(monthIndex) {
+            if (!ganttData) return [];
+            
+            const activeTasks = [];
+            ganttData.tasks.forEach((task, taskIndex) => {
+                const key = `${taskIndex}-${monthIndex}`;
+                if (ganttData.ganttData[key]) {
+                    activeTasks.push(task);
+                }
+            });
+            
+            return activeTasks;
+        }
+
+        // Calculate proper In/Out times for weekly hours
+        function calculateInOutTimes(weeklyHours) {
+            const daysNeeded = Math.ceil(weeklyHours / 8);
+            const result = [];
+            
+            let remainingHours = weeklyHours;
+            
+            for (let day = 0; day < daysNeeded && remainingHours > 0; day++) {
+                const hoursThisDay = Math.min(8, remainingHours);
+                
+                // Calculate out time based on hours (8 hours = 9:00-17:00)
+                const startHour = 9;
+                const endHour = startHour + hoursThisDay;
+                const inTime = `${startHour.toString().padStart(2, '0')}:00`;
+                const outTime = `${endHour.toString().padStart(2, '0')}:00`;
+                
+                result.push({ in: inTime, out: outTime, hours: hoursThisDay });
+                remainingHours -= hoursThisDay;
+            }
+            
+            return result;
+        }
+
+        let ganttData = null;
+        let timesheetData = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGanttProjects();
+            loadSystemPrompt();
+            loadPayslipFolder();
+        });
+
+        // Save/Load system prompt from localStorage
+        function loadSystemPrompt() {
+            const saved = localStorage.getItem('timesheet_system_prompt');
+            if (saved) {
+                document.getElementById('systemPrompt').value = saved;
+            }
+        }
+
+        function saveSystemPrompt() {
+            const prompt = document.getElementById('systemPrompt').value;
+            localStorage.setItem('timesheet_system_prompt', prompt);
+        }
+
+        // Parse forecast data from textarea
+        function parseForecastData() {
+            const input = document.getElementById('forecastPasteArea').value.trim();
+            if (!input) {
+                showToast('Please paste forecast data first', 'error');
+                return;
             }
 
-            imageCell.innerHTML = '<div class="loading">Generating image...</div>';
+            const lines = input.split('\n').filter(line => line.trim() !== '');
+            forecastData = [];
+
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 5) {
+                    forecastData.push({
+                        month: cols[0].trim(),
+                        staff: cols[1].trim(),
+                        daysForecast: parseFloat(cols[2]) || 0,
+                        ratePerDay: parseFloat(cols[3]) || 0,
+                        hrsForecast: parseFloat(cols[4]) || 0,
+                        hrsRemaining: parseFloat(cols[5]) || 0,
+                        hrsSpent: parseFloat(cols[6]) || 0,
+                        ref: cols[7] ? cols[7].trim() : '',
+                        costPerMonth: parseFloat(cols[8]) || 0
+                    });
+                }
+            });
+
+            if (forecastData.length === 0) {
+                showToast('No valid forecast data found. Check format.', 'error');
+                return;
+            }
+
+            displayForecastPreview();
+            updateCostEstimate();
+            showToast(`Parsed ${forecastData.length} forecast entries`, 'success');
+        }
+
+        // Display forecast preview table
+        function displayForecastPreview() {
+            const preview = document.getElementById('forecastPreview');
+
+            let html = '<h3 style="margin-top: 20px; margin-bottom: 10px; font-size: 16px; color: #333;">Preview (Hrs Forecast highlighted for AI generation)</h3>';
+            html += '<table class="preview-table">';
+            html += '<thead><tr><th>Month</th><th>Staff</th><th style="background-color: #4CAF50;">Hrs Forecast</th></tr></thead>';
+            html += '<tbody>';
+
+            forecastData.forEach(item => {
+                html += `<tr>
+                    <td>${item.month}</td>
+                    <td>${item.staff}</td>
+                    <td style="background-color: #c8e6c9; font-weight: bold;">${item.hrsForecast}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            preview.innerHTML = html;
+        }
+
+        // Load Gantt projects from localStorage
+        function loadGanttProjects() {
+            const dropdown = document.getElementById('ganttDropdown');
+            dropdown.innerHTML = '<option value="">-- Select a Gantt project --</option>';
+
+            // Try both possible localStorage keys
+            const savedProjects = JSON.parse(localStorage.getItem('peblgen_gantt_projects') || localStorage.getItem('ganttProjects') || '{}');
+
+            for (const [name, project] of Object.entries(savedProjects)) {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                dropdown.appendChild(option);
+            }
+        }
+
+        // Load selected Gantt project
+        function loadGanttProject() {
+            const dropdown = document.getElementById('ganttDropdown');
+            const projectName = dropdown.value;
+
+            if (!projectName) {
+                showToast('Please select a Gantt project', 'error');
+                return;
+            }
+
+            const savedProjects = JSON.parse(localStorage.getItem('peblgen_gantt_projects') || localStorage.getItem('ganttProjects') || '{}');
+            ganttData = savedProjects[projectName];
+
+            if (!ganttData) {
+                showToast('Project not found', 'error');
+                return;
+            }
+
+            displayGanttSummary();
+            updateCostEstimate();
+            showToast(`Loaded Gantt project: ${projectName}`, 'success');
+        }
+
+
+        // Load Gantt from file
+        function loadGanttFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    ganttData = JSON.parse(e.target.result);
+                    
+                    // Display the file name
+                    document.getElementById('selectedFileName').textContent = `Loaded: ${file.name}`;
+                    
+                    displayGanttSummary();
+                    updateCostEstimate();
+                    showToast(`Loaded Gantt from file: ${file.name}`, 'success');
+                    log(`Gantt loaded from file: ${file.name}`, 'success');
+                } catch (error) {
+                    showToast('Error loading JSON file: ' + error.message, 'error');
+                    log('Error loading JSON file: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+
+            // Reset input so same file can be loaded again
+            event.target.value = '';
+        }
+
+                // Display Gantt summary
+        function displayGanttSummary() {
+            const summary = document.getElementById('ganttSummary');
+
+            if (!ganttData) {
+                summary.innerHTML = '';
+                return;
+            }
+
+            const activeTasks = ganttData.tasks.filter(task => {
+                // Check if task has any active weeks
+                for (const key in ganttData.ganttData) {
+                    if (ganttData.ganttData[key] && key.startsWith(ganttData.tasks.indexOf(task) + '-')) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+            let html = '<div class="gantt-summary">';
+            html += `<h3>Project: ${ganttData.name}</h3>`;
+            html += `<p><strong>Date Range:</strong> ${ganttData.startDate} to ${ganttData.endDate}</p>`;
+            html += `<p><strong>Total Tasks:</strong> ${ganttData.tasks.length}</p>`;
+            html += `<p><strong>Active Tasks:</strong> ${activeTasks.length}</p>`;
+
+            if (activeTasks.length > 0) {
+                html += '<p><strong>Active Task List:</strong></p><ul style="margin-left: 20px; font-size: 13px;">';
+                activeTasks.forEach(task => {
+                    html += `<li>${task.number} ${task.name}</li>`;
+                });
+                html += '</ul>';
+            }
+
+            html += '</div>';
+            summary.innerHTML = html;
+        }
+
+        // Update cost estimate
+        function updateCostEstimate() {
+            const costElement = document.getElementById('estimatedCost');
+
+            if (forecastData.length === 0) {
+                costElement.textContent = '0.00';
+                return;
+            }
+
+            // Estimate: ~$0.01 per timesheet entry (conservative estimate for GPT-4o)
+            const estimatedCost = forecastData.length * 0.01;
+            costElement.textContent = estimatedCost.toFixed(2);
+        }
+
+        // Generate timesheet descriptions using GPT-4o
+        async function generateTimesheets() {
+            if (forecastData.length === 0) {
+                showToast('Please parse forecast data first', 'error');
+                return;
+            }
+
+            if (!ganttData) {
+                showToast('Please load a Gantt project first', 'error');
+                return;
+            }
+
+            saveSystemPrompt();
+            clearLog();
+            log('=== Starting Timesheet Generation ===', 'info');
+
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.innerHTML = 'Generating... <span class="spinner"></span>';
+
+            timesheetData = [];
+            let totalCost = 0;
 
             try {
-                const response = await fetch('https://api.openai.com/v1/images/generations', {
+                // Process each forecast entry
+                for (const forecast of forecastData) {
+                    log(`Processing: ${forecast.month} - ${forecast.staff}`, 'info');
+                    
+                    // Parse month to index
+                    const monthIndex = parseMonthToIndex(forecast.month);
+                    if (monthIndex === -1) {
+                        log(`Warning: Could not parse month "${forecast.month}"`, 'warning');
+                        continue;
+                    }
+                    
+                    // Get active tasks for this month
+                    const activeTasks = getActiveTasksForMonth(monthIndex);
+                    log(`Found ${activeTasks.length} active tasks in ${forecast.month}`, 'info');
+                    
+                    if (activeTasks.length > 0) {
+                        const taskNames = activeTasks.map(t => `${t.number}`).join(', ');
+                        log(`Active tasks: ${taskNames}`, 'info');
+                    }
+                    
+                    // Calculate weekly breakdown (assume ~4 weeks per month)
+                    const weeksInMonth = 4;
+                    const hoursPerWeek = forecast.hrsForecast / weeksInMonth;
+                    log(`Hours breakdown: ${forecast.hrsForecast}hrs total / ${weeksInMonth} weeks = ${hoursPerWeek.toFixed(2)}hrs/week`, 'info');
+                    
+                    // Generate descriptions using GPT-4o
+                    log('Calling GPT-4o...', 'info');
+                    const result = await generateWeekDescriptions(forecast, activeTasks, monthIndex, hoursPerWeek);
+
+                    if (result.success) {
+                        timesheetData.push({
+                            month: forecast.month,
+                            staff: forecast.staff,
+                            forecastHours: forecast.hrsForecast,
+                            weeks: result.weeks
+                        });
+                        totalCost += result.cost;
+                        log(`Success! Cost: $${result.cost.toFixed(4)}`, 'success');
+                    } else {
+                        log(`Error: ${result.error}`, 'error');
+                    }
+
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                log('=== Generation Complete ===', 'success');
+                log(`Total timesheets: ${timesheetData.length}, Total cost: $${totalCost.toFixed(4)}`, 'success');
+                
+                displayTimesheetOutput();
+                saveToHistory();
+                showToast(`Generated ${timesheetData.length} timesheets. Total cost: $${totalCost.toFixed(4)}`, 'success');
+
+            } catch (error) {
+                log(`Fatal error: ${error.message}`, 'error');
+                showToast('Error generating timesheets: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Timesheet Descriptions';
+            }
+        }
+
+        // DUAL-MODEL APPROACH: Small model for In/Out times, Large model for descriptions
+
+        // Function 1: Calculate In/Out times using GPT-4o-mini (fast, cheap, accurate math)
+        async function calculateInOutTimes(hoursPerWeek, weekNum) {
+            const systemPrompt = `You are a timesheet time calculator. Calculate realistic work In/Out times that add up to the specified hours.
+
+Rules:
+- Standard workday: 9:00-17:00 (8 hours)
+- Lunch not deducted from hours
+- If hours = 40, that's 5 full days: "Mon-Fri 9:00-17:00"
+- If hours = 24, that's 3 full days: "Mon-Wed 9:00-17:00"
+- If hours = 14.5, that's Mon 9:00-17:00 (8h) + Tue 9:00-15:30 (6.5h)
+- Be precise with the math - times MUST add up exactly
+
+Return ONLY valid JSON:
+{"inOut": "Mon 9:00-17:00, Tue 9:00-15:30"}`;
+
+            const userMessage = `Calculate In/Out times for ${hoursPerWeek.toFixed(2)} hours in week ${weekNum}.
+
+Examples:
+- 40 hours = Mon-Fri 9:00-17:00
+- 32 hours = Mon-Thu 9:00-17:00
+- 24 hours = Mon-Wed 9:00-17:00
+- 16 hours = Mon-Tue 9:00-17:00
+- 8 hours = Mon 9:00-17:00
+- 14.5 hours = Mon 9:00-17:00, Tue 9:00-15:30
+
+Return JSON with exact In/Out times that sum to ${hoursPerWeek.toFixed(2)} hours.`;
+
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: 'dall-e-3',
-                        prompt: fullPrompt,
-                        n: 1,
-                        size: '1024x1024'
+                        model: 'gpt-4o-mini', // Small, fast, cheap model for math
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userMessage }
+                        ],
+                        temperature: 0.3, // Low temperature for consistent math
+                        max_tokens: 100
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error('Failed to calculate In/Out times');
+                }
+
                 const data = await response.json();
+                const content = data.choices[0].message.content.trim();
+                const jsonContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+                const parsed = JSON.parse(jsonContent);
+
+                // Calculate cost (GPT-4o-mini: ~$0.00015/1K input, ~$0.0006/1K output)
+                const cost = (data.usage.prompt_tokens / 1000 * 0.00015) +
+                            (data.usage.completion_tokens / 1000 * 0.0006);
+
+                return {
+                    success: true,
+                    inOut: parsed.inOut || '',
+                    cost: cost
+                };
+
+            } catch (error) {
+                console.error('In/Out Calculation Error:', error);
+                // Fallback to basic calculation
+                const days = Math.ceil(hoursPerWeek / 8);
+                const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                const fallback = days >= 5 ? 'Mon-Fri 9:00-17:00' :
+                               days === 1 ? `${dayNames[0]} 9:00-17:00` :
+                               `${dayNames[0]}-${dayNames[days-1]} 9:00-17:00`;
+
+                return {
+                    success: true,
+                    inOut: fallback,
+                    cost: 0
+                };
+            }
+        }
+
+        // Function 2: Generate descriptions using GPT-4o (large, creative model)
+        async function generateDescriptions(forecast, activeTasks, monthIndex) {
+            const systemPrompt = document.getElementById('systemPrompt').value;
+
+            // Build task list with deliverables highlighted
+            const taskDescriptions = activeTasks.map(task => {
+                if (task.deliverableCode) {
+                    return `${task.number}: ${task.name} **(DELIVERABLE DUE!)**`;
+                }
+                return `${task.number}: ${task.name}`;
+            }).join('\n');
+
+            const userMessage = `Generate 4 weekly work descriptions for:
+Staff: ${forecast.staff}
+Month: ${forecast.month}
+Role: ${forecast.staff.split('/').pop().trim()} (extract role from staff name)
+
+ACTIVE TASKS THIS MONTH:
+${taskDescriptions || 'No specific tasks active'}
+
+Requirements:
+- Generate 4 descriptions (week 1, 2, 3, 4)
+- Keep it technical and specific
+- Base descriptions on the ACTIVE TASKS listed
+- Mention deliverables if marked
+- Vary the language naturally
+- NO corporate jargon
+
+Return JSON:
+{
+  "weeks": [
+    {"weekNum": 1, "description": "..."},
+    {"weekNum": 2, "description": "..."},
+    {"weekNum": 3, "description": "..."},
+    {"weekNum": 4, "description": "..."}
+  ]
+}`;
+
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o', // Large model for creative descriptions
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userMessage }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 800
+                    })
+                });
 
                 if (!response.ok) {
-                    throw new Error(data.error?.message || 'Failed to generate image');
+                    throw new Error('Failed to generate descriptions');
                 }
 
-                const imageUrl = data.data[0].url;
-                imageCell.innerHTML = `<div class="image-container"><img src="${imageUrl}" alt="${latinName}"></div>`;
+                const data = await response.json();
+                const content = data.choices[0].message.content.trim();
+                const jsonContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+                const parsed = JSON.parse(jsonContent);
 
-                // Increment cost tracker
-                incrementCost();
+                // Calculate cost (GPT-4o: ~$0.005/1K input, ~$0.015/1K output)
+                const cost = (data.usage.prompt_tokens / 1000 * 0.005) +
+                            (data.usage.completion_tokens / 1000 * 0.015);
 
-                // Show the regenerate button after successful generation
-                const regenerateBtn = row.querySelector('.regenerate-btn');
-                if (regenerateBtn) {
-                    regenerateBtn.style.display = 'inline-block';
-                }
+                return {
+                    success: true,
+                    weeks: parsed.weeks || [],
+                    cost: cost
+                };
+
             } catch (error) {
-                imageCell.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                console.error('Description Generation Error:', error);
+                return {
+                    success: false,
+                    error: error.message,
+                    cost: 0
+                };
             }
         }
 
-        async function regenerateImage(button) {
-            const row = button.closest('tr');
-            await generateImageForRow(row);
-        }
+        // Combined function: Run both models in parallel
+        async function generateWeekDescriptions(forecast, activeTasks, monthIndex, hoursPerWeek) {
+            log('Running dual-model generation (In/Out + Descriptions in parallel)...', 'info');
 
-        async function batchGenerate() {
-            const rows = document.querySelectorAll('#dataTable tbody tr');
-            const batchButton = document.querySelector('.batch-generate-btn');
+            try {
+                // Run both models in PARALLEL using Promise.all
+                const [descriptionsResult, ...inOutResults] = await Promise.all([
+                    generateDescriptions(forecast, activeTasks, monthIndex),
+                    calculateInOutTimes(hoursPerWeek, 1),
+                    calculateInOutTimes(hoursPerWeek, 2),
+                    calculateInOutTimes(hoursPerWeek, 3),
+                    calculateInOutTimes(hoursPerWeek, 4)
+                ]);
 
-            batchButton.disabled = true;
-            batchButton.textContent = 'Generating...';
-
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                await generateImageForRow(row);
-
-                // Add a small delay between requests to avoid rate limiting
-                if (i < rows.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                if (!descriptionsResult.success) {
+                    throw new Error(descriptionsResult.error);
                 }
-            }
 
-            batchButton.disabled = false;
-            batchButton.textContent = 'Batch Generate All';
+                // Combine results from both models
+                const weeks = descriptionsResult.weeks.map((week, index) => {
+                    return {
+                        weekNum: week.weekNum,
+                        inOut: inOutResults[index].inOut,
+                        hours: hoursPerWeek,
+                        description: week.description
+                    };
+                });
+
+                // Calculate total cost
+                const totalCost = descriptionsResult.cost +
+                                 inOutResults.reduce((sum, r) => sum + r.cost, 0);
+
+                log(`✓ Descriptions: $${descriptionsResult.cost.toFixed(6)} (GPT-4o)`, 'success');
+                log(`✓ In/Out times: $${inOutResults.reduce((s,r) => s+r.cost, 0).toFixed(6)} (GPT-4o-mini)`, 'success');
+
+                return {
+                    success: true,
+                    weeks: weeks,
+                    cost: totalCost
+                };
+
+            } catch (error) {
+                console.error('Combined Generation Error:', error);
+                return {
+                    success: false,
+                    error: error.message,
+                    cost: 0
+                };
+            }
         }
 
-        // Handle paste from Excel or other spreadsheet applications
-        document.addEventListener('paste', function(e) {
-            // Only handle paste when focused on table body, not in system prompt
-            const systemPrompt = document.getElementById('systemPrompt');
-            if (e.target === systemPrompt || systemPrompt.contains(e.target)) {
-                return; // Allow normal paste in system prompt
-            }
+        // Display timesheet output table
+        function displayTimesheetOutput() {
+            const output = document.getElementById('timesheetOutput');
 
-            // If pasting in a specific cell input
-            if (e.target.tagName === 'INPUT' && e.target.closest('td')) {
-                e.preventDefault();
-
-                const clipboardData = e.clipboardData || window.clipboardData;
-                const pastedData = clipboardData.getData('Text');
-
-                if (!pastedData) return;
-
-                // Check if this is multi-line/multi-cell data
-                const hasNewlines = pastedData.includes('\n');
-                const hasTabs = pastedData.includes('\t');
-
-                if (hasNewlines || hasTabs) {
-                    // Multi-cell paste - replace entire table
-                    const rows = pastedData.split('\n').filter(row => row.trim() !== '');
-                    const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
-
-                    // Clear existing rows
-                    table.innerHTML = '';
-
-                    // Process each row
-                    rows.forEach(row => {
-                        // Split by tabs (Excel format) or commas (CSV format)
-                        const cells = row.split('\t').length > 1 ? row.split('\t') : row.split(',');
-
-                        // Get the first two cell values
-                        const val1 = cells[0] ? cells[0].trim() : '';
-                        const val2 = cells[1] ? cells[1].trim() : '';
-
-                        if (val1) {
-                            const newRow = table.insertRow();
-                            const cell1 = newRow.insertCell(0);
-                            const cell2 = newRow.insertCell(1);
-                            const cell3 = newRow.insertCell(2);
-                            const cell4 = newRow.insertCell(3);
-
-                            cell1.innerHTML = `<input type="text" placeholder="Latin name..." value="${val1}">`;
-                            cell2.innerHTML = `<input type="text" placeholder="Common name..." value="${val2}">`;
-                            cell3.className = 'image-cell';
-                            cell4.innerHTML = '<button class="regenerate-btn" onclick="regenerateImage(this)" style="display:none;">Regenerate</button>';
-                        }
-                    });
-
-                    // If no valid rows were added, add one empty row
-                    if (table.rows.length === 0) {
-                        addRow();
-                    }
-                } else {
-                    // Single value paste - paste into current cell
-                    e.target.value = pastedData;
-                }
+            if (timesheetData.length === 0) {
+                output.innerHTML = '<p class="empty-state">No timesheet data to display.</p>';
                 return;
             }
 
-            // Pasting outside of any input field
-            e.preventDefault();
+            let html = '<table class="timesheet-table">';
+            html += '<thead><tr>';
+            html += '<th>Forecast</th><th>Generated</th><th>Diff</th>'; // Validation columns
+            html += '<th>Month</th><th>Staff</th>';
+            html += '<th>Week 1 In/Out</th><th>Week 1 Hrs</th><th>Week 1 Description</th>';
+            html += '<th>Week 2 In/Out</th><th>Week 2 Hrs</th><th>Week 2 Description</th>';
+            html += '<th>Week 3 In/Out</th><th>Week 3 Hrs</th><th>Week 3 Description</th>';
+            html += '<th>Week 4 In/Out</th><th>Week 4 Hrs</th><th>Week 4 Description</th>';
+            html += '<th>Week 5 In/Out</th><th>Week 5 Hrs</th><th>Week 5 Description</th>';
+            html += '</tr></thead><tbody>';
 
-            const clipboardData = e.clipboardData || window.clipboardData;
-            const pastedData = clipboardData.getData('Text');
+            timesheetData.forEach((entry, entryIndex) => {
+                html += '<tr>';
+                
+                // Calculate generated hours
+                const generatedHours = entry.weeks.reduce((sum, week) => {
+                    const hours = parseFloat(week.hours) || 0;
+                    return sum + hours;
+                }, 0);
+                
+                const forecastHours = entry.forecastHours || 0;
+                const diff = generatedHours - forecastHours;
+                const diffPercent = forecastHours > 0 ? Math.abs(diff / forecastHours * 100) : 0;
+                
+                // Color code based on difference
+                let bgcolor = '#c8e6c9'; // green
+                if (diffPercent > 10) {
+                    bgcolor = '#ffcdd2'; // red
+                } else if (diffPercent > 5) {
+                    bgcolor = '#fff9c4'; // yellow
+                }
+                
+                html += `<td style="background:${bgcolor};font-weight:bold">${forecastHours.toFixed(2)}</td>`;
+                html += `<td style="background:${bgcolor};font-weight:bold">${generatedHours.toFixed(2)}</td>`;
+                html += `<td style="background:${bgcolor};font-weight:bold">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}</td>`;
+                
+                html += `<td class="editable">${entry.month}</td>`;
+                html += `<td class="editable">${entry.staff}</td>`;
 
-            if (!pastedData) return;
+                // Create array of 5 weeks
+                const weeks = Array(5).fill(null).map((_, i) => {
+                    return entry.weeks.find(w => w.weekNum === i + 1) || { inOut: '', hours: '', description: '' };
+                });
 
-            // Split by newlines to get rows
-            const rows = pastedData.split('\n').filter(row => row.trim() !== '');
+                weeks.forEach((week, weekIndex) => {
+                    html += `<td class="editable week-group">${week.inOut || ''}</td>`;
+                    html += `<td class="editable week-group">${week.hours || ''}</td>`;
+                    html += `<td class="editable week-group">${week.description || ''}</td>`;
+                });
 
-            if (rows.length === 0) return;
+                html += '</tr>';
+            });
 
-            const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+            html += '</tbody></table>';
+            output.innerHTML = html;
+            
+            // Add double-click event listeners to editable cells
+            setTimeout(() => {
+                const editableCells = document.querySelectorAll('.timesheet-table td.editable');
+                editableCells.forEach(cell => {
+                    cell.addEventListener('dblclick', function() {
+                        this.contentEditable = true;
+                        this.classList.add('editing');
+                        this.focus();
+                        
+                        // Select all text
+                        const range = document.createRange();
+                        range.selectNodeContents(this);
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    });
+                    
+                    cell.addEventListener('blur', function() {
+                        this.contentEditable = false;
+                        this.classList.remove('editing');
+                    });
+                    
+                    cell.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            this.blur();
+                        } else if (e.key === 'Escape') {
+                            this.blur();
+                        }
+                    });
+                });
+            }, 0);
+        }
 
-            // Clear existing rows
-            table.innerHTML = '';
+        // Validate timesheet hours against forecast
+        function validateTimesheet() {
+            const warnings = document.getElementById('validationWarnings');
+            const warningList = [];
 
-            // Process each row
-            rows.forEach(row => {
-                // Split by tabs (Excel format) or commas (CSV format)
-                const cells = row.split('\t').length > 1 ? row.split('\t') : row.split(',');
+            timesheetData.forEach(entry => {
+                const forecast = forecastData.find(f => f.month === entry.month && f.staff === entry.staff);
+                if (!forecast) return;
 
-                // Get the first two cell values
-                const val1 = cells[0] ? cells[0].trim() : '';
-                const val2 = cells[1] ? cells[1].trim() : '';
+                const totalHours = entry.weeks.reduce((sum, week) => sum + (parseFloat(week.hours) || 0), 0);
+                const difference = Math.abs(totalHours - forecast.hrsForecast);
+                const percentDiff = (difference / forecast.hrsForecast) * 100;
 
-                if (val1) {
-                    const newRow = table.insertRow();
-                    const cell1 = newRow.insertCell(0);
-                    const cell2 = newRow.insertCell(1);
-                    const cell3 = newRow.insertCell(2);
-                    const cell4 = newRow.insertCell(3);
-
-                    cell1.innerHTML = `<input type="text" placeholder="Latin name..." value="${val1}">`;
-                    cell2.innerHTML = `<input type="text" placeholder="Common name..." value="${val2}">`;
-                    cell3.className = 'image-cell';
-                    cell4.innerHTML = '<button class="regenerate-btn" onclick="regenerateImage(this)" style="display:none;">Regenerate</button>';
+                if (percentDiff > 10) {
+                    warningList.push({
+                        staff: entry.staff,
+                        month: entry.month,
+                        forecast: forecast.hrsForecast,
+                        actual: totalHours,
+                        diff: percentDiff.toFixed(1)
+                    });
                 }
             });
 
-            // If no valid rows were added, add one empty row
-            if (table.rows.length === 0) {
-                addRow();
+            if (warningList.length > 0) {
+                let html = '<div class="validation-warning">';
+                html += '<strong>Warning: Hour Mismatch Detected</strong>';
+                warningList.forEach(w => {
+                    html += `<div>${w.staff} (${w.month}): Forecast ${w.forecast}hrs, Generated ${w.actual}hrs (${w.diff}% difference)</div>`;
+                });
+                html += '</div>';
+                warnings.innerHTML = html;
+            } else {
+                warnings.innerHTML = '';
             }
-        });
+        }
+
+        // Copy to clipboard (tab-separated for Excel)
+        function copyToClipboard() {
+            if (timesheetData.length === 0) {
+                showToast('No timesheet data to copy', 'error');
+                return;
+            }
+
+            const table = document.querySelector('.timesheet-table');
+            if (!table) return;
+
+            let text = '';
+
+            // Get headers
+            const headers = table.querySelectorAll('thead th');
+            headers.forEach((header, index) => {
+                text += header.textContent;
+                if (index < headers.length - 1) text += '\t';
+            });
+            text += '\n';
+
+            // Get data rows
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                cells.forEach((cell, index) => {
+                    text += cell.textContent;
+                    if (index < cells.length - 1) text += '\t';
+                });
+                text += '\n';
+            });
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Timesheet copied to clipboard (ready for Excel paste)', 'success');
+            }).catch(err => {
+                showToast('Failed to copy to clipboard', 'error');
+            });
+        }
+
+        // Download as CSV
+        function downloadCSV() {
+            if (timesheetData.length === 0) {
+                showToast('No timesheet data to download', 'error');
+                return;
+            }
+
+            const table = document.querySelector('.timesheet-table');
+            if (!table) return;
+
+            let csv = '';
+
+            // Get headers
+            const headers = table.querySelectorAll('thead th');
+            headers.forEach((header, index) => {
+                csv += '"' + header.textContent.replace(/"/g, '""') + '"';
+                if (index < headers.length - 1) csv += ',';
+            });
+            csv += '\n';
+
+            // Get data rows
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                cells.forEach((cell, index) => {
+                    csv += '"' + cell.textContent.replace(/"/g, '""') + '"';
+                    if (index < cells.length - 1) csv += ',';
+                });
+                csv += '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `timesheet_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showToast('CSV downloaded successfully', 'success');
+        }
+
+        // Clear timesheet
+        function clearTimesheet() {
+            if (!confirm('Are you sure you want to clear all timesheet data?')) {
+                return;
+            }
+
+            timesheetData = [];
+            document.getElementById('timesheetOutput').innerHTML = '<p class="empty-state">Generate timesheet data to see output here.</p>';
+            document.getElementById('validationWarnings').innerHTML = '';
+            showToast('Timesheet cleared', 'success');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Auto-save system prompt on change
+        document.getElementById('systemPrompt').addEventListener('change', saveSystemPrompt);
+
+        // Auto-save staff mappings on change
+
+        // Copy for Excel (tab-separated)
+        function copyForExcel() {
+            if (timesheetData.length === 0) {
+                showToast('No data to copy', 'error');
+                return;
+            }
+
+            let text = '';
+
+            timesheetData.forEach(entry => {
+                const weeks = Array(5).fill(null).map((_, i) => {
+                    return entry.weeks.find(w => w.weekNum === i + 1) || { inOut: '', hours: '', description: '' };
+                });
+
+                weeks.forEach((week, index) => {
+                    text += week.inOut || '';
+                    text += '\t';
+                    text += week.hours || '';
+                    text += '\t';
+                    text += week.description || '';
+                    if (index < weeks.length - 1) {
+                        text += '\t';
+                    }
+                });
+
+                text += '\n';
+            });
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied week data only', 'success');
+            }).catch(err => {
+                showToast('Copy failed: ' + err, 'error');
+            });
+        }
+
+        // Save to history
+        function saveToHistory() {
+            const history = JSON.parse(localStorage.getItem('timesheetHistory') || '[]');
+            const entry = {
+                timestamp: new Date().toISOString(),
+                data: timesheetData,
+                forecastData: forecastData,
+                ganttName: ganttData ? ganttData.name : 'Unknown'
+            };
+            
+            history.unshift(entry);
+            // Keep only last 10
+            if (history.length > 10) {
+                history.pop();
+            }
+            
+            localStorage.setItem('timesheetHistory', JSON.stringify(history));
+        }
+
+        // Show history
+        function showHistory() {
+            const history = JSON.parse(localStorage.getItem('timesheetHistory') || '[]');
+            const modal = document.getElementById('historyModal');
+            const list = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                list.innerHTML = '<p>No generation history found.</p>';
+            } else {
+                let html = '<table class="preview-table"><thead><tr><th>Date</th><th>Gantt</th><th>Entries</th><th>Actions</th></tr></thead><tbody>';
+                
+                history.forEach((entry, index) => {
+                    const date = new Date(entry.timestamp).toLocaleString();
+                    html += `<tr>
+                        <td>${date}</td>
+                        <td>${entry.ganttName}</td>
+                        <td>${entry.data.length}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick="loadHistory(${index})">Load</button>
+                            <button class="btn btn-danger" onclick="deleteHistory(${index})">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                list.innerHTML = html;
+            }
+
+            modal.style.display = 'block';
+        }
+
+        function closeHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        function loadHistory(index) {
+            const history = JSON.parse(localStorage.getItem('timesheetHistory') || '[]');
+            if (history[index]) {
+                timesheetData = history[index].data;
+                displayTimesheetOutput();
+                closeHistory();
+                showToast('Loaded generation from history', 'success');
+            }
+        }
+
+        function deleteHistory(index) {
+            const history = JSON.parse(localStorage.getItem('timesheetHistory') || '[]');
+            history.splice(index, 1);
+            localStorage.setItem('timesheetHistory', JSON.stringify(history));
+            showHistory(); // Refresh
+        }
+
+
+        // IndexedDB helper for folder handles
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('PEBLGenDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('folderHandles')) {
+                        db.createObjectStore('folderHandles', { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        // PAYSLIP MERGER FUNCTIONALITY
+        let payslipFolderHandle = null;
+        let fetchedPayslips = [];
+        const teamMembers = {'CW':'Craig Williams','CB':'Christian Berger','JG':'Jack Green','AK':'Anjali Cowan Krishna','HM':'Huw Matthews'};
+        const folderNameMap = {
+            'CW': ['Craig', 'PEBL Staff - Craig'],
+            'CB': ['Christian', 'PEBL Staff - Christian'],
+            'JG': ['Jack', 'PEBL Staff - Jack'],
+            'AK': ['Anjali', 'PEBL Staff - Anjali'],
+            'HM': ['Huw', 'PEBL Staff - Huw']
+        };
+        const monthNames = {'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'};
+
+        async function selectPayslipFolder() {
+            console.log("[Payslip] selectPayslipFolder called");
+            if (!('showDirectoryPicker' in window)) {
+                showToast('Use Chrome or Edge', 'error');
+                return;
+            }
+            try {
+                const dirHandle = await window.showDirectoryPicker({mode: 'read'});
+                console.log("[Payslip] Folder selected:", dirHandle.name);
+                payslipFolderHandle = dirHandle;
+                const db = await openDB();
+                const tx = db.transaction(['folderHandles'], 'readwrite');
+                tx.objectStore('folderHandles').put({id: 'payslipFolder', handle: dirHandle});
+                updatePayslipFolderStatus(dirHandle.name);
+                document.getElementById('fetchPayslipsBtn').disabled = false;
+                showToast('Folder set', 'success');
+            } catch (e) {
+                if (e.name !== 'AbortError') { console.error('[Payslip] Error:', e.name, e.message, e.stack); showToast('Error selecting folder: ' + e.message, 'error'); }
+            }
+        }
+
+        async function loadPayslipFolder() {
+            console.log("[Payslip] loadPayslipFolder called");
+            if (!('showDirectoryPicker' in window)) return;
+            try {
+                const db = await openDB();
+                const tx = db.transaction(['folderHandles'], 'readonly');
+                const request = tx.objectStore('folderHandles').get('payslipFolder');
+                request.onsuccess = async () => {
+                    if (request.result) {
+                        payslipFolderHandle = request.result.handle;
+                        const perm = await payslipFolderHandle.queryPermission({mode: 'read'});
+                        if (perm === 'granted') {
+                            updatePayslipFolderStatus(payslipFolderHandle.name);
+                            document.getElementById('fetchPayslipsBtn').disabled = false;
+                        }
+                    }
+                };
+            } catch (e) {}
+        }
+
+        function updatePayslipFolderStatus(name) {
+            const status = document.getElementById('payslipFolderStatus');
+            if (status) {
+                status.textContent = '✓ ' + name;
+                status.style.color = '#4caf50';
+            }
+        }
+
+        async function fetchPayslips() {
+            console.log("[Payslip] fetchPayslips called");
+            if (!payslipFolderHandle) {
+                showToast('Select folder first', 'error');
+                return;
+            }
+
+            const memberMonths = {};
+            for (const code in teamMembers) {
+                const checkboxes = document.querySelectorAll('input[type="checkbox"][data-member="' + code + '"]:checked');
+                if (checkboxes.length > 0) {
+                    memberMonths[code] = Array.from(checkboxes).map(cb => cb.getAttribute('data-month'));
+                }
+            }
+
+            if (Object.keys(memberMonths).length === 0) {
+                showToast('Select at least one month for a member', 'error');
+                return;
+            }
+
+            const year = document.getElementById('payslipYear').value;
+            showToast('Searching subfolders...', 'info');
+            fetchedPayslips = [];
+
+            try {
+                const perm = await payslipFolderHandle.queryPermission({mode: 'read'});
+                if (perm !== 'granted') await payslipFolderHandle.requestPermission({mode: 'read'});
+
+                console.log("[Payslip] Scanning subfolders in:", payslipFolderHandle.name);
+                for await (const entry of payslipFolderHandle.values()) {
+                    if (entry.kind === 'directory') {
+                        console.log('[Payslip] Found subfolder:', entry.name);
+                        const memberCode = matchFolderToMember(entry.name);
+                        console.log("[Payslip] Match result for", entry.name, "->", memberCode);
+                        if (memberCode && memberMonths[memberCode]) {
+                            await searchSubfolderForPayslips(entry, memberCode, memberMonths[memberCode], year);
+                        }
+                    }
+                }
+
+                displayFetchedPayslips();
+
+                if (fetchedPayslips.length > 0) {
+                    showToast('Fetched ' + fetchedPayslips.length + ' payslips', 'success');
+                    document.getElementById('mergePayslipsBtn').style.display = 'inline-block';
+                    document.getElementById('payslipCount').textContent = fetchedPayslips.length + ' payslips found';
+                } else {
+                    showToast('No payslips found', 'warning');
+                    document.getElementById('payslipCount').textContent = 'No payslips found';
+                }
+            } catch (e) {
+                console.error('[Payslip] Error in fetchPayslips:', e);
+                console.error('[Payslip] Error name:', e.name);
+                console.error('[Payslip] Error message:', e.message);
+                console.error('[Payslip] Stack:', e.stack);
+                showToast('Error fetching: ' + e.message, 'error');
+            }
+        }
+
+        function matchFolderToMember(folderName) {
+            for (const code in folderNameMap) {
+                const patterns = folderNameMap[code];
+                for (const pattern of patterns) {
+                    if (folderName.toLowerCase().includes(pattern.toLowerCase())) {
+                        return code;
+                    }
+                }
+            }
+            return null;
+        }
+
+        async function searchSubfolderForPayslips(folderHandle, memberCode, months, year) {
+            try {
+                for await (const entry of folderHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.endsWith('.pdf')) {
+                            console.log('[Payslip] Found PDF:', entry.name);
+                        const match = matchPayslipFile(entry.name, memberCode, months, year);
+                            console.log("[Payslip] Match result:", match ? "YES" : "NO");
+                        if (match) {
+                            const file = await entry.getFile();
+                            fetchedPayslips.push({
+                                name: entry.name,
+                                file: file,
+                                memberCode: match.memberCode,
+                                memberName: match.memberName,
+                                month: match.month,
+                                year: match.year,
+                                folderName: folderHandle.name
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error searching subfolder:', folderHandle.name, e);
+            }
+        }
+
+        function matchPayslipFile(filename, memberCode, months, year) {
+            const memberName = teamMembers[memberCode];
+            for (const month of months) {
+                const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+                const dateStr = lastDay.toString().padStart(2, '0') + '-' + month + '-' + year;
+                const pattern = 'Payslip - ' + memberName + ' - Month Ending ' + dateStr;
+                if (filename.includes(pattern)) {
+                    return {memberCode, memberName, month, year};
+                }
+            }
+            return null;
+        }
+
+        function displayFetchedPayslips() {
+            const display = document.getElementById('fetchedPayslipsDisplay');
+            const list = document.getElementById('fetchedPayslipsList');
+
+            if (fetchedPayslips.length === 0) {
+                display.style.display = 'none';
+                return;
+            }
+
+            display.style.display = 'block';
+            fetchedPayslips.sort((a, b) => {
+                if (a.memberCode !== b.memberCode) return a.memberCode.localeCompare(b.memberCode);
+                return a.month.localeCompare(b.month);
+            });
+
+            let html = '<table style="border-collapse:collapse;width:100%;"><thead><tr>';
+            html += '<th style="border:1px solid #ddd;padding:4px;background:#4caf50;color:white;">Member</th>';
+            html += '<th style="border:1px solid #ddd;padding:4px;background:#4caf50;color:white;">Month</th>';
+            html += '<th style="border:1px solid #ddd;padding:4px;background:#4caf50;color:white;">Folder</th>';
+            html += '<th style="border:1px solid #ddd;padding:4px;background:#4caf50;color:white;">Filename</th>';
+            html += '</tr></thead><tbody>';
+
+            fetchedPayslips.forEach(p => {
+                html += '<tr>';
+                html += '<td style="border:1px solid #ddd;padding:4px;">' + p.memberCode + '</td>';
+                html += '<td style="border:1px solid #ddd;padding:4px;">' + monthNames[p.month] + ' ' + p.year + '</td>';
+                html += '<td style="border:1px solid #ddd;padding:4px;">' + p.folderName + '</td>';
+                html += '<td style="border:1px solid #ddd;padding:4px;font-size:10px;">' + p.name + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            list.innerHTML = html;
+        }
+
+        async function mergePayslips() {
+            if (fetchedPayslips.length === 0) {
+                showToast('No payslips to merge', 'error');
+                return;
+            }
+
+            showToast('Merging PDFs...', 'info');
+
+            try {
+                const PDFDocument = PDFLib.PDFDocument;
+                const mergedPdf = await PDFDocument.create();
+
+                for (const ps of fetchedPayslips) {
+                    const arrayBuffer = await ps.file.arrayBuffer();
+                    const pdf = await PDFDocument.load(arrayBuffer);
+                    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    copiedPages.forEach(page => mergedPdf.addPage(page));
+                }
+
+                const mergedPdfBytes = await mergedPdf.save();
+                const blob = new Blob([mergedPdfBytes], {type: 'application/pdf'});
+                const url = URL.createObjectURL(blob);
+                const year = document.getElementById('payslipYear').value;
+                const filename = 'Merged_Payslips_' + year + '_' + new Date().toISOString().split('T')[0] + '.pdf';
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.click();
+                URL.revokeObjectURL(url);
+
+                showToast('PDF downloaded: ' + filename, 'success');
+            } catch (e) {
+                console.error(e);
+                showToast('Error merging PDFs: ' + e.message, 'error');
+            }
+        }
+
+
     </script>
-    </div>
 </body>
 </html>

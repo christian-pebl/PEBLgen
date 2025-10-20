@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gantt Chart</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        .nav-banner { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 30px; margin-bottom: 0; }
+        .nav-banner h1 { color: white; font-size: 28px; font-weight: 600; margin: 0; }
+        .nav-buttons { display: flex; gap: 15px; }
+        .nav-btn { background-color: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); padding: 10px 25px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; text-decoration: none; transition: all 0.3s ease; display: inline-block; }
+        .nav-btn:hover { background-color: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); transform: translateY(-2px); }
+        .nav-btn.active { background-color: white; color: #667eea; border-color: white; }
+        .content-container { padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to bottom, #e3f2fd 0%, #ffffff 100%);
+            min-height: 100vh;
+        }
+
+        .settings-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .settings-section h2 {
+            margin-top: 0;
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .task-input-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #e0f7fa;
+            border-radius: 8px;
+            border-left: 4px solid #00acc1;
+        }
+
+        .task-input-section h2 {
+            margin-top: 0;
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .task-input-section p {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        #taskListInput {
+            width: 100%;
+            min-height: 150px;
+            padding: 10px;
+            border: 2px solid #2196F3;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0b7dda;
+        }
+
+        .btn-success {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #45a049;
+        }
+
+        .btn-warning {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #F57C00;
+        }
+
+        .btn-info {
+            background-color: #00BCD4;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #0097A7;
+        }
+
+        .gantt-container {
+            overflow-x: auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .gantt-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 13px;
+        }
+
+        .gantt-table th,
+        .gantt-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .gantt-table th {
+            background-color: #2196F3;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .gantt-table th.task-header {
+            text-align: left;
+            width: 250px;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .gantt-table td.task-name {
+            text-align: left;
+            font-weight: 500;
+            background-color: #f5f5f5;
+        }
+
+        .gantt-table td.subtask-name {
+            text-align: left;
+            padding-left: 30px;
+            background-color: #fafafa;
+        }
+
+        .gantt-table td.month-cell {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            min-width: 60px;
+            max-width: 80px;
+            width: 70px;
+            padding: 8px 4px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .gantt-table td.month-cell:hover {
+            background-color: #e3f2fd;
+        }
+
+        .gantt-table td.month-cell.active {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: normal;
+        }
+
+        .gantt-table td.month-cell.deliverable {
+            background-color: #FF9800;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .gantt-table th.month-header {
+            background-color: #2196F3 !important;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 60px;
+            max-width: 80px;
+            padding: 10px 4px;
+        }
+
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 5px;
+            height: 100%;
+            cursor: col-resize;
+            background: rgba(255, 255, 255, 0.3);
+            z-index: 20;
+        }
+
+        .resize-handle:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .saved-projects-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fff3e0;
+            border-radius: 8px;
+            border-left: 4px solid #FF9800;
+        }
+
+        .saved-projects-section h2 {
+            margin-top: 0;
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .project-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .project-item-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .project-item-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 5px 12px;
+            font-size: 12px;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-style: italic;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            border-left: 4px solid #2196F3;
+        }
+
+        .toast.success {
+            border-left-color: #4CAF50;
+        }
+
+        .toast.error {
+            border-left-color: #f44336;
+        }
+
+        .toast.warning {
+            border-left-color: #FF9800;
+        }
+
+        .toast.info {
+            border-left-color: #2196F3;
+        }
+
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .toast-message {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            color: #333;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.removing {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+
+        /* Confirmation Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            animation: scaleIn 0.2s ease-out;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .modal-message {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            white-space: pre-line;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Navigation Banner -->
+    <div class="nav-banner">
+        <h1>PEBLGen</h1>
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">Sketcher</a>
+            <a href="timesheet.html" class="nav-btn">Timesheet</a>
+            <a href="spend.html" class="nav-btn">Spend</a>
+            <a href="gantt.html" class="nav-btn active">Gantt</a>
+            <a href="grants.html" class="nav-btn">Grants</a>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <!-- Project Settings -->
+        <div class="settings-section">
+            <h2>Project Settings</h2>
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label for="projectName">Project Name</label>
+                    <input type="text" id="projectName" placeholder="Enter project name">
+                </div>
+                <div class="form-group">
+                    <label for="startMonth">Start Month</label>
+                    <input type="month" id="startMonth">
+                </div>
+                <div class="form-group">
+                    <label for="endMonth">End Month</label>
+                    <input type="month" id="endMonth">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="generateWeekGrid()">Generate Month Grid</button>
+        </div>
+
+        <!-- Task List Input -->
+        <div class="task-input-section">
+            <h2>Task List</h2>
+            <p>Paste your task list below. Format: "1    Task Name" for main tasks, "1.1    Subtask Name" for subtasks.</p>
+            <textarea id="taskListInput" placeholder="Example:
+1    Project Planning
+1.1    Define scope
+1.2    Create timeline
+2    Development
+2.1    Backend setup
+2.2    Frontend design"></textarea>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="button-container">
+            <button class="btn btn-success" onclick="saveProject()">Save Project</button>
+            <button class="btn btn-info" onclick="downloadJSON()">Download JSON</button>
+            <button class="btn btn-success" onclick="setupSaveFolder()">📁 Set Save Folder</button>
+            <button class="btn btn-warning" onclick="document.getElementById('uploadJSON').click()">📂 Load JSON</button>
+            <input type="file" id="uploadJSON" accept=".json" style="display: none;" onchange="uploadJSON(event)">
+            <p style="margin-top: 10px; font-size: 13px; color: #666;">
+                💡 <strong>Recommended:</strong> Click "Set Save Folder" and choose <code>PEBLGen/GanttCharts</code> folder. Files will auto-save there!<br>
+                📂 Use "Load JSON" to open previously saved Gantt chart files<br>
+                <span id="folderStatus" style="color: #999;"></span>
+            </p>
+        </div>
+
+        <!-- Gantt Chart Display -->
+        <div class="gantt-container" id="ganttContainer">
+            <p class="empty-state">Configure project settings and click "Generate Month Grid" to create your Gantt chart.</p>
+        </div>
+
+        <!-- Saved Projects -->
+        <div class="saved-projects-section">
+            <h2>Saved Projects</h2>
+            <div class="project-list" id="projectList">
+                <p class="empty-state">No saved projects yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentProject = {
+            name: '',
+            startDate: '',
+            endDate: '',
+            tasks: [],
+            ganttData: {}
+        };
+
+        // Toast Notification System
+        function showToast(message, type = 'info', title = '', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ'
+            };
+
+            const defaultTitles = {
+                success: 'Success',
+                error: 'Error',
+                warning: 'Warning',
+                info: 'Info'
+            };
+
+            const toastTitle = title || defaultTitles[type];
+
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type]}</span>
+                <div class="toast-content">
+                    <div class="toast-title">${toastTitle}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto remove after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    toast.classList.add('removing');
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+        }
+
+        // Confirmation Modal System
+        function showConfirm(message, title = 'Confirm', onConfirm, onCancel) {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+
+            overlay.innerHTML = `
+                <div class="modal">
+                    <div class="modal-title">${title}</div>
+                    <div class="modal-message">${message}</div>
+                    <div class="modal-buttons">
+                        <button class="btn btn-primary" id="confirmYes">Yes</button>
+                        <button class="btn" style="background: #999;" id="confirmNo">No</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const yesBtn = overlay.querySelector('#confirmYes');
+            const noBtn = overlay.querySelector('#confirmNo');
+
+            yesBtn.onclick = () => {
+                overlay.remove();
+                if (onConfirm) onConfirm();
+            };
+
+            noBtn.onclick = () => {
+                overlay.remove();
+                if (onCancel) onCancel();
+            };
+
+            // Click outside to cancel
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                    if (onCancel) onCancel();
+                }
+            };
+        }
+
+        // File System Access API support
+        let savedFolderHandle = null;
+
+        // Check if browser supports File System Access API
+        function checkFSASupport() {
+            return 'showDirectoryPicker' in window;
+        }
+
+        // Load saved folder handle from IndexedDB
+        async function loadSavedFolderHandle() {
+            if (!checkFSASupport()) return;
+            
+            try {
+                const db = await openDB();
+                const transaction = db.transaction(['folderHandles'], 'readonly');
+                const store = transaction.objectStore('folderHandles');
+                const request = store.get('ganttSaveFolder');
+                
+                request.onsuccess = async () => {
+                    if (request.result) {
+                        savedFolderHandle = request.result.handle;
+                        // Verify we still have permission
+                        const permission = await savedFolderHandle.queryPermission({ mode: 'readwrite' });
+                        if (permission === 'granted') {
+                            updateFolderStatus('✓ Auto-save enabled: ' + savedFolderHandle.name);
+                        } else {
+                            savedFolderHandle = null;
+                            updateFolderStatus('⚠ Permission expired. Click "Set Save Folder" again.');
+                        }
+                    }
+                };
+            } catch (error) {
+                console.log('No saved folder handle:', error);
+            }
+        }
+
+        // Open IndexedDB
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('PEBLGenDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('folderHandles')) {
+                        db.createObjectStore('folderHandles', { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        // Setup save folder
+        async function setupSaveFolder() {
+            if (!checkFSASupport()) {
+                showToast('Your browser does not support automatic folder saving.\n\nPlease use Chrome or Edge for this feature.\n\nFiles will download to your Downloads folder instead.', 'warning', 'Browser Not Supported', 6000);
+                return;
+            }
+
+            try {
+                // Ask user to select a folder
+                const dirHandle = await window.showDirectoryPicker({
+                    mode: 'readwrite',
+                    startIn: 'documents'
+                });
+
+                // Save the handle to IndexedDB
+                const db = await openDB();
+                const transaction = db.transaction(['folderHandles'], 'readwrite');
+                const store = transaction.objectStore('folderHandles');
+                store.put({ id: 'ganttSaveFolder', handle: dirHandle });
+
+                savedFolderHandle = dirHandle;
+                updateFolderStatus('✓ Auto-save enabled: ' + dirHandle.name);
+                showToast(`Save folder set to: ${dirHandle.name}
+
+All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5000);
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Error setting up folder:', error);
+                    showToast('Error setting up folder: ' + error.message, 'error', 'Setup Error');
+                }
+            }
+        }
+
+        // Update folder status display
+        function updateFolderStatus(message) {
+            const status = document.getElementById('folderStatus');
+            if (status) {
+                status.textContent = message;
+            }
+        }
+
+                // Drag removed - using simple click toggle
+
+        // Resize state
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        let taskColumnWidth = parseInt(localStorage.getItem('taskColumnWidth') || '250');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedProjects();
+            loadSavedFolderHandle();
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+
+        // Parse task list from textarea
+        function parseTaskList() {
+            const input = document.getElementById('taskListInput').value;
+            const lines = input.split('\n').filter(line => line.trim() !== '');
+            const tasks = [];
+            let autoNumber = 1;
+            let skippedLines = [];
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                
+                // Skip common non-task lines
+                if (trimmed === 'TOTAL' || 
+                    trimmed.startsWith('Grant ') || 
+                    trimmed.startsWith('Latest ') ||
+                    trimmed.length < 3) {
+                    skippedLines.push(trimmed);
+                    return;
+                }
+                
+                // Check for deliverable pattern (D1, D2, D3, etc.)
+                const deliverableMatch = trimmed.match(/^(D\d+)[:\s]+(.+)$/i);
+                if (deliverableMatch) {
+                    const deliverableCode = deliverableMatch[1].toUpperCase(); // D1, D2, etc.
+                    const name = deliverableMatch[2].trim();
+                    
+                    tasks.push({
+                        number: deliverableCode,
+                        name: name,
+                        level: 0,
+                        isSubtask: false,
+                        deliverableCode: deliverableCode
+                    });
+                    return;
+                }
+                
+                // Check for regular task pattern (1.1, 2.1, etc.)
+                const match = trimmed.match(/^([\d.]+)\s+(.+)$/);
+                if (match) {
+                    const number = match[1];
+                    const name = match[2].trim();
+                    const level = number.split('.').length - 1;
+
+                    tasks.push({
+                        number: number,
+                        name: name,
+                        level: level,
+                        isSubtask: level > 0,
+                        deliverableCode: null
+                    });
+                    return;
+                }
+                
+                // Auto-number lines that don't match any pattern
+                tasks.push({
+                    number: autoNumber.toString(),
+                    name: trimmed,
+                    level: 0,
+                    isSubtask: false,
+                    deliverableCode: null
+                });
+                autoNumber++;
+            });
+
+            // Log skipped lines for debugging
+            if (skippedLines.length > 0) {
+                console.log('Skipped lines:', skippedLines);
+            }
+            
+            console.log(`Parsed ${tasks.length} tasks`);
+            return tasks;
+        }
+
+        // Generate month headers based on date range
+        function generateMonthHeaders(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const months = [];
+
+            let current = new Date(start.getFullYear(), start.getMonth(), 1);
+            const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+
+            while (current <= endMonth) {
+                const monthYear = current.toLocaleString('default', { month: 'short', year: 'numeric' });
+                months.push({
+                    date: new Date(current),
+                    label: monthYear
+                });
+
+                // Move to next month
+                current.setMonth(current.getMonth() + 1);
+            }
+
+            return months;
+        }
+
+
+        // Generate Gantt chart grid
+        function generateWeekGrid() {
+            const projectName = document.getElementById('projectName').value;
+            const startMonth = document.getElementById('startMonth').value;
+            const endMonth = document.getElementById('endMonth').value;
+
+            if (!projectName || !startMonth || !endMonth) {
+                showToast('Please fill in all project settings.', 'warning', 'Missing Settings');
+                return;
+            }
+
+            // Convert month (YYYY-MM) to first and last day
+            const [startYear, startMonthNum] = startMonth.split('-').map(Number);
+            const [endYear, endMonthNum] = endMonth.split('-').map(Number);
+            
+            const startDate = `${startYear}-${String(startMonthNum).padStart(2, '0')}-01`;
+            const lastDay = new Date(endYear, endMonthNum, 0).getDate(); // Get last day of month
+            const endDate = `${endYear}-${String(endMonthNum).padStart(2, '0')}-${lastDay}`;
+
+            if (new Date(startDate) >= new Date(endDate)) {
+                showToast('End month must be after start month.', 'warning', 'Invalid Date Range');
+                return;
+            }
+
+            currentProject.name = projectName;
+            currentProject.startDate = startDate;
+            currentProject.endDate = endDate;
+            currentProject.tasks = parseTaskList();
+
+            if (currentProject.tasks.length === 0) {
+                showToast('Please enter at least one task in the task list.', 'warning', 'No Tasks');
+                return;
+            }
+
+            // Reset gantt data when regenerating (but preserve if loading from saved project)
+            if (!currentProject.ganttData || Object.keys(currentProject.ganttData).length === 0) {
+                currentProject.ganttData = {};
+            }
+
+            // Render the grid
+            renderGanttGrid();
+        }
+
+                // Simple click toggle for month cells
+        function toggleMonthCell(taskIndex, monthIndex) {
+            const key = `${taskIndex}-${monthIndex}`;
+            currentProject.ganttData[key] = !currentProject.ganttData[key];
+            renderGanttGrid();
+        }
+
+        // Resize handlers
+        function handleMouseUp() {
+            if (isResizing) {
+                isResizing = false;
+                localStorage.setItem('taskColumnWidth', taskColumnWidth);
+            }
+        }
+
+        // Keep old toggleCell for compatibility (not used anymore)
+        function toggleCell(taskIndex, monthIndex) {
+            const key = `${taskIndex}-${monthIndex}`;
+            currentProject.ganttData[key] = !currentProject.ganttData[key];
+            renderGanttGrid();
+        }
+
+        // Render the Gantt grid without regenerating weeks
+        function renderGanttGrid() {
+            const months = generateMonthHeaders(currentProject.startDate, currentProject.endDate);
+            const container = document.getElementById('ganttContainer');
+
+            let html = '<table class="gantt-table"><thead>';
+
+            // Single month header row
+            html += '<tr>';
+            html += `<th class="task-header" style="width: ${taskColumnWidth}px; min-width: ${taskColumnWidth}px;"><div style="position: relative;">Task<div class="resize-handle" onmousedown="startResize(event)"></div></div></th>`;
+
+            months.forEach(month => {
+                html += `<th class="month-header">${month.label}</th>`;
+            });
+
+            html += '</tr></thead><tbody>';
+
+            // Render task rows
+            currentProject.tasks.forEach((task, taskIndex) => {
+                html += '<tr>';
+                html += `<td class="${task.isSubtask ? 'subtask-name' : 'task-name'}" style="width: ${taskColumnWidth}px;">${task.number} ${task.name}</td>`;
+
+                // Find the last active cell index for this task (for deliverables)
+                let lastActiveMonthIndex = -1;
+                months.forEach((month, monthIndex) => {
+                    const key = `${taskIndex}-${monthIndex}`;
+                    if (currentProject.ganttData[key]) {
+                        lastActiveMonthIndex = monthIndex;
+                    }
+                });
+
+                months.forEach((month, monthIndex) => {
+                    const key = `${taskIndex}-${monthIndex}`;
+                    const isActive = currentProject.ganttData[key] || false;
+                    const isLastActive = isActive && monthIndex === lastActiveMonthIndex;
+                    const hasDeliverable = isLastActive && task.deliverableCode;
+                    
+                    // Show deliverable code in last active cell if task has deliverableCode
+                    const cellText = hasDeliverable ? task.deliverableCode : (isActive ? '✓' : '');
+                    const cellClass = hasDeliverable ? 'deliverable' : (isActive ? 'active' : '');
+                    
+                    html += `<td class="month-cell ${cellClass}" onclick="toggleMonthCell(${taskIndex}, ${monthIndex})">${cellText}</td>`;
+                });
+
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+                // Resize column handlers
+        function startResize(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            isResizing = true;
+            startX = event.clientX;
+            startWidth = taskColumnWidth;
+
+            document.addEventListener('mousemove', handleResize);
+        }
+
+        function handleResize(event) {
+            if (!isResizing) return;
+
+            const delta = event.clientX - startX;
+            const newWidth = Math.max(150, Math.min(600, startWidth + delta));
+            taskColumnWidth = newWidth;
+
+            renderGanttGrid();
+        }
+
+        document.addEventListener('mouseup', function() {
+            if (isResizing) {
+                document.removeEventListener('mousemove', handleResize);
+            }
+        });
+
+        // Save project to localStorage
+        // Calculate start and end dates for each task based on active months
+        function enrichProjectWithDates() {
+            if (!currentProject.tasks || !currentProject.startDate || !currentProject.endDate) {
+                return;
+            }
+
+            const projectStart = new Date(currentProject.startDate);
+            
+            // Generate month list
+            const months = generateMonthHeaders(currentProject.startDate, currentProject.endDate);
+
+            // For each task, find first and last active month
+            currentProject.tasks.forEach((task, taskIndex) => {
+                let firstActiveMonth = -1;
+                let lastActiveMonth = -1;
+
+                months.forEach((month, monthIndex) => {
+                    const key = `${taskIndex}-${monthIndex}`;
+                    if (currentProject.ganttData[key]) {
+                        if (firstActiveMonth === -1) {
+                            firstActiveMonth = monthIndex;
+                        }
+                        lastActiveMonth = monthIndex;
+                    }
+                });
+
+                if (firstActiveMonth !== -1 && lastActiveMonth !== -1) {
+                    // Calculate actual dates
+                    const startDate = new Date(projectStart);
+                    startDate.setMonth(startDate.getMonth() + firstActiveMonth);
+                    startDate.setDate(1); // First day of month
+                    
+                    const endDate = new Date(projectStart);
+                    endDate.setMonth(endDate.getMonth() + lastActiveMonth + 1);
+                    endDate.setDate(0); // Last day of month
+                    
+                    task.startDate = startDate.toISOString().split('T')[0];
+                    task.endDate = endDate.toISOString().split('T')[0];
+                    task.activeMonths = lastActiveMonth - firstActiveMonth + 1;
+                } else {
+                    task.startDate = null;
+                    task.endDate = null;
+                    task.activeMonths = 0;
+                }
+            });
+
+            console.log('Enriched project with dates:', currentProject.tasks.map(t => ({
+                task: t.number + ' ' + t.name,
+                start: t.startDate,
+                end: t.endDate,
+                months: t.activeMonths
+            })));
+        }
+
+                async function saveProject() {
+            if (!currentProject.name) {
+                showToast('Please generate a Gantt chart first.', 'warning', 'No Chart');
+                return;
+            }
+
+            // Enrich with calculated dates
+            enrichProjectWithDates();
+
+            // Save to localStorage
+            const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
+            savedProjects[currentProject.name] = currentProject;
+            localStorage.setItem('ganttProjects', JSON.stringify(savedProjects));
+
+            // Also save to folder if available
+            let folderSaved = false;
+            if (savedFolderHandle) {
+                try {
+                    const permission = await savedFolderHandle.queryPermission({ mode: 'readwrite' });
+                    if (permission !== 'granted') {
+                        await savedFolderHandle.requestPermission({ mode: 'readwrite' });
+                    }
+
+                    const filename = `${currentProject.name}_gantt.json`;
+                    const fileHandle = await savedFolderHandle.getFileHandle(filename, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(JSON.stringify(currentProject, null, 2));
+                    await writable.close();
+                    
+                    folderSaved = true;
+                } catch (error) {
+                    console.error('Error saving to folder:', error);
+                }
+            }
+
+            if (folderSaved) {
+                showToast(`Project "${currentProject.name}" saved to:
+- localStorage
+- ${savedFolderHandle.name}/${currentProject.name}_gantt.json`, 'success', 'Project Saved', 5000);
+            } else {
+                showToast(`Project "${currentProject.name}" saved to localStorage.
+
+💡 Click "Set Save Folder" to also auto-save JSON files.`, 'success', 'Project Saved');
+            }
+            
+            loadSavedProjects();
+        }
+
+        // Load saved projects
+        function loadSavedProjects() {
+            const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
+            const projectList = document.getElementById('projectList');
+
+            if (Object.keys(savedProjects).length === 0) {
+                projectList.innerHTML = '<p class="empty-state">No saved projects yet.</p>';
+                return;
+            }
+
+            let html = '';
+            for (const [name, project] of Object.entries(savedProjects)) {
+                html += `
+                    <div class="project-item">
+                        <span class="project-item-name">${name}</span>
+                        <div class="project-item-buttons">
+                            <button class="btn btn-primary btn-small" onclick="loadProject('${name}')">Load</button>
+                            <button class="btn btn-danger btn-small" onclick="deleteProject('${name}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            projectList.innerHTML = html;
+        }
+
+        // Load specific project
+        function loadProject(name) {
+            const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
+            const project = savedProjects[name];
+
+            if (project) {
+                currentProject = project;
+                // Ensure ganttData exists
+                if (!currentProject.ganttData) {
+                    currentProject.ganttData = {};
+                }
+                document.getElementById('projectName').value = project.name;
+                // Convert dates back to month format for display
+                const startDate = new Date(project.startDate);
+                const endDate = new Date(project.endDate);
+                document.getElementById('startMonth').value = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+                document.getElementById('endMonth').value = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+
+                const taskListText = project.tasks.map(t => `${t.number}    ${t.name}`).join('\n');
+                document.getElementById('taskListInput').value = taskListText;
+
+                generateWeekGrid();
+                showToast(`Project "${name}" loaded successfully!`, 'success', 'Project Loaded');
+            }
+        }
+
+        // Delete project
+        function deleteProject(name) {
+            showConfirm(
+                `Are you sure you want to delete project "${name}"?`,
+                'Delete Project',
+                () => {
+                    const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
+                    delete savedProjects[name];
+                    localStorage.setItem('ganttProjects', JSON.stringify(savedProjects));
+
+                    showToast(`Project "${name}" deleted.`, 'success', 'Project Deleted');
+                    loadSavedProjects();
+                }
+            );
+        }
+
+        // Download JSON
+        async function downloadJSON() {
+            if (!currentProject.name) {
+                showToast('Please generate a Gantt chart first.', 'warning', 'No Chart');
+                return;
+            }
+
+            // Enrich with calculated dates
+            enrichProjectWithDates();
+
+            const filename = `${currentProject.name}_gantt.json`;
+            const dataStr = JSON.stringify(currentProject, null, 2);
+
+            // Try to save to the selected folder using File System Access API
+            if (savedFolderHandle) {
+                try {
+                    // Request permission if needed
+                    const permission = await savedFolderHandle.queryPermission({ mode: 'readwrite' });
+                    if (permission !== 'granted') {
+                        const newPermission = await savedFolderHandle.requestPermission({ mode: 'readwrite' });
+                        if (newPermission !== 'granted') {
+                            throw new Error('Permission denied');
+                        }
+                    }
+
+                    // Create file in the folder
+                    const fileHandle = await savedFolderHandle.getFileHandle(filename, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(dataStr);
+                    await writable.close();
+
+                    showToast(`✓ Saved to: ${savedFolderHandle.name}/${filename}`, 'success', 'File Saved');
+                    return;
+                } catch (error) {
+                    console.error('Error saving to folder:', error);
+                    showToast('Could not save to folder. Falling back to download.
+
+Error: ' + error.message, 'warning', 'Save Failed');
+                    savedFolderHandle = null;
+                    updateFolderStatus('⚠ Auto-save failed. Click "Set Save Folder" to re-enable.');
+                }
+            }
+
+            // Fallback to traditional download
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Upload JSON
+        function uploadJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const project = JSON.parse(e.target.result);
+                    currentProject = project;
+                    // Ensure ganttData exists
+                    if (!currentProject.ganttData) {
+                        currentProject.ganttData = {};
+                    }
+
+                    document.getElementById('projectName').value = project.name;
+                    const importStartDate = new Date(project.startDate);
+                    const importEndDate = new Date(project.endDate);
+                    document.getElementById('startMonth').value = `${importStartDate.getFullYear()}-${String(importStartDate.getMonth() + 1).padStart(2, '0')}`;
+                    document.getElementById('endMonth').value = `${importEndDate.getFullYear()}-${String(importEndDate.getMonth() + 1).padStart(2, '0')}`;
+                    
+
+                    const taskListText = project.tasks.map(t => `${t.number}    ${t.name}`).join('\n');
+                    document.getElementById('taskListInput').value = taskListText;
+
+                    generateWeekGrid();
+                    showToast(`Project "${project.name}" loaded from JSON successfully!`, 'success', 'JSON Loaded');
+                } catch (error) {
+                    showToast('Error loading JSON file: ' + error.message, 'error', 'Load Error');
+                }
+            };
+            reader.readAsText(file);
+
+            // Reset input
+            event.target.value = '';
+        }
+    </script>
+</body>
+</html>
