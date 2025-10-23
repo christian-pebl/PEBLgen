@@ -1067,7 +1067,25 @@
             console.log(`💡 [SETTINGS] Spent: ${showSpentTransactions ? 'SHOW' : 'HIDE'} transactions, ${showSpentColumn ? 'SHOW' : 'HIDE'} column`);
             console.log(`💡 [SETTINGS] Received: ${showReceivedTransactions ? 'SHOW' : 'HIDE'} transactions, ${showReceivedColumn ? 'SHOW' : 'HIDE'} column`);
 
+            // Sync checkbox states with loaded settings
+            syncCheckboxStates();
+
             applyColumnVisibility();
+        }
+
+        // Sync checkbox states with current settings (called on load and when needed)
+        function syncCheckboxStates() {
+            const spentTransToggle = document.getElementById('showSpentTransactionsToggle');
+            const spentColToggle = document.getElementById('showSpentColumnToggle');
+            const receivedTransToggle = document.getElementById('showReceivedTransactionsToggle');
+            const receivedColToggle = document.getElementById('showReceivedColumnToggle');
+
+            if (spentTransToggle) spentTransToggle.checked = showSpentTransactions;
+            if (spentColToggle) spentColToggle.checked = showSpentColumn;
+            if (receivedTransToggle) receivedTransToggle.checked = showReceivedTransactions;
+            if (receivedColToggle) receivedColToggle.checked = showReceivedColumn;
+
+            console.log('🔄 [SETTINGS] Synced checkbox states with settings');
         }
 
         // Helper function to reset table settings to default (only called from console if needed)
@@ -1577,9 +1595,22 @@
         }
 
         // Auto-load all saved CSV files from IndexedDB
+        let isAutoLoadingCSVs = false; // Flag to prevent multiple simultaneous loads
         async function autoLoadSavedCSVs() {
+            // Prevent multiple simultaneous loads
+            if (isAutoLoadingCSVs) {
+                console.warn('⚠️ [AUTO-LOAD CSV] Already loading CSVs, skipping duplicate call');
+                return;
+            }
+
+            isAutoLoadingCSVs = true;
             console.log('🔄 [AUTO-LOAD CSV] Starting autoLoadSavedCSVs...');
             console.log(`📂 [AUTO-LOAD CSV] savedCSVFiles.length: ${savedCSVFiles.length}`);
+            console.log(`📊 [AUTO-LOAD CSV] allTransactions.length BEFORE clear: ${allTransactions.length}`);
+
+            // Clear existing transactions before loading (prevent duplicates on multiple calls)
+            allTransactions = [];
+            console.log(`🧹 [AUTO-LOAD CSV] Cleared allTransactions array`);
 
             let totalLoaded = 0;
 
@@ -1631,7 +1662,12 @@
                 } else {
                     showToast(`✅ Loaded ${totalLoaded} transaction${totalLoaded !== 1 ? 's' : ''}`, 'success');
                 }
+            } else {
+                console.log('ℹ️ [AUTO-LOAD CSV] No transactions to load');
             }
+
+            isAutoLoadingCSVs = false;
+            console.log('✅ [AUTO-LOAD CSV] Auto-load complete, flag reset');
         }
 
         async function saveCSVFileToDB(fileName, transactions, bankIdentifier) {
@@ -2062,29 +2098,53 @@
         }
 
         // Initialize on page load
+        let isPageInitialized = false;
         document.addEventListener('DOMContentLoaded', async () => {
+            if (isPageInitialized) {
+                console.warn('⚠️ [PAGE LOAD] Page already initialized, skipping duplicate initialization');
+                return;
+            }
+
+            console.log('═══════════════════════════════════════════════════════');
             console.log('🚀 [PAGE LOAD] DOMContentLoaded event fired');
+            console.log('📅 [PAGE LOAD] Timestamp:', new Date().toISOString());
+            console.log('═══════════════════════════════════════════════════════');
 
-            console.log('⚙️ [PAGE LOAD] Loading display settings...');
-            loadDisplaySettings();
+            try {
+                console.log('⚙️ [PAGE LOAD] Step 1/6: Loading display settings...');
+                loadDisplaySettings();
 
-            console.log('💾 [PAGE LOAD] Initializing IndexedDB...');
-            await initIndexedDB();
+                console.log('💾 [PAGE LOAD] Step 2/6: Initializing IndexedDB...');
+                await initIndexedDB();
 
-            console.log('📊 [PAGE LOAD] Loading projects from DB...');
-            await loadProjectsFromDB();
+                console.log('📊 [PAGE LOAD] Step 3/6: Loading projects from DB...');
+                await loadProjectsFromDB();
 
-            console.log('📂 [PAGE LOAD] Loading saved CSV files...');
-            await loadSavedCSVFiles();
+                console.log('📂 [PAGE LOAD] Step 4/6: Loading saved CSV files...');
+                await loadSavedCSVFiles();
 
-            console.log('🔑 [PAGE LOAD] Updating API key status...');
-            updateAPIKeyStatus(); // Update API key status display
+                console.log('🔑 [PAGE LOAD] Step 5/6: Updating API key status...');
+                updateAPIKeyStatus(); // Update API key status display
 
-            console.log('📧 [PAGE LOAD] Loading Gmail accounts...');
-            loadGmailAccountsFromStorage(); // Restore saved Gmail accounts
-            updateGmailStatus(); // Update UI to show restored accounts
+                console.log('📧 [PAGE LOAD] Step 6/6: Loading Gmail accounts...');
+                loadGmailAccountsFromStorage(); // Restore saved Gmail accounts
+                updateGmailStatus(); // Update UI to show restored accounts
 
-            console.log('✅ [PAGE LOAD] Page initialization complete');
+                // Final summary
+                console.log('═══════════════════════════════════════════════════════');
+                console.log('✅ [PAGE LOAD] Page initialization complete!');
+                console.log('📊 [PAGE LOAD] Summary:');
+                console.log(`   - CSV Files: ${savedCSVFiles.length}`);
+                console.log(`   - Total Transactions: ${allTransactions.length}`);
+                console.log(`   - Projects Loaded: ${allProjects.length}`);
+                console.log(`   - Settings: Spent=${showSpentTransactions}, Received=${showReceivedTransactions}`);
+                console.log('═══════════════════════════════════════════════════════');
+
+                isPageInitialized = true;
+            } catch (error) {
+                console.error('❌ [PAGE LOAD] Initialization failed:', error);
+                showToast('❌ Failed to initialize page. Please refresh.', 'error');
+            }
         });
 
         // Drag and drop removed - using compact file input button in Bank Feed card
