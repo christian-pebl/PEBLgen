@@ -694,14 +694,6 @@
                         <div style="font-size: 11px; font-weight: 600; color: #059669; margin-bottom: 4px;">💳 Spent (Expenses)</div>
 
                         <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
-                            <input type="checkbox" id="showSpentTransactionsToggle" onchange="toggleSpentTransactions()" style="cursor: pointer;" checked>
-                            <div>
-                                <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Spent Transactions</div>
-                                <div style="font-size: 10px; color: #6b7280;">Display expense rows</div>
-                            </div>
-                        </label>
-
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
                             <input type="checkbox" id="showSpentColumnToggle" onchange="toggleSpentColumn()" style="cursor: pointer;" checked>
                             <div>
                                 <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Spent Columns</div>
@@ -715,15 +707,7 @@
                         <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px;">💰 Received (Income)</div>
 
                         <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
-                            <input type="checkbox" id="showReceivedTransactionsToggle" onchange="toggleReceivedTransactions()" style="cursor: pointer;">
-                            <div>
-                                <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Received Transactions</div>
-                                <div style="font-size: 10px; color: #6b7280;">Display income rows</div>
-                            </div>
-                        </label>
-
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
-                            <input type="checkbox" id="showReceivedColumnToggle" onchange="toggleReceivedColumn()" style="cursor: pointer;">
+                            <input type="checkbox" id="showReceivedColumnToggle" onchange="toggleReceivedColumn()" style="cursor: pointer;" checked>
                             <div>
                                 <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Received Column</div>
                                 <div style="font-size: 10px; color: #6b7280;">Display received amount column</div>
@@ -742,16 +726,23 @@
                     <div><span id="totalTransactions">0</span> transactions</div>
                     <div>Spent: £<span id="totalSpent">0.00</span> | Received: £<span id="totalReceived">0.00</span></div>
                 </div>
-                <div style="display: flex; gap: 5px;">
-                    <label for="csvFileInput" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 12px; flex: 1; cursor: pointer; text-align: center;">
-                        Load CSV
-                    </label>
-                    <button onclick="fixDuplicates(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 12px; background: #f59e0b; color: white;" title="Remove duplicate transactions from database">
-                        Fix DB
-                    </button>
-                    <button onclick="clearAllTransactions(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 12px;">
-                        Clear
-                    </button>
+                <div style="display: flex; gap: 5px; flex-direction: column;">
+                    <div style="display: flex; gap: 5px;">
+                        <label for="csvFileInput" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 12px; flex: 1; cursor: pointer; text-align: center;">
+                            Load CSV
+                        </label>
+                        <button onclick="clearAllTransactions(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 12px;">
+                            Clear View
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button onclick="fixDuplicates(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 11px; flex: 1; background: #f59e0b; color: white;" title="Remove duplicate transactions from database">
+                            🔧 Fix Duplicates
+                        </button>
+                        <button onclick="clearAndRefreshDatabase(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 11px; flex: 1; background: #dc2626; color: white;" title="Clear CSV files only (preserves project budgets)">
+                            🔄 Reset CSVs
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1040,10 +1031,8 @@
         let modalKeyboardIndex = -1;
 
         // Table display settings
-        let showSpentTransactions = true; // Show spent transactions by default
         let showSpentColumn = true; // Show spent column by default
-        let showReceivedTransactions = false; // Hide received transactions by default
-        let showReceivedColumn = false; // Hide received column by default
+        let showReceivedColumn = true; // Show received column by default
 
         // Load settings from localStorage
         function loadDisplaySettings() {
@@ -1051,21 +1040,17 @@
             if (savedSettings) {
                 try {
                     const settings = JSON.parse(savedSettings);
-                    showSpentTransactions = settings.showSpentTransactions ?? true;
                     showSpentColumn = settings.showSpentColumn ?? true;
-                    showReceivedTransactions = settings.showReceivedTransactions ?? false;
-                    showReceivedColumn = settings.showReceivedColumn ?? false;
+                    showReceivedColumn = settings.showReceivedColumn ?? true;
                     console.log('📋 [SETTINGS] Loaded saved settings from localStorage:', settings);
                 } catch (e) {
                     console.error('❌ [SETTINGS] Failed to load settings:', e);
                 }
             } else {
-                console.log('📋 [SETTINGS] No saved settings found, using defaults (spent visible, received hidden)');
+                console.log('📋 [SETTINGS] No saved settings found, using defaults');
             }
 
-            console.log(`📋 [SETTINGS] Active settings: showSpentTransactions=${showSpentTransactions}, showSpentColumn=${showSpentColumn}, showReceivedTransactions=${showReceivedTransactions}, showReceivedColumn=${showReceivedColumn}`);
-            console.log(`💡 [SETTINGS] Spent: ${showSpentTransactions ? 'SHOW' : 'HIDE'} transactions, ${showSpentColumn ? 'SHOW' : 'HIDE'} column`);
-            console.log(`💡 [SETTINGS] Received: ${showReceivedTransactions ? 'SHOW' : 'HIDE'} transactions, ${showReceivedColumn ? 'SHOW' : 'HIDE'} column`);
+            console.log(`📋 [SETTINGS] Active column settings: showSpentColumn=${showSpentColumn}, showReceivedColumn=${showReceivedColumn}`);
 
             // Sync checkbox states with loaded settings
             syncCheckboxStates();
@@ -1075,14 +1060,10 @@
 
         // Sync checkbox states with current settings (called on load and when needed)
         function syncCheckboxStates() {
-            const spentTransToggle = document.getElementById('showSpentTransactionsToggle');
             const spentColToggle = document.getElementById('showSpentColumnToggle');
-            const receivedTransToggle = document.getElementById('showReceivedTransactionsToggle');
             const receivedColToggle = document.getElementById('showReceivedColumnToggle');
 
-            if (spentTransToggle) spentTransToggle.checked = showSpentTransactions;
             if (spentColToggle) spentColToggle.checked = showSpentColumn;
-            if (receivedTransToggle) receivedTransToggle.checked = showReceivedTransactions;
             if (receivedColToggle) receivedColToggle.checked = showReceivedColumn;
 
             console.log('🔄 [SETTINGS] Synced checkbox states with settings');
@@ -1092,28 +1073,20 @@
         window.resetTableSettings = function() {
             console.log('🔄 [SETTINGS] Resetting table settings to default...');
             localStorage.removeItem('spendTableSettings');
-            showSpentTransactions = true;
             showSpentColumn = true;
-            showReceivedTransactions = false;
-            showReceivedColumn = false;
-            document.getElementById('showSpentTransactionsToggle').checked = true;
+            showReceivedColumn = true;
             document.getElementById('showSpentColumnToggle').checked = true;
-            document.getElementById('showReceivedTransactionsToggle').checked = false;
-            document.getElementById('showReceivedColumnToggle').checked = false;
+            document.getElementById('showReceivedColumnToggle').checked = true;
             saveDisplaySettings();
-            renderTransactions();
-            updateSummary();
             applyColumnVisibility();
-            console.log('✅ [SETTINGS] Reset complete! Showing spent only, hiding received.');
-            showToast('✅ Settings reset: spent visible, received hidden', 'success');
+            console.log('✅ [SETTINGS] Reset complete! All columns visible.');
+            showToast('✅ Settings reset: all columns visible', 'success');
         }
 
         // Save settings to localStorage
         function saveDisplaySettings() {
             const settings = {
-                showSpentTransactions,
                 showSpentColumn,
-                showReceivedTransactions,
                 showReceivedColumn
             };
             localStorage.setItem('spendTableSettings', JSON.stringify(settings));
@@ -1156,9 +1129,7 @@
                 menu.style.display = 'none';
             } else {
                 // Update checkbox states to match current settings
-                document.getElementById('showSpentTransactionsToggle').checked = showSpentTransactions;
                 document.getElementById('showSpentColumnToggle').checked = showSpentColumn;
-                document.getElementById('showReceivedTransactionsToggle').checked = showReceivedTransactions;
                 document.getElementById('showReceivedColumnToggle').checked = showReceivedColumn;
 
                 menu.style.display = 'block';
@@ -1174,26 +1145,6 @@
                 menu.style.display = 'none';
             }
         });
-
-        // Toggle spent transactions visibility
-        function toggleSpentTransactions() {
-            showSpentTransactions = document.getElementById('showSpentTransactionsToggle').checked;
-            console.log('🔄 [SETTINGS] Toggle spent transactions:', showSpentTransactions);
-
-            // Get settings button position for toast
-            const settingsBtn = document.getElementById('tableSettingsBtn');
-            const btnRect = settingsBtn?.getBoundingClientRect();
-            const toastPosition = btnRect ? { x: btnRect.right, y: btnRect.top } : null;
-
-            saveDisplaySettings();
-            renderTransactions();
-            updateSummary();
-
-            const message = showSpentTransactions ?
-                '✅ Showing spent transactions' :
-                '🔒 Hiding spent transactions';
-            showToast(message, 'success', toastPosition);
-        }
 
         // Toggle spent column visibility
         function toggleSpentColumn() {
@@ -1211,26 +1162,6 @@
             const message = showSpentColumn ?
                 '✅ Showing spent column' :
                 '🔒 Hiding spent column';
-            showToast(message, 'success', toastPosition);
-        }
-
-        // Toggle received transactions visibility
-        function toggleReceivedTransactions() {
-            showReceivedTransactions = document.getElementById('showReceivedTransactionsToggle').checked;
-            console.log('🔄 [SETTINGS] Toggle received transactions:', showReceivedTransactions);
-
-            // Get settings button position for toast
-            const settingsBtn = document.getElementById('tableSettingsBtn');
-            const btnRect = settingsBtn?.getBoundingClientRect();
-            const toastPosition = btnRect ? { x: btnRect.right, y: btnRect.top } : null;
-
-            saveDisplaySettings();
-            renderTransactions();
-            updateSummary();
-
-            const message = showReceivedTransactions ?
-                '✅ Showing received transactions' :
-                '🔒 Hiding received transactions';
             showToast(message, 'success', toastPosition);
         }
 
@@ -1651,9 +1582,8 @@
 
                 // Show helpful message about what's being displayed
                 const displayedCount = document.getElementById('tableBody').querySelectorAll('tr:not(.empty-state)').length;
-                const filterStatus = showSpentTransactions ? 'showing spent' : 'hiding spent';
 
-                console.log(`📊 [AUTO-LOAD CSV] Display: ${displayedCount} visible of ${totalLoaded} loaded (${filterStatus})`);
+                console.log(`📊 [AUTO-LOAD CSV] Display: ${displayedCount} visible of ${totalLoaded} loaded`);
 
                 if (spentCount > 0) {
                     showToast(`✅ Loaded ${spentCount} spent transaction${spentCount !== 1 ? 's' : ''} for budget allocation`, 'success');
@@ -2097,6 +2027,75 @@
             }
         }
 
+        /**
+         * Clear CSV files and transactions only (preserve project budgets)
+         */
+        async function clearAndRefreshDatabase(event) {
+            console.log('🔄 [RESET CSV] User clicked Reset DB button');
+
+            // Get button position for toast placement
+            const buttonRect = event?.target?.getBoundingClientRect();
+            const toastPosition = buttonRect ? { x: buttonRect.right, y: buttonRect.top } : null;
+
+            // Show confirmation dialog
+            const confirmed = confirm(
+                '⚠️ RESET CSV DATA\n\n' +
+                'This will delete:\n' +
+                '  • All saved CSV files\n' +
+                '  • All transactions\n' +
+                '  • All transaction assignments\n\n' +
+                '✅ This will PRESERVE:\n' +
+                '  • Your project budgets\n' +
+                '  • Your project settings\n' +
+                '  • Your invoices\n\n' +
+                'After reset, you will need to re-upload your CSV files.\n\n' +
+                'Continue?'
+            );
+
+            if (!confirmed) {
+                console.log('🔄 [RESET CSV] User cancelled operation');
+                return;
+            }
+
+            console.log('🔄 [RESET CSV] Starting CSV data reset...');
+            showToast('🔄 Clearing CSV data...', 'info', toastPosition);
+
+            try {
+                if (!db) {
+                    await initIndexedDB();
+                }
+
+                // Clear only the csvFiles object store (preserve projects and invoices)
+                const transaction = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const objectStore = transaction.objectStore(CSV_STORE_NAME);
+                const clearRequest = objectStore.clear();
+
+                clearRequest.onsuccess = () => {
+                    console.log('✅ [RESET CSV] CSV files cleared successfully');
+
+                    // Clear in-memory transaction data
+                    allTransactions = [];
+                    savedCSVFiles = [];
+
+                    showToast('✅ CSV data cleared! Reloading...', 'success', toastPosition);
+
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                };
+
+                clearRequest.onerror = (event) => {
+                    console.error('❌ [RESET CSV] Failed to clear CSV files:', event);
+                    showToast('❌ Failed to clear CSV data', 'error', toastPosition);
+                };
+
+            } catch (error) {
+                console.error('❌ [RESET CSV] Error:', error);
+                showToast('❌ Error clearing CSV data', 'error', toastPosition);
+            }
+        }
+
         // Initialize on page load
         let isPageInitialized = false;
         document.addEventListener('DOMContentLoaded', async () => {
@@ -2137,7 +2136,6 @@
                 console.log(`   - CSV Files: ${savedCSVFiles.length}`);
                 console.log(`   - Total Transactions: ${allTransactions.length}`);
                 console.log(`   - Projects Loaded: ${allProjects.length}`);
-                console.log(`   - Settings: Spent=${showSpentTransactions}, Received=${showReceivedTransactions}`);
                 console.log('═══════════════════════════════════════════════════════');
 
                 isPageInitialized = true;
@@ -2492,73 +2490,9 @@
                 return;
             }
 
-            // Filter transactions based on settings
-            let transactionsToDisplay = allTransactions;
-            console.log(`⚙️ [RENDER] Filter settings: showSpentTransactions=${showSpentTransactions}, showReceivedTransactions=${showReceivedTransactions}`);
-
-            // Apply filtering based on transaction type visibility settings
-            let hiddenTransactions = [];
-            transactionsToDisplay = allTransactions.filter(transaction => {
-                const hasSpent = transaction.spent && transaction.spent.trim() && parseFloat(transaction.spent.replace(/[^0-9.-]/g, '')) > 0;
-                const hasReceived = transaction.received && transaction.received.trim() && parseFloat(transaction.received.replace(/[^0-9.-]/g, '')) > 0;
-
-                // Determine if transaction should be shown
-                let shouldShow = false;
-
-                if (hasSpent && showSpentTransactions) {
-                    shouldShow = true; // Show spent transactions if enabled
-                }
-                if (hasReceived && showReceivedTransactions) {
-                    shouldShow = true; // Show received transactions if enabled
-                }
-                if (!hasSpent && !hasReceived) {
-                    shouldShow = true; // Always show transactions with no amount (edge case)
-                }
-
-                if (!shouldShow) {
-                    hiddenTransactions.push({
-                        date: transaction.date,
-                        description: transaction.description.substring(0, 30) + '...',
-                        spent: transaction.spent,
-                        received: transaction.received,
-                        type: hasSpent ? 'spent' : 'received'
-                    });
-                }
-
-                return shouldShow;
-            });
-
-            const spentHidden = hiddenTransactions.filter(t => t.type === 'spent').length;
-            const receivedHidden = hiddenTransactions.filter(t => t.type === 'received').length;
-
-            console.log(`🔍 [RENDER] Filtered: ${allTransactions.length} total -> ${transactionsToDisplay.length} displayed`);
-            console.log(`   Hidden: ${spentHidden} spent, ${receivedHidden} received`);
-
-            if (hiddenTransactions.length > 0 && hiddenTransactions.length <= 5) {
-                console.log(`🔍 [RENDER] Hidden transactions:`, hiddenTransactions);
-            } else if (hiddenTransactions.length > 5) {
-                console.log(`🔍 [RENDER] Hidden transactions (first 5 of ${hiddenTransactions.length}):`, hiddenTransactions.slice(0, 5));
-            }
-
-            if (transactionsToDisplay.length === 0) {
-                console.log('⚠️ [RENDER] No transactions to display after filtering');
-                const hiddenCount = allTransactions.length - transactionsToDisplay.length;
-                let message = 'No transactions to display. Please upload CSV files.';
-
-                if (hiddenCount > 0) {
-                    message = `No transactions to display. ${hiddenCount} transaction${hiddenCount !== 1 ? 's are' : ' is'} hidden (use ⚙️ settings to show).`;
-                }
-
-                tbody.innerHTML = `<tr class="empty-state"><td colspan="9">
-                    <div style="padding: 20px; text-align: center;">
-                        <div style="font-size: 14px; color: #666;">${message}</div>
-                    </div>
-                </td></tr>`;
-                return;
-            }
-
-            console.log('✅ [RENDER] Rendering table rows...');
-            tbody.innerHTML = transactionsToDisplay.map((transaction, index) => {
+            // Display all transactions (no filtering)
+            console.log(`✅ [RENDER] Rendering ${allTransactions.length} transactions...`);
+            tbody.innerHTML = allTransactions.map((transaction, index) => {
                 const descriptionHtml = transaction.manualDescription ?
                     `<div class="manual-description">${escapeHtml(transaction.manualDescription)}</div>
                      <div class="original-description">${escapeHtml(transaction.description)}</div>` :
@@ -3420,11 +3354,11 @@
                 savedCSVFiles.forEach(csvFile => {
                     // Find transactions that belong to this CSV file
                     const fileTransactions = allTransactions.filter(t => {
-                        // Match transactions by date and bank (best effort matching)
+                        // Match transactions by date, bank, and description (robust matching)
                         return csvFile.transactions.some(ct =>
                             ct.date === t.date &&
                             ct.bank === t.bank &&
-                            Math.abs(parseFloat(ct.spent || 0) - parseFloat(t.spent || 0)) < 0.01
+                            ct.description === t.description
                         );
                     });
 
