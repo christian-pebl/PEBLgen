@@ -4,8 +4,13 @@
 # Large PDF files
 *.pdf
 
-# API keys
+# API keys and sensitive data
 key.txt
+*.key
+.env
+.env.local
+*_api_key*
+SECURITY_NOTICE.txt
 
 # Claude files
 .claude/
