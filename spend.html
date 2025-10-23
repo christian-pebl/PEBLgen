@@ -17,14 +17,14 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        .nav-banner { background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 30px; margin-bottom: 0; }
+        .nav-banner { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 30px; margin-bottom: 0; z-index: 100; }
         .nav-banner .page-title { color: white; font-size: 28px; font-weight: 700; margin: 0; font-family: 'Roboto', sans-serif; letter-spacing: 0.5px; }
         .nav-banner h1 { color: white; font-size: 28px; font-weight: 700; margin: 0; font-family: 'Roboto', sans-serif; letter-spacing: 0.5px; }
         .nav-buttons { display: flex; gap: 15px; }
         .nav-btn { background-color: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); padding: 10px 25px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; text-decoration: none; transition: all 0.3s ease; display: inline-block; font-family: 'Roboto', sans-serif; }
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); transform: translateY(-2px); }
         .nav-btn.active { background-color: white; color: #2B7A78; border-color: white; }
-        .content-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .content-container { padding: 20px; max-width: 1200px; margin: 0 auto; padding-top: 90px; }
 
         body {
             font-family: 'Roboto', sans-serif;
@@ -96,7 +96,7 @@
             color: white;
         }
         #transactionsTable th {
-            padding: 12px 10px;
+            padding: 8px 6px;
             text-align: left;
             font-weight: 600;
             font-size: 13px;
@@ -111,7 +111,7 @@
             background-color: #f8f9ff;
         }
         #transactionsTable td {
-            padding: 10px;
+            padding: 6px;
             vertical-align: middle;
         }
         #transactionsTable td.notes-cell {
@@ -119,7 +119,7 @@
             white-space: normal;
             word-wrap: break-word;
             line-height: 1.4;
-            font-size: 13px;
+            font-size: 11px;
             color: #555;
         }
         .empty-state td {
@@ -129,17 +129,19 @@
             font-style: italic;
         }
         .description-cell {
-            max-width: 300px;
+            max-width: 450px;
+            font-size: 11px;
         }
         .original-description {
             color: #999;
-            font-size: 12px;
+            font-size: 10px;
             font-style: italic;
         }
         .manual-description {
             color: #333;
             font-weight: 500;
             margin-bottom: 3px;
+            font-size: 11px;
         }
         .manual-description::before {
             content: "📝 ";
@@ -199,6 +201,12 @@
         }
         .modal-overlay.active {
             display: flex;
+        }
+        /* When modal is positioned near a button, disable flex centering */
+        .modal-overlay.active.positioned {
+            display: block;
+            align-items: unset;
+            justify-content: unset;
         }
         .modal-content {
             background-color: white;
@@ -608,10 +616,40 @@
             <a href="gantt.html" class="nav-btn">Gantt</a>
             <a href="timesheet.html" class="nav-btn">Timesheet</a>
             <a href="index.html" class="nav-btn">Sketcher</a>
+            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Scroll to top">↑ Top</button>
         </div>
     </div>
-    
+
     <div class="content-container">
+
+    <!-- Filters Card -->
+    <div class="table-container" style="margin-bottom: 20px;">
+        <div style="padding: 15px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span style="font-size: 20px;">🔍</span>
+                <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Filters</h4>
+                <button onclick="jumpToTopUnassigned()" style="margin-left: auto; padding: 4px 10px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">To Top Unassigned</button>
+                <button onclick="clearFilters()" style="padding: 4px 10px; font-size: 11px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Clear All</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 500; color: #555; margin-bottom: 4px;">Project Budget</label>
+                    <select id="filterProject" onchange="handleProjectFilterChange()" style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white;">
+                        <option value="">All Projects</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 500; color: #555; margin-bottom: 4px;">Category</label>
+                    <select id="filterCategory" onchange="applyFilters()" style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white;" disabled>
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+            </div>
+            <div id="filterStatus" style="margin-top: 10px; font-size: 11px; color: #666; font-style: italic;">
+                <!-- Status message -->
+            </div>
+        </div>
+    </div>
 
     <!-- Compact Control Panel -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
@@ -707,7 +745,7 @@
                         <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px;">💰 Received (Income)</div>
 
                         <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
-                            <input type="checkbox" id="showReceivedColumnToggle" onchange="toggleReceivedColumn()" style="cursor: pointer;" checked>
+                            <input type="checkbox" id="showReceivedColumnToggle" onchange="toggleReceivedColumn()" style="cursor: pointer;">
                             <div>
                                 <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Received Column</div>
                                 <div style="font-size: 10px; color: #6b7280;">Display received amount column</div>
@@ -763,14 +801,13 @@
                     <th>Spent</th>
                     <th>Spent (ex. VAT)</th>
                     <th>Received</th>
-                    <th>From/To</th>
                     <th>Notes</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
                 <tr class="empty-state">
-                    <td colspan="9">No transactions loaded. Please upload a CSV file.</td>
+                    <td colspan="8">No transactions loaded. Please upload a CSV file.</td>
                 </tr>
             </tbody>
         </table>
@@ -1032,7 +1069,7 @@
 
         // Table display settings
         let showSpentColumn = true; // Show spent column by default
-        let showReceivedColumn = true; // Show received column by default
+        let showReceivedColumn = false; // Hide received column by default
 
         // Load settings from localStorage
         function loadDisplaySettings() {
@@ -1041,7 +1078,7 @@
                 try {
                     const settings = JSON.parse(savedSettings);
                     showSpentColumn = settings.showSpentColumn ?? true;
-                    showReceivedColumn = settings.showReceivedColumn ?? true;
+                    showReceivedColumn = settings.showReceivedColumn ?? false;
                     console.log('📋 [SETTINGS] Loaded saved settings from localStorage:', settings);
                 } catch (e) {
                     console.error('❌ [SETTINGS] Failed to load settings:', e);
@@ -1074,13 +1111,13 @@
             console.log('🔄 [SETTINGS] Resetting table settings to default...');
             localStorage.removeItem('spendTableSettings');
             showSpentColumn = true;
-            showReceivedColumn = true;
+            showReceivedColumn = false;
             document.getElementById('showSpentColumnToggle').checked = true;
-            document.getElementById('showReceivedColumnToggle').checked = true;
+            document.getElementById('showReceivedColumnToggle').checked = false;
             saveDisplaySettings();
             applyColumnVisibility();
-            console.log('✅ [SETTINGS] Reset complete! All columns visible.');
-            showToast('✅ Settings reset: all columns visible', 'success');
+            console.log('✅ [SETTINGS] Reset complete! Spent column visible, Received column hidden.');
+            showToast('✅ Settings reset to defaults', 'success');
         }
 
         // Save settings to localStorage
@@ -2138,6 +2175,9 @@
                 console.log(`   - Projects Loaded: ${allProjects.length}`);
                 console.log('═══════════════════════════════════════════════════════');
 
+                // Populate project filter dropdown
+                populateProjectFilter();
+
                 isPageInitialized = true;
             } catch (error) {
                 console.error('❌ [PAGE LOAD] Initialization failed:', error);
@@ -2473,6 +2513,161 @@
             return fields;
         }
 
+        // ========================================
+        // FILTERING FUNCTIONALITY
+        // ========================================
+
+        let currentFilterProject = '';
+        let currentFilterCategory = '';
+
+        function populateProjectFilter() {
+            const filterSelect = document.getElementById('filterProject');
+            if (!filterSelect) return;
+
+            // Get unique projects from assignments
+            const projects = new Set();
+            projects.add('GENERAL_EXPENSES'); // Always include General Expenses
+
+            allTransactions.forEach(trans => {
+                if (trans.assignments && trans.assignments.length > 0) {
+                    trans.assignments.forEach(assignment => {
+                        if (assignment.projectId && assignment.projectName) {
+                            projects.add(JSON.stringify({
+                                id: assignment.projectId,
+                                name: assignment.projectName
+                            }));
+                        }
+                    });
+                }
+            });
+
+            // Clear and rebuild options
+            filterSelect.innerHTML = '<option value="">All Projects</option>';
+
+            // Add General Expenses first
+            filterSelect.innerHTML += '<option value="GENERAL_EXPENSES">PEBL General Expenses</option>';
+
+            // Add other projects sorted by name
+            const projectArray = Array.from(projects)
+                .filter(p => p !== 'GENERAL_EXPENSES')
+                .map(p => JSON.parse(p))
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            projectArray.forEach(proj => {
+                filterSelect.innerHTML += `<option value="${proj.id}">${escapeHtml(proj.name)}</option>`;
+            });
+        }
+
+        function handleProjectFilterChange() {
+            const filterSelect = document.getElementById('filterProject');
+            const categorySelect = document.getElementById('filterCategory');
+            const statusDiv = document.getElementById('filterStatus');
+
+            currentFilterProject = filterSelect.value;
+
+            // Reset category filter
+            categorySelect.innerHTML = '<option value="">All Categories</option>';
+            currentFilterCategory = '';
+
+            if (currentFilterProject) {
+                // Enable category filter and populate with categories from selected project
+                categorySelect.disabled = false;
+
+                const categories = new Set();
+                allTransactions.forEach(trans => {
+                    if (trans.assignments && trans.assignments.length > 0) {
+                        trans.assignments.forEach(assignment => {
+                            if (assignment.projectId == currentFilterProject && assignment.category) {
+                                categories.add(assignment.category);
+                            }
+                        });
+                    }
+                });
+
+                Array.from(categories).sort().forEach(cat => {
+                    categorySelect.innerHTML += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`;
+                });
+            } else {
+                categorySelect.disabled = true;
+            }
+
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const categorySelect = document.getElementById('filterCategory');
+            const statusDiv = document.getElementById('filterStatus');
+
+            currentFilterCategory = categorySelect.value;
+
+            renderTransactions();
+
+            // Update status message
+            let statusMsg = '';
+            if (currentFilterProject) {
+                const projectSelect = document.getElementById('filterProject');
+                const projectName = projectSelect.options[projectSelect.selectedIndex].text;
+                statusMsg = `Showing: ${projectName}`;
+                if (currentFilterCategory) {
+                    statusMsg += ` → ${currentFilterCategory}`;
+                }
+            } else {
+                statusMsg = 'Showing: All transactions';
+            }
+            statusDiv.textContent = statusMsg;
+        }
+
+        function clearFilters() {
+            currentFilterProject = '';
+            currentFilterCategory = '';
+            document.getElementById('filterProject').value = '';
+            document.getElementById('filterCategory').value = '';
+            document.getElementById('filterCategory').disabled = true;
+            document.getElementById('filterCategory').innerHTML = '<option value="">All Categories</option>';
+            document.getElementById('filterStatus').textContent = 'Showing: All transactions';
+            renderTransactions();
+        }
+
+        function jumpToTopUnassigned() {
+            console.log('🎯 [JUMP] Searching for first unassigned transaction...');
+
+            // Clear filters to show all transactions
+            clearFilters();
+
+            // Find the first unassigned transaction
+            const firstUnassignedIndex = allTransactions.findIndex(transaction => {
+                // Check if transaction has no assignments
+                const hasNoAssignments = (!transaction.assignments || transaction.assignments.length === 0) &&
+                                        !transaction.assignedItemName;
+                return hasNoAssignments;
+            });
+
+            if (firstUnassignedIndex === -1) {
+                // No unassigned transactions found
+                alert('🎉 No unassigned transactions found! All expenses have been assigned.');
+                console.log('✅ [JUMP] All transactions are assigned');
+                return;
+            }
+
+            console.log(`🎯 [JUMP] Found unassigned transaction at index ${firstUnassignedIndex}`);
+
+            // Select the row
+            selectedRowIndex = firstUnassignedIndex;
+            renderTransactions();
+
+            // Wait for render to complete, then scroll to it
+            setTimeout(() => {
+                scrollRowIntoView(firstUnassignedIndex);
+
+                // Focus on the row for keyboard shortcuts
+                const row = document.querySelector(`tr[data-row-index="${firstUnassignedIndex}"]`);
+                if (row) {
+                    row.focus();
+                    console.log('✅ [JUMP] Row focused and ready for keyboard shortcuts');
+                }
+            }, 100);
+        }
+
         function renderTransactions() {
             console.log('🎨 [RENDER] Starting renderTransactions...');
             console.log(`📊 [RENDER] allTransactions.length: ${allTransactions.length}`);
@@ -2490,45 +2685,77 @@
                 return;
             }
 
-            // Display all transactions (no filtering)
-            console.log(`✅ [RENDER] Rendering ${allTransactions.length} transactions...`);
-            tbody.innerHTML = allTransactions.map((transaction, index) => {
-                const descriptionHtml = transaction.manualDescription ?
-                    `<div class="manual-description">${escapeHtml(transaction.manualDescription)}</div>
-                     <div class="original-description">${escapeHtml(transaction.description)}</div>` :
-                    escapeHtml(transaction.description);
+            // Apply filters
+            let filteredTransactions = allTransactions;
+            if (currentFilterProject || currentFilterCategory) {
+                filteredTransactions = allTransactions.filter(transaction => {
+                    // Check if transaction has assignments matching the filter
+                    if (!transaction.assignments || transaction.assignments.length === 0) {
+                        return false; // Don't show unassigned transactions when filtering
+                    }
 
-                // Handle both old single assignment format and new split assignments array
+                    return transaction.assignments.some(assignment => {
+                        let projectMatch = true;
+                        let categoryMatch = true;
+
+                        if (currentFilterProject) {
+                            projectMatch = assignment.projectId == currentFilterProject;
+                        }
+
+                        if (currentFilterCategory) {
+                            categoryMatch = assignment.category === currentFilterCategory;
+                        }
+
+                        return projectMatch && categoryMatch;
+                    });
+                });
+            }
+
+            console.log(`✅ [RENDER] Rendering ${filteredTransactions.length} of ${allTransactions.length} transactions...`);
+            tbody.innerHTML = filteredTransactions.map((transaction, index) => {
+                // Build description with inline expense detail
+                let descriptionHtml = '';
+                if (transaction.manualDescription) {
+                    descriptionHtml = `
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 11px; color: #64748b;">${escapeHtml(transaction.description)}</span>
+                            <span style="display: inline-block; padding: 2px 6px; background: #e0f2fe; border-radius: 3px; font-size: 10px; color: #0369a1; font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(transaction.manualDescription)}">📝 ${escapeHtml(transaction.manualDescription)}</span>
+                        </div>`;
+                } else {
+                    descriptionHtml = `<span style="font-size: 11px; color: #64748b;">${escapeHtml(transaction.description)}</span>`;
+                }
+
+                // Handle both old single assignment format and new split assignments array - COMPACT VERSION
                 let categoryBadges = '';
                 if (transaction.assignments && transaction.assignments.length > 0) {
-                    // New format: array of assignments
-                    categoryBadges = transaction.assignments.map(assignment => {
-                        const percentage = assignment.percentage === 100 ? '' : ` (${assignment.percentage}%)`;
-                        const quarter = assignment.quarter ? ` ${getQuarterName(assignment.quarter)}` : '';
+                    // New format: array of assignments - compact single-line badges with × button
+                    categoryBadges = transaction.assignments.map((assignment, assignmentIndex) => {
+                        const percentage = assignment.percentage === 100 ? '' : ` ${assignment.percentage}%`;
+                        const quarter = assignment.quarter ? ` Q${assignment.quarter}` : '';
                         const icon = assignment.icon ? `${assignment.icon} ` : '';
                         const isGeneral = assignment.projectId === 'GENERAL_EXPENSES';
                         const badgeStyle = isGeneral ? 'background-color: #fef3c7; border: 1px solid #fbbf24;' : '';
-                        return `<span class="assigned-category" title="${escapeHtml(assignment.category)} - ${escapeHtml(assignment.projectName || 'Project')}${quarter}" style="position: relative; padding-right: 24px; ${badgeStyle}">
-                            <div style="font-weight: 600; font-size: 11px;">${icon}${escapeHtml(assignment.itemName)}${percentage}</div>
-                            <div style="font-size: 9px; opacity: 0.65; margin-top: 1px; line-height: 1.2;">${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}</div>
-                            <button onclick="handleUnassign(${index}); event.stopPropagation();"
-                                    style="position: absolute; top: 2px; right: 2px; background: rgba(220, 38, 38, 0.1); border: none; border-radius: 3px; width: 18px; height: 18px; cursor: pointer; font-size: 12px; line-height: 1; padding: 0; color: #dc2626; transition: all 0.2s;"
-                                    onmouseover="this.style.background='rgba(220, 38, 38, 0.2)'; this.style.transform='scale(1.1)';"
-                                    onmouseout="this.style.background='rgba(220, 38, 38, 0.1)'; this.style.transform='scale(1)';"
+                        const compactInfo = `${icon}${escapeHtml(assignment.itemName)}${percentage} • ${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}${quarter}`;
+                        return `<span class="assigned-category" title="${compactInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-block; margin: 2px 2px 2px 0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;">
+                            <span style="font-size: 10px; font-weight: 500; line-height: 1;">${compactInfo}</span>
+                            <button onclick="handleUnassign(${index}, ${assignmentIndex}); event.stopPropagation();"
+                                    style="position: absolute; top: 2px; right: 2px; background: #dc2626; border: none; border-radius: 2px; width: 14px; height: 14px; cursor: pointer; font-size: 10px; line-height: 1; padding: 0; color: white; transition: all 0.15s; font-weight: bold;"
+                                    onmouseover="this.style.background='#b91c1c'; this.style.transform='scale(1.1)';"
+                                    onmouseout="this.style.background='#dc2626'; this.style.transform='scale(1)';"
                                     title="Remove assignment">×</button>
                         </span>`;
-                    }).join(' ');
+                    }).join('');
                 } else if (transaction.assignedItemName) {
-                    // Old format: single assignment (backward compatibility)
+                    // Old format: single assignment (backward compatibility) - compact version with × button
                     const isGeneral = transaction.assignedProject === 'GENERAL_EXPENSES';
                     const badgeStyle = isGeneral ? 'background-color: #fef3c7; border: 1px solid #fbbf24;' : '';
-                    categoryBadges = `<span class="assigned-category" title="${escapeHtml(transaction.assignedCategory)}" style="position: relative; padding-right: 24px; ${badgeStyle}">
-                        <div style="font-weight: 600; font-size: 11px;">${escapeHtml(transaction.assignedItemName)}</div>
-                        <div style="font-size: 9px; opacity: 0.65; margin-top: 1px; line-height: 1.2;">${escapeHtml(transaction.assignedCategory)}</div>
+                    const compactInfo = `${escapeHtml(transaction.assignedItemName)} • ${escapeHtml(transaction.assignedCategory)}`;
+                    categoryBadges = `<span class="assigned-category" title="${compactInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-block; margin: 2px 2px 2px 0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;">
+                        <span style="font-size: 10px; font-weight: 500; line-height: 1;">${compactInfo}</span>
                         <button onclick="handleUnassign(${index}); event.stopPropagation();"
-                                style="position: absolute; top: 2px; right: 2px; background: rgba(220, 38, 38, 0.1); border: none; border-radius: 3px; width: 18px; height: 18px; cursor: pointer; font-size: 12px; line-height: 1; padding: 0; color: #dc2626; transition: all 0.2s;"
-                                onmouseover="this.style.background='rgba(220, 38, 38, 0.2)'; this.style.transform='scale(1.1)';"
-                                onmouseout="this.style.background='rgba(220, 38, 38, 0.1)'; this.style.transform='scale(1)';"
+                                style="position: absolute; top: 2px; right: 2px; background: #dc2626; border: none; border-radius: 2px; width: 14px; height: 14px; cursor: pointer; font-size: 10px; line-height: 1; padding: 0; color: white; transition: all 0.15s; font-weight: bold;"
+                                onmouseover="this.style.background='#b91c1c'; this.style.transform='scale(1.1)';"
+                                onmouseout="this.style.background='#dc2626'; this.style.transform='scale(1)';"
                                 title="Remove assignment">×</button>
                     </span>`;
                 }
@@ -2549,19 +2776,23 @@
                 <tr class="${selectedRowIndex === index ? 'row-selected' : ''}" onclick="selectRow(${index}, event)" data-row-index="${index}" tabindex="0">
                     <td style="text-align: center; font-weight: 600; color: ${transaction.bank === 'R' ? '#3AAFA9' : '#2B7A78'};">${transaction.bank || '?'}</td>
                     <td>${escapeHtml(transaction.date)}</td>
-                    <td class="description-cell">${descriptionHtml}${categoryBadges}</td>
+                    <td class="description-cell">${descriptionHtml}</td>
                     <td class="amount-spent">${escapeHtml(transaction.spent)}</td>
                     <td class="amount-spent" style="color: #059669; font-weight: 500;">${spentExVAT}</td>
                     <td class="amount-received">${escapeHtml(transaction.received)}</td>
-                    <td>${escapeHtml(transaction.fromTo)}</td>
                     <td class="notes-cell">${notesContent}</td>
                     <td class="action-buttons">
-                        <button class="action-btn edit-btn" onclick="handleManualEdit(${index}); event.stopPropagation();" title="Edit">✏️</button>
-                        <button class="action-btn mic-btn" id="micBtn${index}" onclick="toggleRowVoiceRecording(${index}); event.stopPropagation();" title="Voice Note">🎤</button>
-                        <button class="action-btn invoice-btn" id="invoiceBtn${index}" onclick="handleInvoiceFetch(${index}); event.stopPropagation();" title="Find Invoice">📧</button>
-                        <button class="action-btn delete-btn ${hasAssignments ? 'has-assignment' : ''}" onclick="handleAssign(${index}); event.stopPropagation();" oncontextmenu="handleUnassign(${index}); return false;" title="${assignBtnTitle}" id="assignBtn${index}">
-                            ${assignBtnIcon}
-                        </button>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <div style="display: flex; gap: 5px;">
+                                <button class="action-btn edit-btn" onclick="handleManualEdit(${index}); event.stopPropagation();" title="Add Expense Detail">✏️</button>
+                                <button class="action-btn mic-btn" id="micBtn${index}" onclick="toggleRowVoiceRecording(${index}); event.stopPropagation();" title="Voice Note">🎤</button>
+                                <button class="action-btn invoice-btn" id="invoiceBtn${index}" onclick="handleInvoiceFetch(${index}); event.stopPropagation();" title="Find Invoice">📧</button>
+                                <button class="action-btn delete-btn ${hasAssignments ? 'has-assignment' : ''}" onclick="handleAssign(${index}); event.stopPropagation();" oncontextmenu="handleUnassign(${index}); return false;" title="${assignBtnTitle}" id="assignBtn${index}">
+                                    ${assignBtnIcon}
+                                </button>
+                            </div>
+                            ${categoryBadges ? `<div style="display: flex; flex-wrap: wrap; justify-content: center; max-width: 100%; margin-top: 2px;">${categoryBadges}</div>` : ''}
+                        </div>
                     </td>
                 </tr>
             `;
@@ -2606,20 +2837,86 @@
             const transaction = allTransactions[index];
             currentEditingIndex = index;
 
-            // Populate modal with transaction data
-            document.getElementById('modalDate').textContent = transaction.date;
-            document.getElementById('modalCurrentDescription').textContent = transaction.description;
-            document.getElementById('modalManualDescription').value = transaction.manualDescription || '';
-            document.getElementById('modalVoiceNotes').value = transaction.voiceNotes || '';
+            // Find the description cell for this row
+            const row = document.querySelector(`tr[data-row-index="${index}"]`);
+            if (!row) return;
 
-            // Display amount (either spent or received)
-            const amount = transaction.spent ?
-                `Spent: £${transaction.spent}` :
-                `Received: £${transaction.received}`;
-            document.getElementById('modalAmount').textContent = amount;
+            const descriptionCell = row.querySelector('.description-cell');
+            if (!descriptionCell) return;
 
-            // Show modal
-            document.getElementById('editDescriptionModal').classList.add('active');
+            // Create inline input box
+            const currentValue = transaction.manualDescription || '';
+            descriptionCell.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <input type="text"
+                           id="inline-edit-${index}"
+                           value="${escapeHtml(currentValue)}"
+                           placeholder="Add Expense Detail..."
+                           style="flex: 1; padding: 4px 6px; border: 2px solid #3b82f6; border-radius: 4px; font-size: 11px; outline: none; background: #eff6ff;"
+                           onkeydown="handleInlineEditKeydown(event, ${index})"
+                           onblur="cancelInlineEdit(${index})">
+                    <span style="font-size: 9px; color: #94a3b8;">Press Enter ↵</span>
+                </div>
+            `;
+
+            // Focus the input
+            setTimeout(() => {
+                const input = document.getElementById(`inline-edit-${index}`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 50);
+        }
+
+        // Handle keyboard input in inline editor
+        function handleInlineEditKeydown(event, index) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveInlineEdit(index);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelInlineEdit(index);
+            }
+        }
+
+        // Save inline edit
+        async function saveInlineEdit(index) {
+            const input = document.getElementById(`inline-edit-${index}`);
+            if (!input) return;
+
+            const newValue = input.value.trim();
+
+            // Save to transaction
+            allTransactions[index].manualDescription = newValue;
+
+            // Save to storage
+            await saveTransactionsToStorage();
+
+            // Re-render to show the compact detail badge
+            renderTransactions();
+
+            // Show success toast
+            if (newValue) {
+                showToast('✅ Expense Detail saved', 'success');
+            } else {
+                showToast('✅ Expense Detail cleared', 'success');
+            }
+
+            currentEditingIndex = null;
+        }
+
+        // Cancel inline edit
+        function cancelInlineEdit(index) {
+            // Just re-render to restore original state
+            setTimeout(() => {
+                // Check if we're still in edit mode (not saved)
+                const input = document.getElementById(`inline-edit-${index}`);
+                if (input) {
+                    renderTransactions();
+                    currentEditingIndex = null;
+                }
+            }, 200); // Delay to allow click on other elements
         }
 
         function closeEditModal() {
@@ -2752,8 +3049,8 @@
 
             console.log('📋 [MODAL DEBUG] Modal content HTML set, length:', content.length);
 
-            // Add numbers to options after rendering
-            addNumbersToOptions();
+            // Numbers are already added in HTML generation above
+            // addNumbersToOptions(); // Removed to prevent duplication
 
             console.log('✅ [MODAL DEBUG] showProjectSelection completed successfully');
         }
@@ -2858,109 +3155,136 @@
                 <div style="max-height: 400px; overflow-y: auto;">
             `;
 
+            let categoryNumber = 1; // Counter for keyboard shortcuts
+
             // Materials
-            if (project.materials?.items?.length > 0) {
+            if (project.materials && (project.materials.items?.length > 0 || (project.materials.totalCost && project.materials.totalCost > 0))) {
                 const claimed = getCategoryClaimed(project.materials);
                 const budget = project.materials.totalCost || 0;
                 const remaining = budget - claimed;
+                const itemCount = project.materials.items?.length || 0;
 
                 content += `
-                    <div class="category-option" onclick="selectCategoryStep('Materials')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-size: 12px; font-weight: 600; color: #333;">🔧 Materials</span>
-                            <span style="font-size: 11px; color: #666;">${project.materials.items.length} items</span>
-                        </div>
-                        <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                            <span>Budget: £${budget.toLocaleString()}</span>
-                            <span>Claimed: £${claimed.toLocaleString()}</span>
-                            <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                    <div class="category-option" onclick="selectCategoryStep('Materials')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                        ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 12px; font-weight: 600; color: #333;">🔧 Materials</span>
+                                <span style="font-size: 11px; color: #666;">${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                <span>Budget: £${budget.toLocaleString()}</span>
+                                <span>Claimed: £${claimed.toLocaleString()}</span>
+                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                            </div>
                         </div>
                     </div>
                 `;
+                categoryNumber++;
             }
 
             // Capital Usage
-            if (project.capitalUsage?.items?.length > 0) {
+            if (project.capitalUsage && (project.capitalUsage.items?.length > 0 || (project.capitalUsage.totalCost && project.capitalUsage.totalCost > 0))) {
                 const claimed = getCategoryClaimed(project.capitalUsage);
                 const budget = project.capitalUsage.totalCost || 0;
                 const remaining = budget - claimed;
+                const itemCount = project.capitalUsage.items?.length || 0;
 
                 content += `
-                    <div class="category-option" onclick="selectCategoryStep('Capital Usage')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-size: 12px; font-weight: 600; color: #333;">💼 Capital Usage</span>
-                            <span style="font-size: 11px; color: #666;">${project.capitalUsage.items.length} items</span>
-                        </div>
-                        <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                            <span>Budget: £${budget.toLocaleString()}</span>
-                            <span>Claimed: £${claimed.toLocaleString()}</span>
-                            <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                    <div class="category-option" onclick="selectCategoryStep('Capital Usage')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                        ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 12px; font-weight: 600; color: #333;">💼 Capital Usage</span>
+                                <span style="font-size: 11px; color: #666;">${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                <span>Budget: £${budget.toLocaleString()}</span>
+                                <span>Claimed: £${claimed.toLocaleString()}</span>
+                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                            </div>
                         </div>
                     </div>
                 `;
+                categoryNumber++;
             }
 
             // Subcontracting
-            if (project.subcontracting?.contractors?.length > 0) {
+            if (project.subcontracting && (project.subcontracting.contractors?.length > 0 || (project.subcontracting.totalCost && project.subcontracting.totalCost > 0))) {
                 const claimed = getCategoryClaimed(project.subcontracting);
                 const budget = project.subcontracting.totalCost || 0;
                 const remaining = budget - claimed;
+                const contractorCount = project.subcontracting.contractors?.length || 0;
 
                 content += `
-                    <div class="category-option" onclick="selectCategoryStep('Subcontracting')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-size: 12px; font-weight: 600; color: #333;">🤝 Subcontracting</span>
-                            <span style="font-size: 11px; color: #666;">${project.subcontracting.contractors.length} contractors</span>
-                        </div>
-                        <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                            <span>Budget: £${budget.toLocaleString()}</span>
-                            <span>Claimed: £${claimed.toLocaleString()}</span>
-                            <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                    <div class="category-option" onclick="selectCategoryStep('Subcontracting')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                        ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 12px; font-weight: 600; color: #333;">🤝 Subcontracting</span>
+                                <span style="font-size: 11px; color: #666;">${contractorCount} contractor${contractorCount !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                <span>Budget: £${budget.toLocaleString()}</span>
+                                <span>Claimed: £${claimed.toLocaleString()}</span>
+                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                            </div>
                         </div>
                     </div>
                 `;
+                categoryNumber++;
             }
 
             // Travel
-            if (project.travel?.trips?.length > 0) {
+            if (project.travel && (project.travel.trips?.length > 0 || (project.travel.totalCost && project.travel.totalCost > 0))) {
                 const claimed = getCategoryClaimed(project.travel);
                 const budget = project.travel.totalCost || 0;
                 const remaining = budget - claimed;
+                const tripCount = project.travel.trips?.length || 0;
 
                 content += `
-                    <div class="category-option" onclick="selectCategoryStep('Travel')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-size: 12px; font-weight: 600; color: #333;">✈️ Travel</span>
-                            <span style="font-size: 11px; color: #666;">${project.travel.trips.length} trips</span>
-                        </div>
-                        <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                            <span>Budget: £${budget.toLocaleString()}</span>
-                            <span>Claimed: £${claimed.toLocaleString()}</span>
-                            <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                    <div class="category-option" onclick="selectCategoryStep('Travel')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                        ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 12px; font-weight: 600; color: #333;">✈️ Travel</span>
+                                <span style="font-size: 11px; color: #666;">${tripCount} trip${tripCount !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                <span>Budget: £${budget.toLocaleString()}</span>
+                                <span>Claimed: £${claimed.toLocaleString()}</span>
+                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                            </div>
                         </div>
                     </div>
                 `;
+                categoryNumber++;
             }
 
             // Other Costs
-            if (project.otherCosts?.items?.length > 0) {
+            if (project.otherCosts && (project.otherCosts.items?.length > 0 || (project.otherCosts.totalCost && project.otherCosts.totalCost > 0))) {
                 const claimed = getCategoryClaimed(project.otherCosts);
                 const budget = project.otherCosts.totalCost || 0;
                 const remaining = budget - claimed;
+                const itemCount = project.otherCosts.items?.length || 0;
 
                 content += `
-                    <div class="category-option" onclick="selectCategoryStep('Other Costs')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-size: 12px; font-weight: 600; color: #333;">📋 Other Costs</span>
-                            <span style="font-size: 11px; color: #666;">${project.otherCosts.items.length} items</span>
-                        </div>
-                        <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                            <span>Budget: £${budget.toLocaleString()}</span>
-                            <span>Claimed: £${claimed.toLocaleString()}</span>
-                            <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                    <div class="category-option" onclick="selectCategoryStep('Other Costs')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                        ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 12px; font-weight: 600; color: #333;">📋 Other Costs</span>
+                                <span style="font-size: 11px; color: #666;">${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                <span>Budget: £${budget.toLocaleString()}</span>
+                                <span>Claimed: £${claimed.toLocaleString()}</span>
+                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                            </div>
                         </div>
                     </div>
                 `;
+                categoryNumber++;
             }
 
             // WELSH GOV CATEGORIES
@@ -2974,18 +3298,22 @@
                     const remaining = budget - claimed;
 
                     content += `
-                        <div class="category-option" onclick="selectCategoryStep('Capital Non-Standard')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span style="font-size: 12px; font-weight: 600; color: #333;">🏗️ Capital - Non Standard</span>
-                                <span style="font-size: 11px; color: #666;">${sections.capital.nonStandard.length} items</span>
-                            </div>
-                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                                <span>Budget: £${budget.toLocaleString()}</span>
-                                <span>Claimed: £${claimed.toLocaleString()}</span>
-                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                        <div class="category-option" onclick="selectCategoryStep('Capital Non-Standard')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                            ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 600; color: #333;">🏗️ Capital - Non Standard</span>
+                                    <span style="font-size: 11px; color: #666;">${sections.capital.nonStandard.length} items</span>
+                                </div>
+                                <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                    <span>Budget: £${budget.toLocaleString()}</span>
+                                    <span>Claimed: £${claimed.toLocaleString()}</span>
+                                    <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
                     `;
+                    categoryNumber++;
                 }
 
                 // Revenue - Non Standard Costs
@@ -2995,18 +3323,22 @@
                     const remaining = budget - claimed;
 
                     content += `
-                        <div class="category-option" onclick="selectCategoryStep('Revenue Non-Standard')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span style="font-size: 12px; font-weight: 600; color: #333;">💰 Revenue - Non Standard</span>
-                                <span style="font-size: 11px; color: #666;">${sections.revenue.nonStandard.length} items</span>
-                            </div>
-                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                                <span>Budget: £${budget.toLocaleString()}</span>
-                                <span>Claimed: £${claimed.toLocaleString()}</span>
-                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                        <div class="category-option" onclick="selectCategoryStep('Revenue Non-Standard')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                            ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 600; color: #333;">💰 Revenue - Non Standard</span>
+                                    <span style="font-size: 11px; color: #666;">${sections.revenue.nonStandard.length} items</span>
+                                </div>
+                                <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                    <span>Budget: £${budget.toLocaleString()}</span>
+                                    <span>Claimed: £${claimed.toLocaleString()}</span>
+                                    <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
                     `;
+                    categoryNumber++;
                 }
 
                 // Revenue - Standard Costs
@@ -3016,18 +3348,22 @@
                     const remaining = budget - claimed;
 
                     content += `
-                        <div class="category-option" onclick="selectCategoryStep('Revenue Standard')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span style="font-size: 12px; font-weight: 600; color: #333;">👥 Revenue - Standard</span>
-                                <span style="font-size: 11px; color: #666;">${sections.revenue.standardCosts.length} items</span>
-                            </div>
-                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                                <span>Budget: £${budget.toLocaleString()}</span>
-                                <span>Claimed: £${claimed.toLocaleString()}</span>
-                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                        <div class="category-option" onclick="selectCategoryStep('Revenue Standard')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                            ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 600; color: #333;">👥 Revenue - Standard</span>
+                                    <span style="font-size: 11px; color: #666;">${sections.revenue.standardCosts.length} items</span>
+                                </div>
+                                <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                    <span>Budget: £${budget.toLocaleString()}</span>
+                                    <span>Claimed: £${claimed.toLocaleString()}</span>
+                                    <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
                     `;
+                    categoryNumber++;
                 }
 
                 // Item Breakdown - Capital
@@ -3040,18 +3376,22 @@
                     const remaining = budget - claimed;
 
                     content += `
-                        <div class="category-option" onclick="selectCategoryStep('Item Breakdown Capital')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span style="font-size: 12px; font-weight: 600; color: #333;">📋 Item Breakdown - Capital</span>
-                                <span style="font-size: 11px; color: #666;">${sections.itemBreakdown.capital.length} items</span>
-                            </div>
-                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                                <span>Budget: £${budget.toLocaleString()}</span>
-                                <span>Claimed: £${claimed.toLocaleString()}</span>
-                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                        <div class="category-option" onclick="selectCategoryStep('Item Breakdown Capital')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                            ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 600; color: #333;">📋 Item Breakdown - Capital</span>
+                                    <span style="font-size: 11px; color: #666;">${sections.itemBreakdown.capital.length} items</span>
+                                </div>
+                                <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                    <span>Budget: £${budget.toLocaleString()}</span>
+                                    <span>Claimed: £${claimed.toLocaleString()}</span>
+                                    <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
                     `;
+                    categoryNumber++;
                 }
 
                 // Item Breakdown - Revenue
@@ -3064,18 +3404,22 @@
                     const remaining = budget - claimed;
 
                     content += `
-                        <div class="category-option" onclick="selectCategoryStep('Item Breakdown Revenue')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span style="font-size: 12px; font-weight: 600; color: #333;">📋 Item Breakdown - Revenue</span>
-                                <span style="font-size: 11px; color: #666;">${sections.itemBreakdown.revenue.length} items</span>
-                            </div>
-                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                                <span>Budget: £${budget.toLocaleString()}</span>
-                                <span>Claimed: £${claimed.toLocaleString()}</span>
-                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                        <div class="category-option" onclick="selectCategoryStep('Item Breakdown Revenue')" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                            ${categoryNumber <= 9 ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: #3b82f6; color: white; border-radius: 4px; font-weight: 700; font-size: 13px; flex-shrink: 0;">${categoryNumber}</span>` : ''}
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 600; color: #333;">📋 Item Breakdown - Revenue</span>
+                                    <span style="font-size: 11px; color: #666;">${sections.itemBreakdown.revenue.length} items</span>
+                                </div>
+                                <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                    <span>Budget: £${budget.toLocaleString()}</span>
+                                    <span>Claimed: £${claimed.toLocaleString()}</span>
+                                    <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
                     `;
+                    categoryNumber++;
                 }
             }
 
@@ -3147,56 +3491,80 @@
                 itemPrefix = 'itemBreakdownRevenue';
             }
 
-            items.forEach((item, idx) => {
-                const itemKey = `${itemPrefix}-${idx}`;
-                const claimed = getItemClaimed(item);
+            // If category has items, show them
+            if (items && items.length > 0) {
+                items.forEach((item, idx) => {
+                    const itemKey = `${itemPrefix}-${idx}`;
+                    const claimed = getItemClaimed(item);
 
-                // Get item name and budget
-                let itemName = '';
-                let itemBudget = 0;
+                    // Get item name and budget
+                    let itemName = '';
+                    let itemBudget = 0;
 
-                // IUK Categories
-                if (selectedCategoryName === 'Materials') {
-                    itemName = item.item;
-                    itemBudget = item.total || 0;
-                } else if (selectedCategoryName === 'Capital Usage') {
-                    itemName = item.description;
-                    itemBudget = item.netCost || 0;
-                } else if (selectedCategoryName === 'Subcontracting') {
-                    itemName = item.name;
-                    itemBudget = item.cost || 0;
-                } else if (selectedCategoryName === 'Travel') {
-                    itemName = item.purpose;
-                    itemBudget = item.total || 0;
-                } else if (selectedCategoryName === 'Other Costs') {
-                    itemName = item.description;
-                    itemBudget = item.estimatedCost || 0;
-                }
-                // Welsh Gov Categories
-                else if (selectedCategoryName === 'Capital Non-Standard' || selectedCategoryName === 'Revenue Non-Standard') {
-                    itemName = `${item.itemCode} - ${item.description}`;
-                    itemBudget = item.maxGrantValue || item.totalCost || 0;
-                } else if (selectedCategoryName === 'Revenue Standard') {
-                    itemName = `${item.itemCode} - ${item.description}`;
-                    itemBudget = item.maxGrantValue || 0;
-                } else if (selectedCategoryName === 'Item Breakdown Capital' || selectedCategoryName === 'Item Breakdown Revenue') {
-                    itemName = `${item.itemCode} - ${item.description}`;
-                    itemBudget = item.maxGrantApproved || item.totalCost || 0;
-                }
+                    // IUK Categories
+                    if (selectedCategoryName === 'Materials') {
+                        itemName = item.item;
+                        itemBudget = item.total || 0;
+                    } else if (selectedCategoryName === 'Capital Usage') {
+                        itemName = item.description;
+                        itemBudget = item.netCost || 0;
+                    } else if (selectedCategoryName === 'Subcontracting') {
+                        itemName = item.name;
+                        itemBudget = item.cost || 0;
+                    } else if (selectedCategoryName === 'Travel') {
+                        itemName = item.purpose;
+                        itemBudget = item.total || 0;
+                    } else if (selectedCategoryName === 'Other Costs') {
+                        itemName = item.description;
+                        itemBudget = item.estimatedCost || 0;
+                    }
+                    // Welsh Gov Categories
+                    else if (selectedCategoryName === 'Capital Non-Standard' || selectedCategoryName === 'Revenue Non-Standard') {
+                        itemName = `${item.itemCode} - ${item.description}`;
+                        itemBudget = item.maxGrantValue || item.totalCost || 0;
+                    } else if (selectedCategoryName === 'Revenue Standard') {
+                        itemName = `${item.itemCode} - ${item.description}`;
+                        itemBudget = item.maxGrantValue || 0;
+                    } else if (selectedCategoryName === 'Item Breakdown Capital' || selectedCategoryName === 'Item Breakdown Revenue') {
+                        itemName = `${item.itemCode} - ${item.description}`;
+                        itemBudget = item.maxGrantApproved || item.totalCost || 0;
+                    }
 
-                const remaining = itemBudget - claimed;
+                    const remaining = itemBudget - claimed;
+
+                    content += `
+                        <div class="category-option" onclick="selectCategoryItem('${selectedCategoryName}', '${itemKey}', '${escapeHtml(itemName)}', ${selectedProject})" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
+                            <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 4px;">${escapeHtml(itemName)}</div>
+                            <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
+                                <span>Budget: £${itemBudget.toLocaleString()}</span>
+                                <span>Claimed: £${claimed.toLocaleString()}</span>
+                                <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                // No line items - create a "General" option for category-level assignment
+                const claimed = getCategoryClaimed(category);
+                const budget = category.totalCost || 0;
+                const remaining = budget - claimed;
+                const generalItemKey = `${itemPrefix}-general`;
+                const generalItemName = `General ${selectedCategoryName}`;
 
                 content += `
-                    <div class="category-option" onclick="selectCategoryItem('${selectedCategoryName}', '${itemKey}', '${escapeHtml(itemName)}', ${selectedProject})" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
-                        <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 4px;">${escapeHtml(itemName)}</div>
+                    <div style="padding: 12px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; margin-bottom: 12px;">
+                        <p style="font-size: 11px; color: #92400e; margin: 0;">ℹ️ This category has no individual line items. Expenses will be assigned to the category as a whole.</p>
+                    </div>
+                    <div class="category-option" onclick="selectCategoryItem('${selectedCategoryName}', '${generalItemKey}', '${escapeHtml(generalItemName)}', ${selectedProject})" style="cursor: pointer; padding: 10px; margin-bottom: 8px; border: 2px solid #3b82f6; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 6px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #333; margin-bottom: 4px;">💼 ${escapeHtml(generalItemName)}</div>
                         <div style="font-size: 10px; color: #666; display: flex; gap: 12px;">
-                            <span>Budget: £${itemBudget.toLocaleString()}</span>
+                            <span>Budget: £${budget.toLocaleString()}</span>
                             <span>Claimed: £${claimed.toLocaleString()}</span>
                             <span style="color: ${remaining < 0 ? '#dc2626' : '#059669'}; font-weight: 600;">Remaining: £${remaining.toLocaleString()}</span>
                         </div>
                     </div>
                 `;
-            });
+            }
 
             content += '</div>';
             document.getElementById('assignModalContent').innerHTML = content;
@@ -3298,6 +3666,9 @@
             // Re-render the table
             renderTransactions();
 
+            // Update filter dropdown to include newly assigned project
+            populateProjectFilter();
+
             // Save to storage
             await saveTransactionsToStorage();
 
@@ -3318,7 +3689,7 @@
             const modal = document.getElementById('assignCategoryModal');
             const modalContent = modal.querySelector('.modal-content');
 
-            modal.classList.remove('active');
+            modal.classList.remove('active', 'positioned');
             currentEditingIndex = null;
             selectedCategory = null;
             modalKeyboardIndex = -1;
@@ -3331,6 +3702,7 @@
             modalContent.style.width = '';
             modalContent.style.margin = '';
             modalContent.style.maxHeight = '';
+            modalContent.style.overflowY = '';
             modalContent.style.opacity = '';
             modalContent.style.transition = '';
 
@@ -3716,34 +4088,66 @@
             modalContent.style.transition = 'none';
 
             // Position modal as dropdown below the button
-            modal.classList.add('active');
+            modal.classList.add('active', 'positioned');
 
             console.log('🔍 [MODAL DEBUG] Modal active class added, classList:', modal.classList.toString());
 
             // Use setTimeout to ensure modal is rendered before positioning
             setTimeout(() => {
                 console.log('📐 [MODAL DEBUG] Positioning modal');
+
+                // Calculate available space and modal dimensions
+                // NOTE: rect is viewport-relative, and modal-overlay is position:fixed,
+                // so we use viewport coordinates (no scrollY/scrollX needed)
+                const viewportHeight = window.innerHeight;
+                const viewportWidth = window.innerWidth;
+                const modalWidth = Math.min(500, viewportWidth - 40);
+
+                // Calculate max height based on available space (with padding)
+                const spaceBelow = viewportHeight - rect.bottom - 20;
+                const spaceAbove = rect.top - 20;
+                const maxModalHeight = Math.min(viewportHeight * 0.7, Math.max(spaceBelow, spaceAbove));
+
+                // Set max height first so we can get accurate offsetHeight
+                modalContent.style.maxHeight = maxModalHeight + 'px';
+                modalContent.style.overflowY = 'auto';
+
+                // Force layout recalculation
                 const modalHeight = modalContent.offsetHeight;
-                const modalWidth = Math.min(500, window.innerWidth - 40);
 
-                let top = rect.bottom + window.scrollY + 5;
-                let left = rect.right + window.scrollX - modalWidth;
+                let top, left;
 
-                // Adjust if modal goes off-screen
-                if (left < 10) left = 10;
-                if (left + modalWidth > window.innerWidth - 10) {
-                    left = window.innerWidth - modalWidth - 10;
+                // Try to position below the button first
+                if (spaceBelow >= modalHeight || spaceBelow >= spaceAbove) {
+                    // Position below button (viewport coordinates)
+                    top = rect.bottom + 5;
+
+                    // Ensure it doesn't go off bottom of viewport
+                    if (top + modalHeight > viewportHeight - 20) {
+                        top = viewportHeight - modalHeight - 20;
+                    }
+                } else {
+                    // Position above button (viewport coordinates)
+                    top = rect.top - modalHeight - 5;
+
+                    // Ensure it doesn't go off top of viewport
+                    if (top < 10) {
+                        top = 10;
+                    }
                 }
 
-                // If modal goes below viewport, position above button
-                if (top + modalHeight > window.innerHeight + window.scrollY - 20) {
-                    top = rect.top + window.scrollY - modalHeight - 5;
+                // Position horizontally (align right edge with button)
+                left = rect.right - modalWidth;
+
+                // Adjust if modal goes off-screen horizontally
+                if (left < 10) left = 10;
+                if (left + modalWidth > viewportWidth - 10) {
+                    left = viewportWidth - modalWidth - 10;
                 }
 
                 modalContent.style.position = 'absolute';
                 modalContent.style.top = top + 'px';
                 modalContent.style.left = left + 'px';
-                modalContent.style.maxHeight = '70vh';
                 modalContent.style.width = modalWidth + 'px';
                 modalContent.style.margin = '0';
 
@@ -3751,7 +4155,15 @@
                 modalContent.style.opacity = '1';
                 modalContent.style.transition = 'opacity 0.15s ease-in-out';
 
-                console.log('✅ [MODAL DEBUG] Modal positioned at:', { top, left });
+                console.log('✅ [MODAL DEBUG] Modal positioned at:', {
+                    top,
+                    left,
+                    modalHeight,
+                    spaceBelow,
+                    spaceAbove,
+                    buttonRect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
+                    viewport: { width: viewportWidth, height: viewportHeight }
+                });
             }, 10);
 
             // Now proceed with normal assignment flow
@@ -3871,6 +4283,13 @@
             if (!category) return null;
 
             const [catName, indexStr] = itemKey.split('-');
+
+            // Handle "general" item keys for categories without line items
+            if (indexStr === 'general') {
+                console.log('📦 [FIND ITEM] General category assignment - returning category object');
+                return category; // Return the category itself for general assignments
+            }
+
             const index = parseInt(indexStr);
 
             // IUK categories
@@ -3922,8 +4341,8 @@
         /**
          * Handle unassignment (right-click on assign button)
          */
-        async function handleUnassign(index) {
-            const transaction = allTransactions[index];
+        async function handleUnassign(transactionIndex, assignmentIndex = null) {
+            const transaction = allTransactions[transactionIndex];
 
             if (!transaction.assignments || transaction.assignments.length === 0) {
                 if (!transaction.assignedItemName) {
@@ -3945,6 +4364,18 @@
                 return;
             }
 
+            // If specific assignment index provided, remove that one directly
+            if (assignmentIndex !== null && assignmentIndex >= 0 && assignmentIndex < transaction.assignments.length) {
+                const assignment = transaction.assignments[assignmentIndex];
+                await removeAssignmentFromProject(transaction, assignment);
+                transaction.assignments.splice(assignmentIndex, 1);
+                renderTransactions();
+                await saveTransactionsToStorage();
+                showToast('✅ Assignment removed and saved', 'success');
+                return;
+            }
+
+            // Fallback for old behavior (no assignment index provided)
             // New format - show list of assignments to remove
             if (transaction.assignments.length === 1) {
                 if (confirm(`Remove assignment: ${transaction.assignments[0].itemName}?`)) {

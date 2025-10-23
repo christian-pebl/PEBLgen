@@ -14,7 +14,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         /* Navigation Banner - PEBL Brand Colors */
-        .nav-banner { background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 30px; margin-bottom: 0; }
+        .nav-banner { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 30px; margin-bottom: 0; z-index: 100; }
         .nav-banner h1 { color: white; font-size: 28px; font-weight: 700; margin: 0; font-family: 'Roboto', sans-serif; letter-spacing: 0.5px; }
         .nav-buttons { display: flex; gap: 15px; }
         .nav-btn { background-color: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); padding: 10px 25px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; text-decoration: none; transition: all 0.3s ease; display: inline-block; font-family: 'Roboto', sans-serif; }
@@ -27,6 +27,7 @@
             background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%);
             min-height: 100vh;
             padding: 0;
+            padding-top: 90px;
         }
 
         .container {
@@ -766,6 +767,7 @@
             <a href="gantt.html" class="nav-btn">Gantt</a>
             <a href="timesheet.html" class="nav-btn">Timesheet</a>
             <a href="index.html" class="nav-btn">Sketcher</a>
+            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Scroll to top">↑ Top</button>
         </div>
     </div>
 
@@ -1116,6 +1118,296 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             });
         }
 
+        // Transaction and Invoice Loading (for Spend integration)
+        const INVOICES_STORE_NAME = 'invoices';
+        let cachedTransactions = null;
+        let cachedInvoices = null;
+
+        // Load all transactions from csvFiles store
+        async function loadAllTransactions() {
+            if (!db) await initIndexedDB();
+            if (!db) return [];
+
+            try {
+                // Check if csvFiles store exists
+                if (!db.objectStoreNames.contains(CSV_STORE_NAME)) {
+                    console.log('📊 [TRANSACTIONS] CSV files store not found');
+                    return [];
+                }
+
+                const transaction = db.transaction([CSV_STORE_NAME], 'readonly');
+                const store = transaction.objectStore(CSV_STORE_NAME);
+                const allFiles = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Flatten all transactions from all CSV files
+                const allTransactions = [];
+                allFiles.forEach(file => {
+                    if (file.transactions && Array.isArray(file.transactions)) {
+                        allTransactions.push(...file.transactions);
+                    }
+                });
+
+                console.log(`📊 [TRANSACTIONS] Loaded ${allTransactions.length} transactions from ${allFiles.length} CSV files`);
+                return allTransactions;
+            } catch (error) {
+                console.error('❌ [TRANSACTIONS] Failed to load transactions:', error);
+                return [];
+            }
+        }
+
+        // Load all invoice attachments
+        async function loadInvoiceAttachments() {
+            if (!db) await initIndexedDB();
+            if (!db) return [];
+
+            try {
+                // Check if invoices store exists
+                if (!db.objectStoreNames.contains(INVOICES_STORE_NAME)) {
+                    console.log('📎 [INVOICES] Invoices store not found');
+                    return [];
+                }
+
+                const transaction = db.transaction([INVOICES_STORE_NAME], 'readonly');
+                const store = transaction.objectStore(INVOICES_STORE_NAME);
+                const allInvoices = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                console.log(`📎 [INVOICES] Loaded ${allInvoices.length} invoice attachments`);
+                return allInvoices;
+            } catch (error) {
+                console.error('❌ [INVOICES] Failed to load invoices:', error);
+                return [];
+            }
+        }
+
+        // Get transactions for a specific item and quarter
+        function getTransactionsForItem(allTransactions, projectId, category, itemKey, quarter = null) {
+            const filtered = allTransactions.filter(transaction => {
+                if (!transaction.assignments || !Array.isArray(transaction.assignments)) return false;
+
+                return transaction.assignments.some(assignment =>
+                    assignment.projectId === projectId &&
+                    assignment.category === category &&
+                    assignment.itemKey === itemKey &&
+                    (quarter === null || assignment.quarter === quarter)
+                );
+            });
+
+            console.log(`🔍 [FILTER] Found ${filtered.length} transactions for project ${projectId}, ${category}, ${itemKey}, Q${quarter || 'all'}`);
+            return filtered;
+        }
+
+        // Find invoice for a transaction
+        function getInvoiceForTransaction(transaction, invoices) {
+            if (!invoices || invoices.length === 0) return null;
+
+            // Try to match by date and description substring
+            return invoices.find(inv => {
+                if (!inv.transactionDate || !transaction.date) return false;
+
+                const dateMatch = inv.transactionDate === transaction.date;
+                const descMatch = inv.description &&
+                    transaction.description &&
+                    (inv.description.includes(transaction.description.substring(0, 20)) ||
+                     transaction.description.includes(inv.description.substring(0, 20)));
+
+                return dateMatch && descMatch;
+            });
+        }
+
+        // Render transaction details table
+        function renderTransactionDetails(transactions, projectId, category, itemKey, quarter, invoices) {
+            if (!transactions || transactions.length === 0) {
+                return '<p style="color: #94a3b8; font-style: italic; padding: 10px;">No transactions assigned yet</p>';
+            }
+
+            const rows = transactions.map(transaction => {
+                const date = transaction.date || '-';
+                const description = transaction.description || '-';
+                const spentAmount = parseAmount(transaction.spent);
+                const valueExTax = spentAmount > 0 ? (spentAmount / 1.2).toFixed(2) : '0.00';
+
+                // Combine manual description and voice notes for Detail column
+                const detailParts = [];
+                if (transaction.manualDescription) detailParts.push(transaction.manualDescription);
+                if (transaction.voiceNotes) detailParts.push(`🎤 ${transaction.voiceNotes}`);
+                const detail = detailParts.length > 0 ? detailParts.join(' | ') : '-';
+
+                // Find the specific assignment for this item
+                const assignment = transaction.assignments.find(a =>
+                    a.projectId === projectId &&
+                    a.category === category &&
+                    a.itemKey === itemKey &&
+                    (quarter === null || a.quarter === quarter)
+                );
+
+                const assignedAmount = assignment ? assignment.amount.toFixed(2) : '0.00';
+                const assignedQuarter = assignment ? assignment.quarter : '-';
+
+                // Check for PDF attachment
+                const invoice = getInvoiceForTransaction(transaction, invoices);
+                const pdfCell = invoice
+                    ? `<button class="view-pdf-btn" data-invoice-id="${invoice.id}" onclick="viewInvoicePDF(${invoice.id})" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">📎 View PDF</button>`
+                    : '<span style="color: #94a3b8;">-</span>';
+
+                return `
+                    <tr>
+                        <td style="padding: 6px 10px;">${escapeHtml(date)}</td>
+                        <td style="padding: 6px 10px;">${escapeHtml(description)}</td>
+                        <td style="padding: 6px 10px; text-align: right;">£${valueExTax}</td>
+                        <td style="padding: 6px 10px; max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(detail)}</td>
+                        <td style="padding: 6px 10px; text-align: center;">${pdfCell}</td>
+                        <td style="padding: 6px 10px; text-align: center;">Q${assignedQuarter}</td>
+                        <td style="padding: 6px 10px; text-align: right; font-weight: 600;">£${assignedAmount}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+                <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <h5 style="margin: 0 0 10px 0; color: #3b82f6; font-size: 0.95em;">💳 Assigned Transactions</h5>
+                    <table class="transaction-details-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                        <thead>
+                            <tr style="background: #f1f5f9;">
+                                <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Date</th>
+                                <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Description</th>
+                                <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Value ex Tax</th>
+                                <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Detail</th>
+                                <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">PDF</th>
+                                <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Qtr</th>
+                                <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // HTML escape utility
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Parse amount from string (removes currency symbols and commas)
+        function parseAmount(amountStr) {
+            if (!amountStr) return 0;
+            // Remove currency symbols and commas
+            const cleaned = amountStr.replace(/[£$,]/g, '');
+            return parseFloat(cleaned) || 0;
+        }
+
+        // View invoice PDF in modal
+        async function viewInvoicePDF(invoiceId) {
+            if (!db) await initIndexedDB();
+            if (!db) {
+                alert('Database not available');
+                return;
+            }
+
+            try {
+                const transaction = db.transaction([INVOICES_STORE_NAME], 'readonly');
+                const store = transaction.objectStore(INVOICES_STORE_NAME);
+                const invoice = await new Promise((resolve, reject) => {
+                    const request = store.get(invoiceId);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                if (!invoice || !invoice.pdfBlob) {
+                    alert('PDF not found');
+                    return;
+                }
+
+                // Create blob URL and open in modal
+                const blobUrl = URL.createObjectURL(invoice.pdfBlob);
+                showPDFModal(blobUrl, invoice.filename || 'invoice.pdf');
+            } catch (error) {
+                console.error('Failed to load PDF:', error);
+                alert('Failed to load PDF');
+            }
+        }
+
+        // Show PDF in modal
+        function showPDFModal(pdfUrl, filename) {
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.id = 'pdfModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 8px; width: 90%; max-width: 900px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                    <div style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0; font-size: 1.1em; color: #333;">📎 ${escapeHtml(filename)}</h3>
+                        <button onclick="closePDFModal()" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕ Close</button>
+                    </div>
+                    <div style="flex: 1; overflow: hidden;">
+                        <iframe src="${pdfUrl}" style="width: 100%; height: 100%; border: none;"></iframe>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closePDFModal();
+                }
+            });
+
+            // Clean up blob URL when modal closes
+            modal.dataset.blobUrl = pdfUrl;
+        }
+
+        // Close PDF modal
+        function closePDFModal() {
+            const modal = document.getElementById('pdfModal');
+            if (modal) {
+                // Revoke blob URL to free memory
+                if (modal.dataset.blobUrl) {
+                    URL.revokeObjectURL(modal.dataset.blobUrl);
+                }
+                modal.remove();
+            }
+        }
+
+        // Pre-load transactions and invoices on page load
+        async function preloadTransactionData() {
+            console.log('📊 [PRELOAD] Loading transaction data...');
+            cachedTransactions = await loadAllTransactions();
+            cachedInvoices = await loadInvoiceAttachments();
+            console.log(`✅ [PRELOAD] Cached ${cachedTransactions.length} transactions and ${cachedInvoices.length} invoices`);
+        }
+
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 [STARTUP] DOM Content Loaded - starting initialization...');
@@ -1133,6 +1425,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                         // Auto-load projects to check for existing data
                         loadProjectsOnStartup();
+
+                        // Pre-load transactions and invoices from Spend tab
+                        preloadTransactionData();
                     } else {
                         addLog('⚠️ IndexedDB unavailable - project saving disabled');
                         console.warn('⚠️ [STARTUP] App running without database support');
@@ -2210,6 +2505,27 @@ Rules:
                                                             </tr>
                                                         </tbody>
                                                     </table>
+                                                    ${(() => {
+                                                        // Render transaction details for this Capital Non-Standard item
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Capital Non-Standard',
+                                                                'capitalNonStandard-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Capital Non-Standard',
+                                                                'capitalNonStandard-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
@@ -2345,6 +2661,27 @@ Rules:
                                                             </tr>
                                                         </tbody>
                                                     </table>
+                                                    ${(() => {
+                                                        // Render transaction details for this Revenue Non-Standard item
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Revenue Non-Standard',
+                                                                'revenueNonStandard-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Revenue Non-Standard',
+                                                                'revenueNonStandard-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
@@ -3867,6 +4204,27 @@ ${inputText}`
                                                             </tr>
                                                         </tbody>
                                                     </table>
+                                                    ${(() => {
+                                                        // Render transaction details for this Materials item
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Materials',
+                                                                'materials-' + index,
+                                                                null // null = show all quarters
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Materials',
+                                                                'materials-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
@@ -4023,6 +4381,27 @@ ${inputText}`
                                                             </tr>
                                                         </tbody>
                                                     </table>
+                                                    ${(() => {
+                                                        // Render transaction details for this Capital Usage item
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Capital Usage',
+                                                                'capitalUsage-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Capital Usage',
+                                                                'capitalUsage-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
@@ -4156,6 +4535,27 @@ ${inputText}`
                                                             </tr>
                                                         </tbody>
                                                     </table>
+                                                    ${(() => {
+                                                        // Render transaction details for this Subcontracting item
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Subcontracting',
+                                                                'subcontracting-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Subcontracting',
+                                                                'subcontracting-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
@@ -4226,7 +4626,7 @@ ${inputText}`
                 let travelOtherHTML = `
                     <div class="category-section">
                         <h3>✈️ Travel and Subsistence (£${projectBudget.travel.totalCost.toLocaleString()})</h3>
-                        ${projectBudget.travel.trips && projectBudget.travel.trips.length > 0 ? `
+                        ${(projectBudget.travel.trips && projectBudget.travel.trips.length > 0) || (projectBudget.travel.totalCost > 0 && projectBudget.travel.quarterlyCosts) ? `
                         <table>
                             <thead>
                                 <tr>
@@ -4238,7 +4638,7 @@ ${inputText}`
                                 </tr>
                             </thead>
                             <tbody>
-                                ${projectBudget.travel.trips.map((trip, index) => {
+                                ${(projectBudget.travel.trips && projectBudget.travel.trips.length > 0 ? projectBudget.travel.trips : (projectBudget.travel.quarterlyCosts ? [projectBudget.travel] : [])).map((trip, index) => {
                                     // Ensure total is treated as totalCost
                                     if (!trip.totalCost && trip.total) {
                                         trip.totalCost = trip.total;
@@ -4247,14 +4647,14 @@ ${inputText}`
                                     const costsClaimed = getTotalCostsClaimed(trip);
                                     const remaining = getRemainingBudget(trip);
                                     const difference = getDifferencePercentage(trip);
-                                    const isOverBudget = costsClaimed > trip.total;
+                                    const isOverBudget = costsClaimed > (trip.total || trip.totalCost);
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${trip.purpose}</td>
-                                            <td>${trip.numberOfTimes}</td>
-                                            <td>£${trip.costEach.toLocaleString()}</td>
-                                            <td>£${trip.total.toLocaleString()}</td>
+                                            <td>${trip.purpose || 'General Travel'}</td>
+                                            <td>${trip.numberOfTimes || '-'}</td>
+                                            <td>${trip.costEach ? '£' + trip.costEach.toLocaleString() : '-'}</td>
+                                            <td>£${(trip.total || trip.totalCost).toLocaleString()}</td>
                                             ${hasQuarters ? `
                                                 <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
                                                 <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
@@ -4265,7 +4665,7 @@ ${inputText}`
                                         <tr id="travel-${index}-breakdown" style="display: none;">
                                             <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: #f8f9fa;">
                                                 <div style="padding: 15px;">
-                                                    <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 0.95em;">📊 Quarterly Breakdown - ${trip.purpose}</h4>
+                                                    <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 0.95em;">📊 Quarterly Breakdown - ${trip.purpose || 'General Travel'}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                         <thead>
                                                             <tr style="background: #e2e8f0;">
@@ -4281,7 +4681,7 @@ ${inputText}`
                                                                         <input
                                                                             type="number"
                                                                             value="${trip.quarterlyCosts['q' + q.index] || 0}"
-                                                                            onchange="updateQuarterlyCost(projectBudget.travel.trips[${index}], ${q.index}, this.value); displayDetailedBudget();"
+                                                                            onchange="updateQuarterlyCost(${projectBudget.travel.trips && projectBudget.travel.trips.length > 0 ? `projectBudget.travel.trips[${index}]` : 'projectBudget.travel'}, ${q.index}, this.value); displayDetailedBudget();"
                                                                             onclick="event.stopPropagation()"
                                                                             style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;"
                                                                         />
@@ -4296,6 +4696,27 @@ ${inputText}`
                                                             </tr>
                                                         </tbody>
                                                     </table>
+                                                    ${(() => {
+                                                        // Render transaction details for this Travel item
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Travel',
+                                                                'travel-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Travel',
+                                                                'travel-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
@@ -4303,8 +4724,8 @@ ${inputText}`
                                     `;
                                 }).join('')}
 
-                                ${hasQuarters && projectBudget.travel.trips.length > 0 ? (() => {
-                                    const summary = getCategorySummary(projectBudget.travel.trips);
+                                ${hasQuarters && ((projectBudget.travel.trips && projectBudget.travel.trips.length > 0) || projectBudget.travel.quarterlyCosts) ? (() => {
+                                    const summary = getCategorySummary(projectBudget.travel.trips && projectBudget.travel.trips.length > 0 ? projectBudget.travel.trips : [projectBudget.travel]);
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     return `
@@ -4359,7 +4780,7 @@ ${inputText}`
 
                     <div class="category-section" style="margin-top: 20px;">
                         <h3>📋 Other Costs (£${projectBudget.otherCosts.totalCost.toLocaleString()})</h3>
-                        ${projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? `
+                        ${(projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0) || (projectBudget.otherCosts.totalCost > 0 && projectBudget.otherCosts.quarterlyCosts) ? `
                         <table>
                             <thead>
                                 <tr>
@@ -4369,7 +4790,7 @@ ${inputText}`
                                 </tr>
                             </thead>
                             <tbody>
-                                ${projectBudget.otherCosts.items.map((item, index) => {
+                                ${(projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? projectBudget.otherCosts.items : (projectBudget.otherCosts.quarterlyCosts ? [projectBudget.otherCosts] : [])).map((item, index) => {
                                     // Ensure estimatedCost is treated as totalCost
                                     if (!item.totalCost && item.estimatedCost) {
                                         item.totalCost = item.estimatedCost;
@@ -4378,12 +4799,12 @@ ${inputText}`
                                     const costsClaimed = getTotalCostsClaimed(item);
                                     const remaining = getRemainingBudget(item);
                                     const difference = getDifferencePercentage(item);
-                                    const isOverBudget = costsClaimed > item.estimatedCost;
+                                    const isOverBudget = costsClaimed > (item.estimatedCost || item.totalCost);
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.description}</td>
-                                            <td>£${item.estimatedCost.toLocaleString()}</td>
+                                            <td>${item.description || 'General Other Costs'}</td>
+                                            <td>£${(item.estimatedCost || item.totalCost).toLocaleString()}</td>
                                             ${hasQuarters ? `
                                                 <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
                                                 <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
@@ -4394,7 +4815,7 @@ ${inputText}`
                                         <tr id="othercosts-${index}-breakdown" style="display: none;">
                                             <td colspan="${hasQuarters ? '5' : '2'}" style="padding: 0; background: #f8f9fa;">
                                                 <div style="padding: 15px;">
-                                                    <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 0.95em;">📊 Quarterly Breakdown - ${item.description}</h4>
+                                                    <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 0.95em;">📊 Quarterly Breakdown - ${item.description || 'General Other Costs'}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                         <thead>
                                                             <tr style="background: #e2e8f0;">
@@ -4410,7 +4831,7 @@ ${inputText}`
                                                                         <input
                                                                             type="number"
                                                                             value="${item.quarterlyCosts['q' + q.index] || 0}"
-                                                                            onchange="updateQuarterlyCost(projectBudget.otherCosts.items[${index}], ${q.index}, this.value); displayDetailedBudget();"
+                                                                            onchange="updateQuarterlyCost(${projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? `projectBudget.otherCosts.items[${index}]` : 'projectBudget.otherCosts'}, ${q.index}, this.value); displayDetailedBudget();"
                                                                             onclick="event.stopPropagation()"
                                                                             style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;"
                                                                         />
@@ -4425,6 +4846,27 @@ ${inputText}`
                                                             </tr>
                                                         </tbody>
                                                     </table>
+                                                    ${(() => {
+                                                        // Render transaction details for this Other Costs item
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Other Costs',
+                                                                'otherCosts-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Other Costs',
+                                                                'otherCosts-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
@@ -4432,8 +4874,8 @@ ${inputText}`
                                     `;
                                 }).join('')}
 
-                                ${hasQuarters && projectBudget.otherCosts.items.length > 0 ? (() => {
-                                    const summary = getCategorySummary(projectBudget.otherCosts.items);
+                                ${hasQuarters && ((projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0) || projectBudget.otherCosts.quarterlyCosts) ? (() => {
+                                    const summary = getCategorySummary(projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? projectBudget.otherCosts.items : [projectBudget.otherCosts]);
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     return `
