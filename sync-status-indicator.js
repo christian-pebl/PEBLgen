@@ -275,14 +275,14 @@ style.textContent = `
     /* Sync Status Button in Nav Bar */
     .sync-status-btn {
         position: relative;
-        padding: 8px 12px !important;
-        min-width: 45px;
+        padding: 6px 10px !important;
+        min-width: 40px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
     }
 
     .sync-status-btn .sync-icon {
-        font-size: 24px;
+        font-size: 20px;
         display: inline-block;
         position: relative;
         line-height: 1;

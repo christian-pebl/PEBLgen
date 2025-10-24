@@ -20,10 +20,10 @@
         .nav-banner { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 30px; margin-bottom: 0; z-index: 100; }
         .nav-banner .page-title { color: white; font-size: 28px; font-weight: 700; margin: 0; font-family: 'Roboto', sans-serif; letter-spacing: 0.5px; }
         .nav-banner h1 { color: white; font-size: 28px; font-weight: 700; margin: 0; font-family: 'Roboto', sans-serif; letter-spacing: 0.5px; }
-        .nav-buttons { display: flex; gap: 15px; }
-        .nav-btn { background-color: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); padding: 10px 25px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; text-decoration: none; transition: all 0.3s ease; display: inline-block; font-family: 'Roboto', sans-serif; }
-        .nav-btn:hover { background-color: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); transform: translateY(-2px); }
-        .nav-btn.active { background-color: white; color: #2B7A78; border-color: white; }
+        .nav-buttons { display: flex; gap: 8px; }
+        .nav-btn { background-color: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; display: inline-block; font-family: 'Roboto', sans-serif; }
+        .nav-btn:hover { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); }
+        .nav-btn.active { background-color: rgba(255, 255, 255, 0.9); color: #2B7A78; border-color: rgba(255, 255, 255, 0.9); }
         .content-container { padding: 20px; max-width: 1200px; margin: 0 auto; padding-top: 90px; }
 
         body {
@@ -921,6 +921,22 @@
         </div>
     </div>
 
+    <!-- Text Popup Modal (for long descriptions/details) -->
+    <div id="textPopupModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="textPopupTitle">Full Text</h3>
+                <button class="modal-close" onclick="closeTextPopup()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="textPopupContent" style="font-size: 13px; line-height: 1.6; color: #1e293b; word-wrap: break-word; white-space: pre-wrap;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-secondary" onclick="closeTextPopup()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Invoice Search Modal -->
     <div id="invoiceSearchModal" class="modal-overlay">
         <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
@@ -1135,24 +1151,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Overall recommendation -->
-                    <div id="validationRecommendation" style="padding: 12px; border-radius: 6px; background: #f0f9ff; border: 2px solid #3b82f6; text-align: center;">
-                        <div style="font-weight: 600; font-size: 13px; color: #1e40af;">
-                            <span id="recommendationIcon">🤖</span>
-                            <span id="recommendationText">Analyzing invoice...</span>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Attachment Confirmation -->
+                <!-- Attachment Buttons -->
                 <div style="padding: 15px; background: #f8fafc; border-top: 2px solid #e5e7eb;">
-                    <div style="margin-bottom: 12px;">
-                        <strong style="color: #1e293b; font-size: 14px;">Is this the correct invoice?</strong>
-                        <p style="color: #64748b; font-size: 12px; margin: 4px 0 0 0;">
-                            Clicking "Attach Invoice" will save this PDF to the transaction.
-                        </p>
-                    </div>
                     <div style="display: flex; gap: 10px;">
                         <button onclick="confirmAttachInvoice()" class="btn-primary" id="attachInvoiceBtn" style="flex: 1; padding: 10px; font-size: 14px; font-weight: 600;">
                             ✅ Attach Invoice
@@ -2969,17 +2971,29 @@
                     console.log(`👤 [RENDER ROW 0] Has fromTo field: ${transaction.hasOwnProperty('fromTo')}`);
                 }
 
+                // Helper function to truncate text with popup
+                const truncateWithPopup = (text, maxLength, fieldName, rowIndex) => {
+                    if (!text || text.length <= maxLength) {
+                        return escapeHtml(text);
+                    }
+                    const truncated = text.substring(0, maxLength) + '...';
+                    return `<span onclick="showTextPopup('${fieldName}', ${rowIndex}); event.stopPropagation();" style="cursor: pointer; text-decoration: underline dotted;" title="Click to view full text">${escapeHtml(truncated)}</span>`;
+                };
+
                 // Description column - always show original bank description (unchanged)
-                const descriptionHtml = `<span style="font-size: 11px; color: #64748b;">${escapeHtml(transaction.description)}</span>`;
+                const descriptionText = transaction.description || '';
+                const descriptionHtml = `<span style="font-size: 11px; color: #64748b;">${truncateWithPopup(descriptionText, 100, 'description', index)}</span>`;
 
                 // Detail column - show manual description, voice notes, or AI-generated detail
                 let detailHtml = '';
                 if (transaction.detail) {
                     // AI-generated or manually set detail
-                    detailHtml = `<span style="font-size: 11px; color: #1e293b; font-weight: 500;">${escapeHtml(transaction.detail)}</span>`;
+                    const detailText = transaction.detail;
+                    detailHtml = `<span style="font-size: 11px; color: #1e293b; font-weight: 500;">${truncateWithPopup(detailText, 100, 'detail', index)}</span>`;
                 } else if (transaction.manualDescription) {
                     // Legacy field - migrate to detail
-                    detailHtml = `<span style="font-size: 11px; color: #1e293b; font-weight: 500;">${escapeHtml(transaction.manualDescription)}</span>`;
+                    const detailText = transaction.manualDescription;
+                    detailHtml = `<span style="font-size: 11px; color: #1e293b; font-weight: 500;">${truncateWithPopup(detailText, 100, 'detail', index)}</span>`;
                 } else {
                     detailHtml = `<span style="font-size: 10px; color: #94a3b8; font-style: italic;">-</span>`;
                 }
@@ -4981,6 +4995,43 @@
         }
 
         // ========================================
+        // TEXT POPUP FOR LONG DESCRIPTIONS/DETAILS
+        // ========================================
+
+        function showTextPopup(fieldName, rowIndex) {
+            const transaction = allTransactions[rowIndex];
+            if (!transaction) return;
+
+            const modal = document.getElementById('textPopupModal');
+            const title = document.getElementById('textPopupTitle');
+            const content = document.getElementById('textPopupContent');
+
+            // Get the appropriate text based on field name
+            let text = '';
+            if (fieldName === 'description') {
+                text = transaction.description || '';
+                title.textContent = 'Full Description';
+            } else if (fieldName === 'detail') {
+                text = transaction.detail || transaction.manualDescription || '';
+                title.textContent = 'Full Detail';
+            }
+
+            content.textContent = text;
+            modal.style.display = 'flex';
+        }
+
+        function closeTextPopup() {
+            document.getElementById('textPopupModal').style.display = 'none';
+        }
+
+        // Close popup when clicking outside
+        document.getElementById('textPopupModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeTextPopup();
+            }
+        });
+
+        // ========================================
         // GMAIL API AUTHENTICATION (Google Identity Services)
         // ========================================
 
@@ -5802,12 +5853,16 @@ Example: {"company": "Acme Corp", "amount": 123.45, "date": "2025-01-15"}`;
                     dateDaysDifference = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
                     clientSideDateMatch = dateDaysDifference <= 5; // Within 5 days = match
 
-                    console.log('📅 [VALIDATE] Date parsing:', {
+                    console.log('📅 [VALIDATE] Date parsing DETAILED:', {
                         transactionRaw: transaction.date,
                         transactionParsed: transactionDate.toISOString().split('T')[0],
+                        transactionDateObj: transactionDate,
                         extractedRaw: extractedData.date,
                         extractedParsed: extractedDate.toISOString().split('T')[0],
-                        daysDifference: dateDaysDifference
+                        extractedDateObj: extractedDate,
+                        timeDiffMS: timeDiff,
+                        daysDifference: dateDaysDifference,
+                        within5Days: clientSideDateMatch
                     });
                 } catch (e) {
                     console.warn('Could not parse dates for client-side validation:', e);
@@ -5903,9 +5958,23 @@ Return ONLY valid JSON.`;
                 // CLIENT-SIDE OVERRIDE: If dates within 5 days, override AI if it says they don't match
                 if (clientSideDateMatch && !validationResult.dateMatch) {
                     console.log('⚠️ [VALIDATE] AI said dates don\'t match, but client-side check says they do (within 5 days). Overriding AI decision.');
+                    console.log('📅 [OVERRIDE] Date override details:', {
+                        clientSideDateMatch,
+                        dateDaysDifference,
+                        aiDateMatch: validationResult.dateMatch,
+                        overridingTo: true
+                    });
                     validationResult.dateMatch = true;
                     validationResult.dateReason = `Dates match within tolerance (${dateDaysDifference} day(s) difference)`;
                 }
+
+                // Log final validation state
+                console.log('🏁 [VALIDATE] Final validation result:', {
+                    companyMatch: validationResult.companyMatch,
+                    amountMatch: validationResult.amountMatch,
+                    dateMatch: validationResult.dateMatch,
+                    recommendation: validationResult.recommendation
+                });
 
                 // Update overall recommendation if all fields now match
                 if (validationResult.companyMatch && validationResult.amountMatch && validationResult.dateMatch) {
@@ -7613,7 +7682,7 @@ Return ONLY valid JSON.`;
                 await saveTransactionsToStorage();
 
                 // Update UI
-                renderTransactionsTable();
+                renderTransactions();
 
                 // Close modals
                 closePDFPreview();
