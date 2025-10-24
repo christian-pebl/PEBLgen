@@ -84,7 +84,8 @@
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
         }
         #transactionsTable {
             width: 100%;
@@ -153,6 +154,12 @@
         .amount-received {
             color: #2e7d32;
             font-weight: 600;
+        }
+        .fromto-cell {
+            min-width: 120px;
+            max-width: 200px;
+            font-size: 11px;
+            color: #64748b;
         }
 
         /* Action Buttons */
@@ -2778,7 +2785,7 @@
                     <td style="text-align: center; font-weight: 600; color: ${transaction.bank === 'R' ? '#3AAFA9' : '#2B7A78'};">${transaction.bank || '?'}</td>
                     <td>${escapeHtml(transaction.date)}</td>
                     <td class="description-cell">${descriptionHtml}</td>
-                    <td style="font-size: 11px; color: #64748b;">${escapeHtml(transaction.fromTo || '')}</td>
+                    <td class="fromto-cell">${escapeHtml(transaction.fromTo || '')}</td>
                     <td class="amount-spent">${escapeHtml(transaction.spent)}</td>
                     <td class="amount-spent" style="color: #059669; font-weight: 500;">${spentExVAT}</td>
                     <td class="amount-received">${escapeHtml(transaction.received)}</td>
