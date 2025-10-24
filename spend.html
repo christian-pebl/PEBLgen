@@ -2682,6 +2682,7 @@
             if (allTransactions.length > 0) {
                 console.log(`🔍 [RENDER] First transaction:`, allTransactions[0]);
                 console.log(`🔍 [RENDER] Transaction keys:`, Object.keys(allTransactions[0]));
+                console.log(`👤 [RENDER] First transaction fromTo:`, allTransactions[0].fromTo);
                 console.log(`🔍 [RENDER] Sample transactions:`, allTransactions.slice(0, 3));
             }
 
@@ -2721,6 +2722,12 @@
 
             console.log(`✅ [RENDER] Rendering ${filteredTransactions.length} of ${allTransactions.length} transactions...`);
             tbody.innerHTML = filteredTransactions.map((transaction, index) => {
+                // Debug first transaction
+                if (index === 0) {
+                    console.log(`👤 [RENDER ROW 0] fromTo value: "${transaction.fromTo}"`);
+                    console.log(`👤 [RENDER ROW 0] Has fromTo field: ${transaction.hasOwnProperty('fromTo')}`);
+                }
+
                 // Build description with inline expense detail
                 let descriptionHtml = '';
                 if (transaction.manualDescription) {
@@ -2809,6 +2816,12 @@
 
             // Apply column visibility after rendering
             applyColumnVisibility();
+
+            // Debug: Log table headers
+            console.log('🔍 [RENDER] Checking table headers...');
+            const headers = document.querySelectorAll('#transactionsTable th');
+            console.log(`📊 [RENDER] Total headers: ${headers.length}`);
+            headers.forEach((h, i) => console.log(`   Header ${i}: "${h.textContent.trim()}" (display: ${h.style.display || 'default'})`));
         }
 
         function updateSummary() {
