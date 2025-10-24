@@ -1061,6 +1061,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         const DB_VERSION = 6; // Updated to version 6 to match current browser database
         const STORE_NAME = 'projects';
         const CSV_STORE_NAME = 'csvFiles'; // Added by spend.html
+        const INVOICES_STORE_NAME = 'invoices'; // Added for spend.html invoice storage
 
         async function initIndexedDB() {
             console.log(`🔍 [DB INIT] Starting IndexedDB initialization...`);
@@ -1069,16 +1070,30 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-                request.onerror = () => {
+                // Add timeout to detect hanging requests
+                const timeout = setTimeout(() => {
+                    console.warn('⚠️ [DB INIT] Database initialization timeout (10s) - continuing without DB');
+                    if (!db) {
+                        addLog('⚠️ Database initialization timeout - features may be limited');
+                        resolve(null);
+                    }
+                }, 10000); // 10 second timeout
+
+                request.onerror = (event) => {
+                    clearTimeout(timeout);
                     console.error('❌ [DB INIT] IndexedDB error:', request.error);
                     console.error('❌ [DB INIT] Error name:', request.error?.name);
                     console.error('❌ [DB INIT] Error message:', request.error?.message);
+                    console.error('❌ [DB INIT] Error event:', event);
+                    console.error('❌ [DB INIT] Request state:', request.readyState);
                     // Don't reject - continue without DB to allow app to load
                     db = null;
+                    addLog('❌ Database initialization failed - features may be limited');
                     resolve(null);
                 };
 
                 request.onsuccess = () => {
+                    clearTimeout(timeout);
                     db = request.result;
                     console.log('✅ [DB INIT] IndexedDB opened successfully');
                     console.log(`✅ [DB INIT] Current version: ${db.version}`);
@@ -1088,11 +1103,11 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 request.onupgradeneeded = (event) => {
                     console.log(`🔧 [DB UPGRADE] Upgrading IndexedDB from v${event.oldVersion} to v${event.newVersion}`);
-                    const db = event.target.result;
+                    const database = event.target.result;
 
                     // Create projects object store if it doesn't exist
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'projectId', autoIncrement: true });
+                    if (!database.objectStoreNames.contains(STORE_NAME)) {
+                        const objectStore = database.createObjectStore(STORE_NAME, { keyPath: 'projectId', autoIncrement: true });
                         objectStore.createIndex('projectName', 'projectName', { unique: false });
                         objectStore.createIndex('projectNumber', 'projectNumber', { unique: false });
                         objectStore.createIndex('lastModified', 'lastModified', { unique: false });
@@ -1102,13 +1117,24 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     }
 
                     // Create CSV files object store if it doesn't exist (for spend.html compatibility)
-                    if (!db.objectStoreNames.contains(CSV_STORE_NAME)) {
-                        const csvStore = db.createObjectStore(CSV_STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    if (!database.objectStoreNames.contains(CSV_STORE_NAME)) {
+                        const csvStore = database.createObjectStore(CSV_STORE_NAME, { keyPath: 'id', autoIncrement: true });
                         csvStore.createIndex('fileName', 'fileName', { unique: false });
                         csvStore.createIndex('uploadDate', 'uploadDate', { unique: false });
                         console.log('✅ Created CSV files object store');
                     } else {
                         console.log('✓ CSV files store already exists');
+                    }
+
+                    // Create invoices object store if it doesn't exist (for spend.html compatibility)
+                    if (!database.objectStoreNames.contains(INVOICES_STORE_NAME)) {
+                        const invoicesStore = database.createObjectStore(INVOICES_STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                        invoicesStore.createIndex('transactionIndex', 'transactionIndex', { unique: false });
+                        invoicesStore.createIndex('filename', 'filename', { unique: false });
+                        invoicesStore.createIndex('uploadDate', 'uploadDate', { unique: false });
+                        console.log('✅ Created invoices object store');
+                    } else {
+                        console.log('✓ Invoices store already exists');
                     }
                 };
 
@@ -1119,7 +1145,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         }
 
         // Transaction and Invoice Loading (for Spend integration)
-        const INVOICES_STORE_NAME = 'invoices';
         let cachedTransactions = null;
         let cachedInvoices = null;
 

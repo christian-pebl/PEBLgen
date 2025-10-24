@@ -611,6 +611,25 @@
             font-size: 13px;
             padding: 8px 15px;
         }
+        /* Custom scrollbar for results container */
+        #searchResultsContainer {
+            scrollbar-width: thin;
+            scrollbar-color: #3AAFA9 #f1f5f9;
+        }
+        #searchResultsContainer::-webkit-scrollbar {
+            width: 6px;
+        }
+        #searchResultsContainer::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        #searchResultsContainer::-webkit-scrollbar-thumb {
+            background: #3AAFA9;
+            border-radius: 3px;
+        }
+        #searchResultsContainer::-webkit-scrollbar-thumb:hover {
+            background: #2B7A78;
+        }
     </style>
 </head>
 <body>
@@ -948,8 +967,198 @@
         </div>
     </div>
 
+    <!-- Intelligent Invoice Search Modal -->
+    <div id="intelligentSearchModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 800px; width: 95%; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>🔍</span>
+                    <span id="searchModalTitle">Finding Invoice...</span>
+                </h3>
+                <button onclick="closeIntelligentSearchModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Transaction summary -->
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+                        <div><strong>Date:</strong> <span id="searchTxDate"></span></div>
+                        <div><strong>Amount:</strong> <span id="searchTxAmount"></span></div>
+                        <div style="grid-column: 1 / -1;"><strong>Description:</strong> <span id="searchTxDesc"></span></div>
+                        <div style="grid-column: 1 / -1; display: none;" id="searchTxFromToContainer">
+                            <strong>From/To:</strong> <span id="searchTxFromTo"></span>
+                        </div>
+                        <div style="grid-column: 1 / -1; display: none;" id="searchTxNotesContainer">
+                            <strong>User Notes:</strong> <span id="searchTxNotes" style="font-style: italic; color: #6366f1;"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search activity log (collapsible) -->
+                <div id="searchLogHeader" onclick="toggleSearchLog()"
+                     style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 12px 15px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; transition: all 0.3s; user-select: none;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="searchLogIcon" style="font-size: 12px; transition: transform 0.3s;">▶</span>
+                        <span style="font-weight: 600; font-size: 14px;">Search Activity Log</span>
+                        <span id="searchLogSummary" style="font-size: 12px; opacity: 0.9;">(Click to expand)</span>
+                    </div>
+                    <span id="searchLogStatus" style="font-size: 20px;">⏳</span>
+                </div>
+                <div id="searchLogContainer"
+                     style="display: none; background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 250px; overflow-y: auto; margin-bottom: 15px; transition: all 0.3s;">
+                    <!-- Logs will be inserted here -->
+                </div>
+
+                <!-- Progress indicator -->
+                <div id="searchProgressBar" style="display: none; margin-bottom: 20px;">
+                    <div style="background: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden;">
+                        <div id="searchProgressFill" style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div style="text-align: center; margin-top: 5px; font-size: 12px; color: #64748b;" id="searchProgressText">Searching...</div>
+                </div>
+
+                <!-- Results container -->
+                <div id="searchResultsContainer" style="display: none; max-height: 450px; overflow-y: auto; padding-right: 4px;">
+                    <!-- Results will be inserted here -->
+                </div>
+
+                <!-- Action buttons -->
+                <div id="searchActionButtons" style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="closeIntelligentSearchModal()" class="btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
+
+    <!-- PDF Preview Modal -->
+    <div id="pdfPreviewModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 95vw; max-height: 90vh; width: 1000px;">
+            <div class="modal-header">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>📄</span>
+                    <span id="pdfPreviewTitle">Invoice Preview</span>
+                </h3>
+                <button onclick="closePDFPreview()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0; max-height: 80vh; overflow-y: auto;">
+                <!-- PDF Viewer -->
+                <div id="pdfViewerContainer" style="width: 100%; height: 40vh; background: #f3f4f6; display: flex; align-items: center; justify-content: center;">
+                    <iframe id="pdfViewerIframe" style="width: 100%; height: 100%; border: none;"></iframe>
+                </div>
+
+                <!-- Validation Results (shown after analysis) -->
+                <div id="validationResultsContainer" style="display: none; padding: 15px; background: #ffffff; border-top: 2px solid #e5e7eb; border-bottom: 2px solid #e5e7eb;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e293b; display: flex; align-items: center; gap: 6px; font-size: 14px;">
+                        <span id="validationIcon" style="font-size: 16px;">🔍</span>
+                        <span id="validationTitle">AI Validation Results</span>
+                    </h4>
+
+                    <!-- Validation grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                        <!-- Company validation -->
+                        <div id="companyValidation" style="padding: 12px; border-radius: 6px; background: #f8fafc; border: 2px solid #e5e7eb;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="font-weight: 600; color: #64748b; font-size: 11px;">COMPANY</div>
+                                <div id="companyStatus" style="font-size: 18px;">⏳</div>
+                            </div>
+
+                            <!-- Expected vs Found Table -->
+                            <table style="width: 100%; font-size: 11px; line-height: 1.4; margin-bottom: 6px;">
+                                <tr style="color: #64748b;">
+                                    <td style="padding: 2px 0; width: 55px;">Expected:</td>
+                                    <td id="companyExpected" style="padding: 2px 0; font-weight: 500; color: #1e293b;">-</td>
+                                </tr>
+                                <tr style="color: #64748b;">
+                                    <td style="padding: 2px 0;">Found:</td>
+                                    <td id="companyFound" style="padding: 2px 0; font-weight: 500; color: #1e293b;">-</td>
+                                </tr>
+                            </table>
+
+                            <div id="companyReason" style="font-size: 10px; color: #64748b; line-height: 1.3;">
+                                Analyzing...
+                            </div>
+                        </div>
+
+                        <!-- Amount validation -->
+                        <div id="amountValidation" style="padding: 12px; border-radius: 6px; background: #f8fafc; border: 2px solid #e5e7eb;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="font-weight: 600; color: #64748b; font-size: 11px;">AMOUNT</div>
+                                <div id="amountStatus" style="font-size: 18px;">⏳</div>
+                            </div>
+
+                            <!-- Expected vs Found Table -->
+                            <table style="width: 100%; font-size: 11px; line-height: 1.4; margin-bottom: 6px;">
+                                <tr style="color: #64748b;">
+                                    <td style="padding: 2px 0; width: 55px;">Expected:</td>
+                                    <td id="amountExpected" style="padding: 2px 0; font-weight: 500; color: #1e293b;">-</td>
+                                </tr>
+                                <tr style="color: #64748b;">
+                                    <td style="padding: 2px 0;">Found:</td>
+                                    <td id="amountFound" style="padding: 2px 0; font-weight: 500; color: #1e293b;">-</td>
+                                </tr>
+                            </table>
+
+                            <div id="amountReason" style="font-size: 10px; color: #64748b; line-height: 1.3;">
+                                Analyzing...
+                            </div>
+                        </div>
+
+                        <!-- Date validation -->
+                        <div id="dateValidation" style="padding: 12px; border-radius: 6px; background: #f8fafc; border: 2px solid #e5e7eb;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="font-weight: 600; color: #64748b; font-size: 11px;">DATE</div>
+                                <div id="dateStatus" style="font-size: 18px;">⏳</div>
+                            </div>
+
+                            <!-- Expected vs Found Table -->
+                            <table style="width: 100%; font-size: 11px; line-height: 1.4; margin-bottom: 6px;">
+                                <tr style="color: #64748b;">
+                                    <td style="padding: 2px 0; width: 55px;">Expected:</td>
+                                    <td id="dateExpected" style="padding: 2px 0; font-weight: 500; color: #1e293b;">-</td>
+                                </tr>
+                                <tr style="color: #64748b;">
+                                    <td style="padding: 2px 0;">Found:</td>
+                                    <td id="dateFound" style="padding: 2px 0; font-weight: 500; color: #1e293b;">-</td>
+                                </tr>
+                            </table>
+
+                            <div id="dateReason" style="font-size: 10px; color: #64748b; line-height: 1.3;">
+                                Analyzing...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Overall recommendation -->
+                    <div id="validationRecommendation" style="padding: 12px; border-radius: 6px; background: #f0f9ff; border: 2px solid #3b82f6; text-align: center;">
+                        <div style="font-weight: 600; font-size: 13px; color: #1e40af;">
+                            <span id="recommendationIcon">🤖</span>
+                            <span id="recommendationText">Analyzing invoice...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attachment Confirmation -->
+                <div style="padding: 15px; background: #f8fafc; border-top: 2px solid #e5e7eb;">
+                    <div style="margin-bottom: 12px;">
+                        <strong style="color: #1e293b; font-size: 14px;">Is this the correct invoice?</strong>
+                        <p style="color: #64748b; font-size: 12px; margin: 4px 0 0 0;">
+                            Clicking "Attach Invoice" will save this PDF to the transaction.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="confirmAttachInvoice()" class="btn-primary" id="attachInvoiceBtn" style="flex: 1; padding: 10px; font-size: 14px; font-weight: 600;">
+                            ✅ Attach Invoice
+                        </button>
+                        <button onclick="closePDFPreview()" class="btn-secondary" style="flex: 1; padding: 10px; font-size: 14px;">
+                            ❌ Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // ========================================
@@ -5419,8 +5628,2235 @@ Summary:`;
         }
 
         // ========================================
+        // STRUCTURED DATA EXTRACTION FROM INVOICE
+        // ========================================
+
+        /**
+         * Extract structured data (company, amount, date) from invoice text using AI
+         */
+        async function extractStructuredDataFromInvoice(invoiceText) {
+            const apiKey = getOpenAIKey();
+            if (!apiKey) {
+                console.warn('⚠️ No API key available for structured extraction');
+                return null;
+            }
+
+            const prompt = `Extract the following information from this invoice/receipt text and return it as a JSON object:
+
+Required fields:
+- company: The company/vendor name (string)
+- amount: The total amount (number, no currency symbols)
+- date: The invoice/transaction date in YYYY-MM-DD format (string)
+
+Invoice Text:
+${invoiceText.substring(0, 4000)}
+
+Return ONLY a valid JSON object with these three fields. If a field cannot be found, use null.
+Example: {"company": "Acme Corp", "amount": 123.45, "date": "2025-01-15"}`;
+
+            try {
+                console.log('🔍 [EXTRACT] Sending invoice text to ChatGPT for structured extraction...');
+
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            { role: 'system', content: 'You are a data extraction assistant. Always return valid JSON only, no additional text.' },
+                            { role: 'user', content: prompt }
+                        ],
+                        max_tokens: 150,
+                        temperature: 0.1,
+                        response_format: { type: "json_object" }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`OpenAI API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const extractedData = JSON.parse(data.choices[0].message.content.trim());
+
+                console.log('✅ [EXTRACT] Structured data extracted:', extractedData);
+                return extractedData;
+
+            } catch (error) {
+                console.error('❌ [EXTRACT] Structured extraction failed:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Validate extracted invoice data against transaction entry using AI
+         */
+        async function validateInvoiceData(extractedData, transaction) {
+            const apiKey = getOpenAIKey();
+            if (!apiKey) {
+                console.warn('⚠️ No API key available for validation');
+                return null;
+            }
+
+            // Parse transaction amount
+            const transactionAmountStr = (transaction.spent || transaction.received || '0').toString().replace(/£/g, '').trim();
+            const transactionAmount = parseFloat(transactionAmountStr) || 0;
+
+            const prompt = `You are a financial data validator. Compare the extracted invoice data with the transaction entry and determine if they match.
+
+Extracted from Invoice:
+- Company: ${extractedData.company || 'Not found'}
+- Amount: £${extractedData.amount || 'Not found'}
+- Date: ${extractedData.date || 'Not found'}
+
+Transaction Entry:
+- Description/Company: ${transaction.description || 'Not provided'}
+- Amount: £${transactionAmount}
+- Date: ${transaction.date || 'Not provided'}
+
+Analyze each field and return a JSON object with:
+{
+  "companyMatch": true/false,
+  "amountMatch": true/false,
+  "dateMatch": true/false,
+  "companyReason": "brief explanation",
+  "amountReason": "brief explanation",
+  "dateReason": "brief explanation",
+  "overallConfidence": "high"/"medium"/"low",
+  "recommendation": "attach"/"review"/"reject"
+}
+
+Consider:
+- Company: Allow partial matches, common abbreviations, similar names
+- Amount: Exact match required (allow ±0.01 for rounding)
+- Date: Should be within ±3 days of transaction date
+
+Return ONLY valid JSON.`;
+
+            try {
+                console.log('🔍 [VALIDATE] Sending data to ChatGPT for validation...');
+
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            { role: 'system', content: 'You are a financial validation assistant. Always return valid JSON only, no additional text.' },
+                            { role: 'user', content: prompt }
+                        ],
+                        max_tokens: 300,
+                        temperature: 0.1,
+                        response_format: { type: "json_object" }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`OpenAI API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const validationResult = JSON.parse(data.choices[0].message.content.trim());
+
+                console.log('✅ [VALIDATE] Validation complete:', validationResult);
+                return validationResult;
+
+            } catch (error) {
+                console.error('❌ [VALIDATE] Validation failed:', error);
+                return null;
+            }
+        }
+
+        // ========================================
+        // INTELLIGENT INVOICE SEARCH - PHASE 1
+        // ========================================
+
+        /**
+         * Build comprehensive search context from transaction
+         */
+        function buildTransactionContext(transaction, transactionIndex) {
+            console.log('🔍 [CONTEXT] Building search context for:', transaction);
+
+            // Extract core data - strip £ symbol first
+            const amountStr = (transaction.spent || transaction.received || '0').toString().replace(/£/g, '').trim();
+            const amount = parseFloat(amountStr) || 0;
+            const isSpending = transaction.spent && transaction.spent.trim();
+
+            console.log('💰 [CONTEXT] Amount parsing:', {
+                original: transaction.spent || transaction.received,
+                cleaned: amountStr,
+                parsed: amount
+            });
+
+            // Clean merchant name from description
+            const merchantInfo = extractMerchantName(transaction.description);
+
+            // Generate amount variations
+            const amountFormats = generateAmountFormats(amount);
+
+            // Extract keywords from assignments
+            const contextKeywords = [];
+            if (transaction.assignedItemName) {
+                contextKeywords.push(transaction.assignedItemName);
+            }
+            if (transaction.assignments && transaction.assignments.length > 0) {
+                transaction.assignments.forEach(a => {
+                    if (a.itemName) contextKeywords.push(a.itemName);
+                });
+            }
+
+            // Include user voice notes
+            const userNotes = transaction.voiceNotes ? transaction.voiceNotes.trim() : '';
+
+            const context = {
+                // Core data
+                index: transactionIndex,
+                date: parseTransactionDate(transaction.date),
+                amount: amount,
+                description: transaction.description,
+                fromTo: transaction.fromTo || null,
+                bank: transaction.bank,
+                isSpending: isSpending,
+
+                // Extracted/derived
+                merchantName: merchantInfo.cleaned,
+                merchantOriginal: merchantInfo.original,
+                merchantVariants: merchantInfo.variants,
+
+                // Amount formats
+                amountFormats: amountFormats,
+
+                // User context
+                userContext: contextKeywords.join(', '),
+                userNotes: userNotes,
+
+                // Temporal
+                dayOfWeek: getDayOfWeek(transaction.date),
+
+                // Search hints
+                expectedDocumentTypes: isSpending
+                    ? ['invoice', 'receipt', 'order confirmation', 'payment confirmation']
+                    : ['receipt', 'payment received', 'transfer confirmation']
+            };
+
+            console.log('✅ [CONTEXT] Built context:', context);
+            return context;
+        }
+
+        /**
+         * Extract and clean merchant name from description
+         */
+        function extractMerchantName(description) {
+            if (!description) return { original: '', cleaned: '', variants: [] };
+
+            let cleaned = description.trim();
+
+            // Remove common prefixes
+            const prefixes = [
+                'CARD PAYMENT TO ',
+                'CARD PAYMENT ',
+                'DIRECT DEBIT TO ',
+                'DIRECT DEBIT ',
+                'PAYPAL \\*',
+                'PAYPAL ',
+                'STANDING ORDER TO ',
+                'FASTER PAYMENT TO ',
+                'PAYMENT TO ',
+                'TRANSFER TO ',
+                'DD ',
+                'SO '
+            ];
+
+            for (const prefix of prefixes) {
+                const regex = new RegExp('^' + prefix, 'i');
+                cleaned = cleaned.replace(regex, '');
+            }
+
+            // Remove dates at end (e.g., "AMAZON UK 23/01/25")
+            cleaned = cleaned.replace(/\s+\d{1,2}\/\d{1,2}\/\d{2,4}$/, '');
+
+            // Remove reference numbers (e.g., "REF 12345678")
+            cleaned = cleaned.replace(/\s+REF\s+\w+/i, '');
+            cleaned = cleaned.replace(/\s+\d{6,}$/, '');
+
+            // Generate variants
+            const variants = [cleaned];
+
+            // Add without country codes
+            const withoutCountry = cleaned.replace(/\s+(UK|GB|US|EU)\b/gi, '').trim();
+            if (withoutCountry !== cleaned) {
+                variants.push(withoutCountry);
+            }
+
+            // Add common abbreviations
+            if (cleaned.toLowerCase().includes('amazon')) {
+                variants.push('Amazon', 'Amazon UK', 'Amazon.co.uk', 'Amazon Marketplace');
+            }
+            if (cleaned.toLowerCase().includes('tesco')) {
+                variants.push('Tesco', 'Tesco Stores');
+            }
+            // Add more common merchants as needed
+
+            return {
+                original: description,
+                cleaned: cleaned,
+                variants: [...new Set(variants)] // Remove duplicates
+            };
+        }
+
+        /**
+         * Generate amount in multiple formats
+         */
+        function generateAmountFormats(amount) {
+            if (!amount || amount === 0) return [];
+
+            const formats = [
+                amount.toFixed(2),                    // 50.00
+                `£${amount.toFixed(2)}`,              // £50.00
+                `\u00A3${amount.toFixed(2)}`,         // £50.00 (unicode)
+                amount.toFixed(2).replace('.', ','),  // 50,00 (European)
+                `GBP ${amount.toFixed(2)}`,           // GBP 50.00
+            ];
+
+            // Add variations without decimals if whole number
+            if (amount % 1 === 0) {
+                formats.push(amount.toString());      // 50
+                formats.push(`£${amount}`);           // £50
+            }
+
+            return [...new Set(formats)];
+        }
+
+        /**
+         * Parse transaction date to Date object
+         */
+        function parseTransactionDate(dateStr) {
+            if (!dateStr) return new Date();
+
+            // Assuming DD/MM/YYYY or DD/MM/YY format
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
+                let year = parseInt(parts[2]);
+
+                // Handle 2-digit years
+                if (year < 100) {
+                    year += year < 50 ? 2000 : 1900;
+                }
+
+                return new Date(year, month, day);
+            }
+
+            return new Date(dateStr);
+        }
+
+        /**
+         * Get day of week from date string
+         */
+        function getDayOfWeek(dateStr) {
+            const date = parseTransactionDate(dateStr);
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return days[date.getDay()];
+        }
+
+        // ========================================
+        // SEARCH LOGGER
+        // ========================================
+
+        class SearchLogger {
+            constructor() {
+                this.logs = [];
+                this.container = null;
+            }
+
+            init(containerId) {
+                this.container = document.getElementById(containerId);
+                this.logs = [];
+                this.render();
+            }
+
+            logStage(stage, name) {
+                this.addLog('stage', `\n[STAGE ${stage}] ${name}`, 'info', '🔄');
+                this.render();
+            }
+
+            logProgress(message, type = 'info') {
+                const icons = {
+                    info: '⏳',
+                    success: '✅',
+                    warning: '⚠️',
+                    error: '❌',
+                    ai: '🤖'
+                };
+                this.addLog('progress', message, type, icons[type] || '•');
+                this.render();
+                this.updateHeader(message, icons[type]);
+            }
+
+            updateHeader(message, icon) {
+                const statusEl = document.getElementById('searchLogStatus');
+                const summaryEl = document.getElementById('searchLogSummary');
+
+                if (statusEl) statusEl.textContent = icon;
+
+                // Update summary with last message (truncated)
+                if (summaryEl && message) {
+                    const truncated = message.length > 40 ? message.substring(0, 40) + '...' : message;
+                    summaryEl.textContent = truncated;
+                }
+            }
+
+            logAI(action, result) {
+                this.addLog('ai', `🤖 AI: ${action}`, 'ai', '🤖');
+                if (result) {
+                    this.addLog('ai', `   → ${JSON.stringify(result).substring(0, 100)}...`, 'info', '  ');
+                }
+                this.render();
+            }
+
+            logResults(count, stage) {
+                if (count > 0) {
+                    this.addLog('result', `📊 Found ${count} potential invoice${count > 1 ? 's' : ''}!`, 'success', '✅');
+                } else {
+                    this.addLog('result', `No results in ±${stage} days`, 'warning', '⚠️');
+                }
+                this.render();
+            }
+
+            addLog(category, message, type, icon) {
+                this.logs.push({
+                    timestamp: new Date(),
+                    category,
+                    message,
+                    type,
+                    icon
+                });
+            }
+
+            render() {
+                if (!this.container) return;
+
+                const html = this.logs.map(log => {
+                    const colors = {
+                        info: '#94a3b8',
+                        success: '#4ade80',
+                        warning: '#fbbf24',
+                        error: '#f87171',
+                        ai: '#a78bfa'
+                    };
+                    const color = colors[log.type] || '#e2e8f0';
+
+                    return `<div style="color: ${color}; margin: 3px 0; line-height: 1.5;">
+                        ${log.icon} ${log.message}
+                    </div>`;
+                }).join('');
+
+                this.container.innerHTML = html;
+
+                // Auto-scroll to bottom
+                this.container.scrollTop = this.container.scrollHeight;
+            }
+
+            clear() {
+                this.logs = [];
+                this.render();
+            }
+        }
+
+        // Global search logger instance
+        const searchLogger = new SearchLogger();
+
+        /**
+         * Format email date to compact format (e.g., "Jan 15" or "15 Jan 2025")
+         */
+        function formatCompactDate(emailDateStr) {
+            try {
+                const date = new Date(emailDateStr);
+                const now = new Date();
+                const isCurrentYear = date.getFullYear() === now.getFullYear();
+
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const month = months[date.getMonth()];
+                const day = date.getDate();
+
+                if (isCurrentYear) {
+                    return `${month} ${day}`;
+                } else {
+                    return `${month} ${day}, ${date.getFullYear()}`;
+                }
+            } catch (error) {
+                return emailDateStr.substring(0, 15); // Fallback: truncate
+            }
+        }
+
+        /**
+         * Toggle search log visibility
+         */
+        function toggleSearchLog() {
+            const container = document.getElementById('searchLogContainer');
+            const icon = document.getElementById('searchLogIcon');
+            const summary = document.getElementById('searchLogSummary');
+
+            if (container.style.display === 'none') {
+                // Expand
+                container.style.display = 'block';
+                icon.style.transform = 'rotate(90deg)';
+                icon.textContent = '▼';
+                summary.textContent = '(Click to collapse)';
+            } else {
+                // Collapse
+                container.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+                icon.textContent = '▶';
+                summary.textContent = '(Click to expand)';
+            }
+        }
+
+        // ========================================
+        // INTELLIGENT SEARCH MODAL CONTROLS
+        // ========================================
+
+        function showIntelligentSearchModal(transaction, transactionIndex) {
+            const modal = document.getElementById('intelligentSearchModal');
+
+            // Set transaction details
+            document.getElementById('searchTxDate').textContent = transaction.date || 'N/A';
+
+            // Fix double £ sign - strip existing £ before adding new one
+            const amount = (transaction.spent || transaction.received || '0.00').toString().replace(/£/g, '');
+            document.getElementById('searchTxAmount').textContent = `£${amount}`;
+
+            document.getElementById('searchTxDesc').textContent = transaction.description || 'N/A';
+
+            // Show/hide From/To field
+            if (transaction.fromTo && transaction.fromTo.trim()) {
+                document.getElementById('searchTxFromToContainer').style.display = 'block';
+                document.getElementById('searchTxFromTo').textContent = transaction.fromTo;
+            } else {
+                document.getElementById('searchTxFromToContainer').style.display = 'none';
+            }
+
+            // Show/hide user notes field
+            if (transaction.voiceNotes && transaction.voiceNotes.trim()) {
+                document.getElementById('searchTxNotesContainer').style.display = 'block';
+                document.getElementById('searchTxNotes').textContent = transaction.voiceNotes;
+                console.log('📝 [MODAL] Showing user notes:', transaction.voiceNotes);
+            } else {
+                document.getElementById('searchTxNotesContainer').style.display = 'none';
+                console.log('📝 [MODAL] No user notes to display');
+            }
+
+            // Initialize logger
+            searchLogger.init('searchLogContainer');
+
+            // Show modal
+            modal.style.display = 'flex';
+
+            // Start search
+            executeIntelligentSearch(transaction, transactionIndex);
+        }
+
+        function closeIntelligentSearchModal() {
+            document.getElementById('intelligentSearchModal').style.display = 'none';
+
+            // Restore log header visibility for next search
+            const logHeader = document.getElementById('searchLogHeader');
+            if (logHeader) logHeader.style.display = 'flex';
+
+            searchLogger.clear();
+        }
+
+        async function connectGmailFromSearch() {
+            searchLogger.logProgress('Connecting to Gmail...', 'info');
+            try {
+                await signInToGmail();
+                // Wait for auth to complete
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                if (gmailAccounts.length > 0) {
+                    searchLogger.logProgress('✅ Gmail connected successfully!', 'success');
+                    searchLogger.logProgress('Restarting search...', 'info');
+                    // Restart the search
+                    const modal = document.getElementById('intelligentSearchModal');
+                    const txIndex = currentInvoiceSearchIndex; // Should be set from handleInvoiceFetch
+                    const transaction = allTransactions[txIndex];
+                    executeIntelligentSearch(transaction, txIndex);
+                } else {
+                    searchLogger.logProgress('❌ Failed to connect Gmail', 'error');
+                }
+            } catch (error) {
+                searchLogger.logProgress(`❌ Connection error: ${error.message}`, 'error');
+            }
+        }
+
+        function updateSearchProgress(percent, text) {
+            const bar = document.getElementById('searchProgressBar');
+            const fill = document.getElementById('searchProgressFill');
+            const progressText = document.getElementById('searchProgressText');
+
+            bar.style.display = 'block';
+            fill.style.width = percent + '%';
+            progressText.textContent = text;
+        }
+
+        // ========================================
+        // PROGRESSIVE SEARCH ENGINE
+        // ========================================
+
+        const SEARCH_STAGES = [
+            {
+                stage: 1,
+                name: "Exact Match",
+                dateWindow: 5,
+                autoExecute: true,
+                description: "Searching ±5 days with exact merchant and amount"
+            },
+            {
+                stage: 2,
+                name: "Expanded Search",
+                dateWindow: 10,
+                autoExecute: true,
+                description: "Searching ±10 days with merchant variants and AI keywords"
+            },
+            {
+                stage: 3,
+                name: "Wide Search",
+                dateWindow: 15,
+                autoExecute: false,
+                description: "Searching ±15 days with fuzzy matching"
+            }
+        ];
+
+        async function executeIntelligentSearch(transaction, transactionIndex) {
+            try {
+                // Check if Gmail is connected
+                if (gmailAccounts.length === 0) {
+                    searchLogger.logProgress('❌ Gmail not connected!', 'error');
+                    const resultsContainer = document.getElementById('searchResultsContainer');
+                    resultsContainer.style.display = 'block';
+                    resultsContainer.innerHTML = `
+                        <div style="text-align: center; padding: 30px; background: #fef3c7; border-radius: 8px; border: 2px solid #f59e0b;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📧</div>
+                            <h4 style="margin: 0 0 10px 0; color: #92400e;">Gmail Not Connected</h4>
+                            <p style="color: #78350f; margin: 0 0 20px 0;">
+                                You need to connect your Gmail account to search for invoices.
+                            </p>
+                            <button onclick="connectGmailFromSearch()" class="btn-primary" style="margin-right: 10px;">
+                                Connect Gmail Now
+                            </button>
+                            <button onclick="closeIntelligentSearchModal()" class="btn-secondary">
+                                Cancel
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Step 1: Build context
+                searchLogger.logProgress('Building search context...', 'info');
+                const context = buildTransactionContext(transaction, transactionIndex);
+
+                // Extract core keyword for human-like search
+                const merchantKeyword = extractCoreMerchantKeyword(context.merchantName);
+                searchLogger.logProgress(`Merchant: "${context.merchantName}"`, 'success');
+                searchLogger.logProgress(`Search keyword: "${merchantKeyword}"`, 'success');
+                searchLogger.logProgress(`Amount formats: ${context.amountFormats.length} variations`, 'success');
+
+                // Step 2: Optional AI enhancement
+                updateSearchProgress(20, 'Enhancing search with AI...');
+                searchLogger.logAI('Generating smart search keywords...');
+
+                const aiKeywords = await generateAISearchKeywords(context);
+                if (aiKeywords) {
+                    searchLogger.logProgress(`AI keywords: ${aiKeywords.join(', ')}`, 'success');
+                }
+
+                // Step 3: Progressive search stages
+                for (let i = 0; i < SEARCH_STAGES.length; i++) {
+                    const stage = SEARCH_STAGES[i];
+
+                    // Ask user before non-auto stages
+                    if (!stage.autoExecute && i > 0) {
+                        const shouldContinue = await promptUserToContinueSearch(stage);
+                        if (!shouldContinue) {
+                            searchLogger.logProgress('Search cancelled by user', 'warning');
+                            return;
+                        }
+                    }
+
+                    searchLogger.logStage(stage.stage, `${stage.name} (±${stage.dateWindow} days)`);
+                    updateSearchProgress(20 + (i * 25), `Stage ${stage.stage}: ${stage.description}`);
+
+                    const results = await executeSearchStage(context, stage, aiKeywords);
+
+                    searchLogger.logResults(results.length, stage.dateWindow);
+
+                    if (results.length > 0) {
+                        updateSearchProgress(100, 'Search complete!');
+                        searchLogger.logProgress(`✅ Found ${results.length} potential invoice(s)!`, 'success');
+                        await displayIntelligentSearchResults(results, transaction, transactionIndex);
+                        return;
+                    }
+                }
+
+                // No results found
+                searchLogger.logProgress('No invoices found in any search stage', 'warning');
+                updateSearchProgress(100, 'Search complete - no results');
+
+                // Show no results options
+                showNoResultsOptions(context);
+
+            } catch (error) {
+                console.error('Intelligent search error:', error);
+                searchLogger.logProgress(`Error: ${error.message}`, 'error');
+                showToast('Search error: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Execute a single search stage
+         */
+        async function executeSearchStage(context, stage, aiKeywords) {
+            const queries = buildStageQueries(context, stage, aiKeywords);
+            const allResults = [];
+
+            for (let i = 0; i < queries.length; i++) {
+                const query = queries[i];
+                searchLogger.logProgress(`${query.description}...`, 'info');
+                console.log('📧 [Gmail Query]:', query.query);
+
+                try {
+                    // Search all Gmail accounts
+                    for (const account of gmailAccounts) {
+                        const messages = await searchGmailWithQuery(query.query, account, context.date, stage.dateWindow);
+
+                        if (messages.length > 0) {
+                            searchLogger.logProgress(`  Found ${messages.length} email(s) in ${account.email}`, 'success');
+                            allResults.push(...messages.map(m => ({ ...m, accountEmail: account.email, accountAccessToken: account.accessToken })));
+                        } else {
+                            searchLogger.logProgress(`  No results in ${account.email}`, 'info');
+                        }
+                    }
+                } catch (error) {
+                    searchLogger.logProgress(`  Query failed: ${error.message}`, 'error');
+                    console.error('Gmail search error:', error);
+                }
+            }
+
+            // Deduplicate by message ID
+            const uniqueResults = deduplicateMessages(allResults);
+            return uniqueResults;
+        }
+
+        /**
+         * Build search queries for a stage (Human-like search approach)
+         */
+        function buildStageQueries(context, stage, aiKeywords) {
+            const queries = [];
+
+            // Extract core merchant keyword (e.g., "google" from "Card Purchase Google GSUITE pebl-cic")
+            const merchantKeyword = extractCoreMerchantKeyword(context.merchantName);
+
+            // Query 1: Simple human-like search - merchant + invoice keywords
+            if (merchantKeyword) {
+                queries.push({
+                    query: `${merchantKeyword} (invoice OR receipt OR "order confirmation") has:attachment filename:pdf`,
+                    description: `Searching for "${merchantKeyword} invoice"`,
+                    weight: 1.0
+                });
+            }
+
+            // Query 2: Merchant + payment keywords (broader)
+            if (merchantKeyword && stage.stage >= 2) {
+                queries.push({
+                    query: `${merchantKeyword} (payment OR bill OR statement) has:attachment filename:pdf`,
+                    description: `Searching for "${merchantKeyword} payment/bill"`,
+                    weight: 0.9
+                });
+            }
+
+            // Query 3: Full merchant name search (if different from keyword)
+            if (context.merchantName && context.merchantName !== merchantKeyword) {
+                queries.push({
+                    query: `"${context.merchantName}" invoice has:attachment`,
+                    description: `Searching for exact merchant name`,
+                    weight: 0.85
+                });
+            }
+
+            // Query 4: Amount-based search
+            if (context.amountFormats.length > 0 && stage.stage >= 2) {
+                const amountOr = context.amountFormats.slice(0, 3).map(a => `"${a}"`).join(' OR ');
+                queries.push({
+                    query: `${merchantKeyword} (${amountOr}) has:attachment`,
+                    description: `Searching for "${merchantKeyword}" + amount`,
+                    weight: 0.8
+                });
+            }
+
+            // Query 5: AI keywords (if available)
+            if (aiKeywords && aiKeywords.length > 0 && stage.stage >= 2) {
+                // Use AI keywords with merchant name
+                const topKeywords = aiKeywords.slice(0, 3).join(' OR ');
+                queries.push({
+                    query: `${merchantKeyword} (${topKeywords}) has:attachment filename:pdf`,
+                    description: `Searching "${merchantKeyword}" + AI keywords`,
+                    weight: 0.9
+                });
+            }
+
+            // Query 6: User notes (if available) - High priority!
+            if (context.userNotes && stage.stage >= 2) {
+                const notesSnippet = context.userNotes.substring(0, 50).split(/[.!?]/)[0];
+                queries.push({
+                    query: `${merchantKeyword} "${notesSnippet}" has:attachment`,
+                    description: `Searching "${merchantKeyword}" + your notes`,
+                    weight: 0.95
+                });
+            }
+
+            // Query 7: User context (if available)
+            if (context.userContext && stage.stage >= 3) {
+                queries.push({
+                    query: `${merchantKeyword} "${context.userContext}" has:attachment`,
+                    description: `Searching "${merchantKeyword}" + project assignments`,
+                    weight: 0.85
+                });
+            }
+
+            // Query 8: Fallback - just merchant name + attachment (Stage 3 only)
+            if (stage.stage >= 3 && merchantKeyword) {
+                queries.push({
+                    query: `${merchantKeyword} has:attachment`,
+                    description: `Wide search for "${merchantKeyword}" with any attachment`,
+                    weight: 0.5
+                });
+            }
+
+            return queries;
+        }
+
+        /**
+         * Extract core merchant keyword (like a human would type)
+         * "Card Purchase Google GSUITE pebl-cic" → "google"
+         * "Amazon UK" → "amazon"
+         */
+        function extractCoreMerchantKeyword(merchantName) {
+            if (!merchantName) return '';
+
+            // Convert to lowercase for matching
+            const lower = merchantName.toLowerCase();
+
+            // Common merchant keywords to extract
+            const knownMerchants = [
+                'amazon', 'google', 'microsoft', 'apple', 'paypal', 'stripe',
+                'tesco', 'sainsbury', 'asda', 'morrisons', 'waitrose',
+                'edf', 'british gas', 'thames water', 'vodafone', 'bt', 'sky',
+                'spotify', 'netflix', 'adobe', 'dropbox', 'zoom',
+                'uber', 'deliveroo', 'just eat'
+            ];
+
+            // Check if any known merchant appears in the name
+            for (const merchant of knownMerchants) {
+                if (lower.includes(merchant)) {
+                    return merchant;
+                }
+            }
+
+            // If no known merchant, extract first meaningful word
+            const words = merchantName.split(/\s+/);
+            for (const word of words) {
+                // Skip common words
+                if (word.length > 3 && !['card', 'payment', 'purchase'].includes(word.toLowerCase())) {
+                    return word.toLowerCase();
+                }
+            }
+
+            // Fallback: return cleaned merchant name
+            return merchantName.toLowerCase();
+        }
+
+        /**
+         * Search Gmail with date window
+         */
+        async function searchGmailWithQuery(query, account, transactionDate, dateWindowDays) {
+            try {
+                // Check if Gmail API is available
+                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.gmail) {
+                    throw new Error('Gmail API not initialized');
+                }
+
+                // Calculate date range
+                const startDate = new Date(transactionDate);
+                startDate.setDate(startDate.getDate() - dateWindowDays);
+
+                const endDate = new Date(transactionDate);
+                endDate.setDate(endDate.getDate() + dateWindowDays);
+
+                // Format dates for Gmail (YYYY/MM/DD)
+                const formatDate = (d) => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}/${month}/${day}`;
+                };
+
+                const dateQuery = `after:${formatDate(startDate)} before:${formatDate(endDate)}`;
+                const fullQuery = `${query} ${dateQuery}`;
+
+                console.log('📧 [Gmail Search]', fullQuery);
+
+                // Execute Gmail search
+                const response = await gapi.client.gmail.users.messages.list({
+                    userId: 'me',
+                    q: fullQuery,
+                    maxResults: 10
+                });
+
+                if (!response || !response.result) {
+                    console.error('Invalid Gmail API response:', response);
+                    return [];
+                }
+
+                if (!response.result.messages) {
+                    return [];
+                }
+
+                return response.result.messages;
+
+            } catch (error) {
+                console.error('Gmail search error:', error);
+                const errorMsg = error.message || error.result?.error?.message || 'Unknown error';
+                throw new Error(`Gmail search failed: ${errorMsg}`);
+            }
+        }
+
+        /**
+         * Deduplicate messages by ID
+         */
+        function deduplicateMessages(messages) {
+            const seen = new Set();
+            return messages.filter(msg => {
+                const key = `${msg.id}_${msg.accountEmail}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        /**
+         * Prompt user to continue to next search stage
+         */
+        async function promptUserToContinueSearch(stage) {
+            return new Promise((resolve) => {
+                const btnHtml = `
+                    <div id="continueSearchPrompt" style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <p style="margin: 0 0 10px 0; font-weight: 500;">No invoices found. Continue searching?</p>
+                        <p style="margin: 0 0 15px 0; font-size: 14px; color: #92400e;">
+                            ${stage.description}
+                        </p>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="continueSearchResponse(true)" class="btn-primary" style="flex: 1;">
+                                Continue to Stage ${stage.stage}
+                            </button>
+                            <button onclick="continueSearchResponse(false)" class="btn-secondary" style="flex: 1;">
+                                Stop Searching
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('searchActionButtons').insertAdjacentHTML('beforebegin', btnHtml);
+
+                window.continueSearchResponse = (response) => {
+                    const prompt = document.getElementById('continueSearchPrompt');
+                    if (prompt) prompt.remove();
+                    delete window.continueSearchResponse;
+                    resolve(response);
+                };
+            });
+        }
+
+        /**
+         * Display search results
+         */
+        async function displayIntelligentSearchResults(messages, transaction, transactionIndex) {
+            console.log('📊 [RESULTS] Displaying', messages.length, 'invoice matches');
+            searchLogger.logProgress(`Analyzing and scoring ${messages.length} invoice(s)...`, 'info');
+
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            resultsContainer.style.display = 'block';
+
+            // Get transaction context for scoring
+            const context = buildTransactionContext(transaction, transactionIndex);
+
+            // Fetch and score all messages
+            const scoredMessages = [];
+            for (const msg of messages) {
+                try {
+                    // Get full message details
+                    const response = await gapi.client.gmail.users.messages.get({
+                        userId: 'me',
+                        id: msg.id
+                    });
+
+                    const message = response.result;
+
+                    // Score this invoice
+                    const scoring = scoreInvoiceRelevance(message, transaction, context);
+
+                    // Extract attachments
+                    const attachments = extractAttachments(message.payload);
+
+                    scoredMessages.push({
+                        message,
+                        scoring,
+                        attachments,
+                        accountEmail: msg.accountEmail
+                    });
+
+                    console.log('📊 Scored email:', {
+                        subject: message.payload.headers.find(h => h.name === 'Subject')?.value,
+                        score: scoring.total,
+                        breakdown: scoring.details
+                    });
+
+                } catch (error) {
+                    console.error('Error fetching message details:', error);
+                    searchLogger.logProgress(`Error loading email ${msg.id}: ${error.message}`, 'error');
+                }
+            }
+
+            // Sort by score (highest first)
+            scoredMessages.sort((a, b) => b.scoring.total - a.scoring.total);
+
+            searchLogger.logProgress(`Ranked ${scoredMessages.length} results by relevance`, 'success');
+
+            // Build HTML
+            let html = `<div style="margin-bottom: 20px;">
+                <div style="font-weight: 600; font-size: 16px; color: #1e293b; margin-bottom: 10px;">
+                    Found ${scoredMessages.length} potential invoice${scoredMessages.length > 1 ? 's' : ''} (sorted by match probability)
+                </div>
+            </div>`;
+
+            // Display scored results
+            scoredMessages.forEach((item, index) => {
+                const headers = item.message.payload.headers;
+                const from = headers.find(h => h.name === 'From')?.value || 'Unknown';
+                const subject = headers.find(h => h.name === 'Subject')?.value || 'No Subject';
+                const date = headers.find(h => h.name === 'Date')?.value || '';
+                const messageId = item.message.id;
+
+                // Border color based on rank
+                const borderColor = index === 0 ? '#3AAFA9' : (index === 1 ? '#d97706' : '#94a3b8');
+
+                // Score color
+                let scoreColor, scoreIcon;
+                if (item.scoring.total >= 80) {
+                    scoreColor = '#059669';
+                } else if (item.scoring.total >= 60) {
+                    scoreColor = '#d97706';
+                } else if (item.scoring.total >= 40) {
+                    scoreColor = '#ea580c';
+                } else {
+                    scoreColor = '#dc2626';
+                }
+
+                // Scoring pill colors and icons
+                const getMatchIcon = (score, threshold) => score >= threshold ? '✓' : '✗';
+                const getMatchColor = (score, threshold) => score >= threshold ? '#059669' : '#dc2626';
+
+                const companyColor = getMatchColor(item.scoring.company, 30);
+                const amountColor = getMatchColor(item.scoring.amount, 25);
+                const dateColor = item.scoring.date >= 15 ? '#059669' : '#ea580c';
+
+                const companyIcon = getMatchIcon(item.scoring.company, 30);
+                const amountIcon = getMatchIcon(item.scoring.amount, 25);
+                const dateIcon = getMatchIcon(item.scoring.date, 15);
+
+                // Format date compactly
+                const formattedDate = formatCompactDate(date);
+                const fromName = from.includes('<') ? from.split('<')[0].trim() : from.substring(0, 30);
+
+                html += `<div style="background: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${borderColor}; box-shadow: 0 1px 4px rgba(0,0,0,0.08); transition: all 0.2s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.08)'">
+
+                    <!-- Compact Header: Score + Rank inline -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            ${index === 0 ? '<span style="background: #3AAFA9; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">BEST</span>' : ''}
+                            <span style="background: ${scoreColor}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">${item.scoring.total}%</span>
+                        </div>
+                        <span style="font-size: 10px; color: #94a3b8; font-weight: 500;">#${index + 1}</span>
+                    </div>
+
+                    <!-- Compact Scoring: Horizontal pills -->
+                    <div style="display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap;">
+                        <span style="background: ${companyColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
+                            ${companyIcon} Company
+                        </span>
+                        <span style="background: ${amountColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
+                            ${amountIcon} Amount
+                        </span>
+                        <span style="background: ${dateColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
+                            ${dateIcon} Date
+                        </span>
+                    </div>
+
+                    <!-- Email info: Single line, truncated -->
+                    <div style="font-size: 13px; color: #1e293b; margin-bottom: 4px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(subject)}">
+                        ${escapeHtml(subject)}
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
+                        ${escapeHtml(fromName)} • ${formattedDate}
+                    </div>
+
+                    <!-- Compact button -->`
+
+                if (item.attachments.length > 0) {
+                    const att = item.attachments[0]; // Show first attachment
+                    const sizeKB = (att.size / 1024).toFixed(1);
+                    html += `<button onclick="previewAndAttachInvoice(${transactionIndex}, '${messageId}', '${att.id}', '${escapeHtml(att.filename)}', '${escapeHtml(item.accountEmail)}')"
+                        style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; width: 100%; transition: all 0.2s;"
+                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(58,175,169,0.3)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        📄 Preview Invoice (${sizeKB} KB)
+                    </button>`;
+
+                    // Show additional attachments if any
+                    if (item.attachments.length > 1) {
+                        html += `<div style="font-size: 10px; color: #64748b; margin-top: 4px; text-align: center;">
+                            +${item.attachments.length - 1} more attachment(s)
+                        </div>`;
+                    }
+                } else {
+                    html += `<div style="color: #f59e0b; font-size: 11px; padding: 6px; text-align: center; background: #fffbeb; border-radius: 4px;">
+                        ⚠️ No PDF attachments
+                    </div>`;
+                }
+
+                html += `</div>`;
+            });
+
+            resultsContainer.innerHTML = html;
+            searchLogger.logProgress('✅ Results displayed! Click "Preview & Attach" to view invoice.', 'success');
+        }
+
+        /**
+         * Extract attachments from email payload
+         */
+        function extractAttachments(payload, attachments = []) {
+            if (payload.parts) {
+                for (const part of payload.parts) {
+                    if (part.filename && part.body && part.body.attachmentId) {
+                        attachments.push({
+                            filename: part.filename,
+                            id: part.body.attachmentId,
+                            mimeType: part.mimeType,
+                            size: part.body.size || 0
+                        });
+                    }
+                    // Recursively check nested parts
+                    if (part.parts) {
+                        extractAttachments(part, attachments);
+                    }
+                }
+            }
+            return attachments;
+        }
+
+        /**
+         * Score an email's relevance to the transaction
+         * Returns score 0-100 based on company, amount, and date match
+         */
+        function scoreInvoiceRelevance(email, transaction, context) {
+            let score = 0;
+            const scoring = {
+                company: 0,
+                amount: 0,
+                date: 0,
+                details: {}
+            };
+
+            // Get email metadata
+            const headers = email.payload.headers;
+            const from = headers.find(h => h.name === 'From')?.value || '';
+            const subject = headers.find(h => h.name === 'Subject')?.value || '';
+            const dateStr = headers.find(h => h.name === 'Date')?.value || '';
+            const snippet = email.snippet || '';
+
+            // 1. COMPANY NAME MATCH (max 40 points)
+            const merchantKeyword = extractCoreMerchantKeyword(context.merchantName);
+            const searchText = `${from} ${subject}`.toLowerCase();
+
+            if (searchText.includes(merchantKeyword.toLowerCase())) {
+                score += 40;
+                scoring.company = 40;
+                scoring.details.companyMatch = `✓ "${merchantKeyword}" found in email`;
+            } else {
+                // Partial match - check merchant variants
+                const partialMatch = context.merchantVariants.some(variant =>
+                    searchText.includes(variant.toLowerCase())
+                );
+                if (partialMatch) {
+                    score += 20;
+                    scoring.company = 20;
+                    scoring.details.companyMatch = `~ Partial match found`;
+                } else {
+                    scoring.details.companyMatch = `✗ Company name not found`;
+                }
+            }
+
+            // 2. AMOUNT MATCH (max 35 points)
+            const amountStr = context.amount.toFixed(2);
+            const amountGBP = `£${amountStr}`;
+            const fullText = `${subject} ${snippet}`.toLowerCase();
+
+            if (fullText.includes(amountStr) || fullText.includes(amountGBP)) {
+                score += 35;
+                scoring.amount = 35;
+                scoring.details.amountMatch = `✓ £${amountStr} found`;
+            } else {
+                // Check for amount variations (with commas, different formats)
+                const hasAmountVariation = context.amountFormats.some(format =>
+                    fullText.includes(format.toLowerCase())
+                );
+                if (hasAmountVariation) {
+                    score += 20;
+                    scoring.amount = 20;
+                    scoring.details.amountMatch = `~ Amount format variation found`;
+                } else {
+                    scoring.details.amountMatch = `✗ Amount not found`;
+                }
+            }
+
+            // 3. DATE PROXIMITY (max 25 points)
+            try {
+                const emailDate = new Date(dateStr);
+                const txDate = context.date;
+                const daysDiff = Math.abs(Math.floor((emailDate - txDate) / (1000 * 60 * 60 * 24)));
+
+                if (daysDiff === 0) {
+                    score += 25;
+                    scoring.date = 25;
+                    scoring.details.dateMatch = `✓ Same day`;
+                } else if (daysDiff <= 2) {
+                    score += 20;
+                    scoring.date = 20;
+                    scoring.details.dateMatch = `✓ ${daysDiff} day(s) difference`;
+                } else if (daysDiff <= 5) {
+                    score += 15;
+                    scoring.date = 15;
+                    scoring.details.dateMatch = `~ ${daysDiff} days difference`;
+                } else if (daysDiff <= 10) {
+                    score += 10;
+                    scoring.date = 10;
+                    scoring.details.dateMatch = `~ ${daysDiff} days difference`;
+                } else {
+                    score += 5;
+                    scoring.date = 5;
+                    scoring.details.dateMatch = `⚠ ${daysDiff} days difference`;
+                }
+            } catch (error) {
+                scoring.details.dateMatch = `? Could not parse date`;
+            }
+
+            scoring.total = score;
+            return scoring;
+        }
+
+        /**
+         * Get score badge HTML with color coding
+         */
+        function getScoreBadge(score) {
+            let color, label, bgColor;
+
+            if (score >= 80) {
+                color = '#059669';
+                bgColor = '#d1fae5';
+                label = 'HIGH MATCH';
+            } else if (score >= 60) {
+                color = '#d97706';
+                bgColor = '#fef3c7';
+                label = 'LIKELY';
+            } else if (score >= 40) {
+                color = '#ea580c';
+                bgColor = '#ffedd5';
+                label = 'POSSIBLE';
+            } else {
+                color = '#dc2626';
+                bgColor = '#fee2e2';
+                label = 'LOW MATCH';
+            }
+
+            return `<div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: ${bgColor}; border-radius: 6px; border: 2px solid ${color};">
+                <span style="font-weight: 700; font-size: 18px; color: ${color};">${score}%</span>
+                <span style="font-weight: 600; font-size: 11px; color: ${color}; letter-spacing: 0.5px;">${label}</span>
+            </div>`;
+        }
+
+        /**
+         * Show no results options
+         */
+        function showNoResultsOptions(context) {
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = `
+                <div style="text-align: center; padding: 30px; background: #f8fafc; border-radius: 8px;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+                    <h4 style="margin: 0 0 10px 0; color: #1e293b;">No Invoices Found</h4>
+                    <p style="color: #64748b; margin: 0 0 20px 0;">
+                        Searched up to ±15 days for "${context.merchantName}"
+                    </p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="document.getElementById('manualInvoiceUpload').click()" class="btn-primary">
+                            📎 Upload PDF Manually
+                        </button>
+                        <button onclick="closeIntelligentSearchModal()" class="btn-secondary">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========================================
+        // PDF PREVIEW & ATTACHMENT WORKFLOW
+        // ========================================
+
+        // Store current attachment details
+        let currentAttachmentData = null;
+
+        /**
+         * Display validation results in the UI
+         */
+        function displayValidationResults(validation, extractedData, transaction) {
+            const container = document.getElementById('validationResultsContainer');
+            container.style.display = 'block';
+
+            // Parse transaction amount for display
+            const transactionAmountStr = (transaction.spent || transaction.received || '0').toString().replace(/£/g, '').trim();
+            const transactionAmount = parseFloat(transactionAmountStr) || 0;
+
+            // Company validation
+            const companyValidation = document.getElementById('companyValidation');
+            const companyStatus = document.getElementById('companyStatus');
+            const companyReason = document.getElementById('companyReason');
+            const companyExpected = document.getElementById('companyExpected');
+            const companyFound = document.getElementById('companyFound');
+
+            // Populate Expected vs Found
+            companyExpected.textContent = (transaction.description || 'N/A').substring(0, 20);
+            companyFound.textContent = (extractedData?.company || 'Not found').substring(0, 20);
+
+            if (validation.companyMatch) {
+                companyStatus.textContent = '✅';
+                companyValidation.style.background = '#f0fdf4';
+                companyValidation.style.borderColor = '#22c55e';
+            } else {
+                companyStatus.textContent = '❌';
+                companyValidation.style.background = '#fef2f2';
+                companyValidation.style.borderColor = '#ef4444';
+            }
+            companyReason.textContent = validation.companyReason || 'No reason provided';
+
+            // Amount validation
+            const amountValidation = document.getElementById('amountValidation');
+            const amountStatus = document.getElementById('amountStatus');
+            const amountReason = document.getElementById('amountReason');
+            const amountExpected = document.getElementById('amountExpected');
+            const amountFound = document.getElementById('amountFound');
+
+            // Populate Expected vs Found
+            amountExpected.textContent = `£${transactionAmount.toFixed(2)}`;
+            amountFound.textContent = extractedData?.amount ? `£${extractedData.amount}` : 'Not found';
+
+            if (validation.amountMatch) {
+                amountStatus.textContent = '✅';
+                amountValidation.style.background = '#f0fdf4';
+                amountValidation.style.borderColor = '#22c55e';
+            } else {
+                amountStatus.textContent = '❌';
+                amountValidation.style.background = '#fef2f2';
+                amountValidation.style.borderColor = '#ef4444';
+            }
+            amountReason.textContent = validation.amountReason || 'No reason provided';
+
+            // Date validation
+            const dateValidation = document.getElementById('dateValidation');
+            const dateStatus = document.getElementById('dateStatus');
+            const dateReason = document.getElementById('dateReason');
+            const dateExpected = document.getElementById('dateExpected');
+            const dateFound = document.getElementById('dateFound');
+
+            // Populate Expected vs Found
+            dateExpected.textContent = transaction.date || 'N/A';
+            dateFound.textContent = extractedData?.date || 'Not found';
+
+            if (validation.dateMatch) {
+                dateStatus.textContent = '✅';
+                dateValidation.style.background = '#f0fdf4';
+                dateValidation.style.borderColor = '#22c55e';
+            } else {
+                dateStatus.textContent = '❌';
+                dateValidation.style.background = '#fef2f2';
+                dateValidation.style.borderColor = '#ef4444';
+            }
+            dateReason.textContent = validation.dateReason || 'No reason provided';
+
+            // Overall recommendation
+            const recommendationContainer = document.getElementById('validationRecommendation');
+            const recommendationIcon = document.getElementById('recommendationIcon');
+            const recommendationText = document.getElementById('recommendationText');
+
+            const allMatch = validation.companyMatch && validation.amountMatch && validation.dateMatch;
+
+            if (validation.recommendation === 'attach' || allMatch) {
+                recommendationContainer.style.background = '#f0fdf4';
+                recommendationContainer.style.borderColor = '#22c55e';
+                recommendationIcon.textContent = '✅';
+                recommendationText.textContent = 'AI Recommendation: Safe to attach - All fields match!';
+            } else if (validation.recommendation === 'review') {
+                recommendationContainer.style.background = '#fffbeb';
+                recommendationContainer.style.borderColor = '#f59e0b';
+                recommendationIcon.textContent = '⚠️';
+                recommendationText.textContent = 'AI Recommendation: Please review - Some fields don\'t match';
+            } else {
+                recommendationContainer.style.background = '#fef2f2';
+                recommendationContainer.style.borderColor = '#ef4444';
+                recommendationIcon.textContent = '🚫';
+                recommendationText.textContent = 'AI Recommendation: Mismatched invoice - Consider rejecting';
+            }
+
+            // Update button text based on confidence
+            const attachBtn = document.getElementById('attachInvoiceBtn');
+            if (validation.overallConfidence === 'high' && allMatch) {
+                attachBtn.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+            } else if (validation.recommendation === 'reject') {
+                attachBtn.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
+                attachBtn.textContent = '⚠️ Attach Anyway';
+            } else {
+                attachBtn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+            }
+        }
+
+        /**
+         * Perform validation on loaded PDF
+         */
+        async function performInvoiceValidation(pdfBlob, transaction) {
+            try {
+                console.log('🔍 [VALIDATE] Starting invoice validation...');
+
+                // Show validation container with loading state
+                const container = document.getElementById('validationResultsContainer');
+                container.style.display = 'block';
+
+                // Extract text from PDF
+                const extractedText = await extractTextFromPDF(pdfBlob);
+
+                if (!extractedText || extractedText.trim().length < 20) {
+                    throw new Error('Insufficient text extracted from PDF');
+                }
+
+                // Extract structured data
+                const extractedData = await extractStructuredDataFromInvoice(extractedText);
+
+                if (!extractedData) {
+                    throw new Error('Failed to extract structured data');
+                }
+
+                // Validate against transaction
+                const validation = await validateInvoiceData(extractedData, transaction);
+
+                if (!validation) {
+                    throw new Error('Validation failed');
+                }
+
+                // Store validation results
+                currentAttachmentData.validation = validation;
+                currentAttachmentData.extractedData = extractedData;
+
+                // Display results
+                displayValidationResults(validation, extractedData, transaction);
+
+                console.log('✅ [VALIDATE] Validation complete and displayed');
+
+            } catch (error) {
+                console.error('❌ [VALIDATE] Validation error:', error);
+
+                // Show error state
+                const container = document.getElementById('validationResultsContainer');
+                container.style.display = 'block';
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; background: #fef2f2; border-radius: 8px;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+                        <div style="color: #dc2626; font-weight: 600;">Validation Failed</div>
+                        <div style="color: #64748b; font-size: 14px; margin-top: 5px;">
+                            ${error.message || 'Unable to validate invoice automatically'}
+                        </div>
+                        <div style="color: #64748b; font-size: 13px; margin-top: 10px;">
+                            You can still attach this invoice manually.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Preview PDF and prepare for attachment
+         */
+        async function previewAndAttachInvoice(transactionIndex, messageId, attachmentId, filename, accountEmail) {
+            console.log('📄 [PREVIEW] Opening PDF preview...', { messageId, attachmentId, filename });
+
+            try {
+                // Store attachment details for later confirmation
+                currentAttachmentData = {
+                    transactionIndex,
+                    messageId,
+                    attachmentId,
+                    filename,
+                    accountEmail
+                };
+
+                // Show modal with loading state
+                const modal = document.getElementById('pdfPreviewModal');
+                const iframe = document.getElementById('pdfViewerIframe');
+                document.getElementById('pdfPreviewTitle').textContent = `Preview: ${filename}`;
+
+                modal.style.display = 'flex';
+                iframe.src = '';  // Clear previous PDF
+
+                // Show loading message
+                const container = document.getElementById('pdfViewerContainer');
+                container.innerHTML = `<div style="text-align: center; color: #64748b;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">⏳</div>
+                    <div>Loading PDF...</div>
+                </div>`;
+
+                // Download PDF from Gmail
+                const response = await gapi.client.gmail.users.messages.attachments.get({
+                    userId: 'me',
+                    messageId: messageId,
+                    id: attachmentId
+                });
+
+                // Decode base64 PDF data
+                const data = response.result.data;
+                const pdfData = data.replace(/-/g, '+').replace(/_/g, '/');
+                const pdfBlob = base64ToBlob(pdfData, 'application/pdf');
+
+                // Create blob URL and show in iframe
+                const blobUrl = URL.createObjectURL(pdfBlob);
+
+                // Restore iframe
+                container.innerHTML = `<iframe id="pdfViewerIframe" style="width: 100%; height: 100%; border: none;"></iframe>`;
+                const newIframe = document.getElementById('pdfViewerIframe');
+                newIframe.src = blobUrl;
+
+                // Store blob for later save
+                currentAttachmentData.pdfBlob = pdfBlob;
+                currentAttachmentData.blobUrl = blobUrl;
+
+                console.log('✅ [PREVIEW] PDF loaded successfully');
+
+                // Trigger automatic validation
+                const transaction = allTransactions[transactionIndex];
+                await performInvoiceValidation(pdfBlob, transaction);
+
+            } catch (error) {
+                console.error('Error loading PDF preview:', error);
+                showToast('❌ Failed to load PDF preview', 'error');
+                closePDFPreview();
+            }
+        }
+
+        /**
+         * Confirm and attach invoice to transaction
+         */
+        async function confirmAttachInvoice() {
+            if (!currentAttachmentData) {
+                showToast('❌ No invoice data available', 'error');
+                return;
+            }
+
+            console.log('💾 [ATTACH] Attaching invoice to transaction...', currentAttachmentData);
+
+            try {
+                const { transactionIndex, messageId, filename, pdfBlob, validation, extractedData } = currentAttachmentData;
+
+                // Disable button during processing
+                const attachBtn = document.getElementById('attachInvoiceBtn');
+                const originalBtnText = attachBtn.textContent;
+                attachBtn.disabled = true;
+                attachBtn.textContent = '⏳ Attaching...';
+
+                // Save PDF to IndexedDB
+                const invoiceId = await saveInvoiceToDB(transactionIndex, pdfBlob, filename, messageId);
+
+                // Extract text from PDF (might already be done during validation)
+                const extractedText = await extractTextFromPDF(pdfBlob);
+
+                // Generate AI description
+                const aiDescription = await generateDescriptionFromInvoice(extractedText, allTransactions[transactionIndex]);
+
+                // Update transaction with AI description if available
+                if (aiDescription) {
+                    allTransactions[transactionIndex].description = aiDescription;
+                }
+
+                // Log validation results for audit trail
+                if (validation) {
+                    console.log('📊 [ATTACH] Validation results:', {
+                        invoiceId,
+                        extractedData,
+                        validation,
+                        decision: 'attached'
+                    });
+
+                    // Optionally store validation data in invoice record
+                    if (invoiceId && extractedData) {
+                        await updateInvoiceWithValidationData(invoiceId, extractedData, validation);
+                    }
+                }
+
+                // Save updated transactions
+                await saveTransactionsToCSVStore();
+
+                // Update UI
+                renderTransactionsTable();
+
+                // Close modals
+                closePDFPreview();
+                closeIntelligentSearchModal();
+
+                // Show success message with validation status
+                let successMessage = `✅ Invoice "${filename}" attached successfully!`;
+                if (validation) {
+                    if (validation.recommendation === 'attach') {
+                        successMessage += ' (AI validated ✓)';
+                    } else if (validation.recommendation === 'review') {
+                        successMessage += ' (Manual review recommended)';
+                    }
+                }
+                showToast(successMessage, 'success');
+
+                console.log('✅ [ATTACH] Invoice attached successfully, ID:', invoiceId);
+
+            } catch (error) {
+                console.error('Error attaching invoice:', error);
+                showToast(`❌ Failed to attach invoice: ${error.message}`, 'error');
+
+                // Re-enable button
+                const attachBtn = document.getElementById('attachInvoiceBtn');
+                attachBtn.disabled = false;
+                attachBtn.textContent = '✅ Attach Invoice';
+            }
+        }
+
+        /**
+         * Close PDF preview modal
+         */
+        function closePDFPreview() {
+            const modal = document.getElementById('pdfPreviewModal');
+            modal.style.display = 'none';
+
+            // Reset validation UI
+            const validationContainer = document.getElementById('validationResultsContainer');
+            if (validationContainer) {
+                validationContainer.style.display = 'none';
+
+                // Reset all validation fields to default state
+                ['company', 'amount', 'date'].forEach(field => {
+                    const statusEl = document.getElementById(`${field}Status`);
+                    const reasonEl = document.getElementById(`${field}Reason`);
+                    const validationEl = document.getElementById(`${field}Validation`);
+
+                    if (statusEl) statusEl.textContent = '⏳';
+                    if (reasonEl) reasonEl.textContent = 'Analyzing...';
+                    if (validationEl) {
+                        validationEl.style.background = '#f8fafc';
+                        validationEl.style.borderColor = '#e5e7eb';
+                    }
+                });
+
+                // Reset recommendation
+                const recommendationContainer = document.getElementById('validationRecommendation');
+                if (recommendationContainer) {
+                    recommendationContainer.style.background = '#f0f9ff';
+                    recommendationContainer.style.borderColor = '#3b82f6';
+                }
+
+                const recommendationIcon = document.getElementById('recommendationIcon');
+                const recommendationText = document.getElementById('recommendationText');
+                if (recommendationIcon) recommendationIcon.textContent = '🤖';
+                if (recommendationText) recommendationText.textContent = 'Analyzing invoice...';
+            }
+
+            // Reset attach button
+            const attachBtn = document.getElementById('attachInvoiceBtn');
+            if (attachBtn) {
+                attachBtn.disabled = false;
+                attachBtn.textContent = '✅ Attach Invoice';
+                attachBtn.style.background = '';
+            }
+
+            // Clean up blob URL
+            if (currentAttachmentData && currentAttachmentData.blobUrl) {
+                URL.revokeObjectURL(currentAttachmentData.blobUrl);
+            }
+
+            currentAttachmentData = null;
+        }
+
+        /**
+         * Store validation data with invoice in IndexedDB
+         */
+        async function updateInvoiceWithValidationData(invoiceId, extractedData, validation) {
+            if (!db) await initIndexedDB();
+
+            try {
+                const transaction = db.transaction([INVOICES_STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(INVOICES_STORE_NAME);
+                const getRequest = store.get(invoiceId);
+
+                getRequest.onsuccess = () => {
+                    const invoice = getRequest.result;
+                    if (invoice) {
+                        invoice.extractedData = extractedData;
+                        invoice.validationResults = validation;
+                        invoice.validatedAt = new Date().toISOString();
+                        store.put(invoice);
+                        console.log('✅ [DB] Validation data stored with invoice');
+                    }
+                };
+            } catch (error) {
+                console.error('Error updating invoice with validation data:', error);
+            }
+        }
+
+        /**
+         * Convert base64 to Blob
+         */
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteArrays = [];
+
+            for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+                const slice = byteCharacters.slice(offset, offset + 512);
+                const byteNumbers = new Array(slice.length);
+
+                for (let i = 0; i < slice.length; i++) {
+                    byteNumbers[i] = slice.charCodeAt(i);
+                }
+
+                const byteArray = new Uint8Array(byteNumbers);
+                byteArrays.push(byteArray);
+            }
+
+            return new Blob(byteArrays, { type: mimeType });
+        }
+
+        // ========================================
+        // ADVANCED PDF TEXT EXTRACTION WITH OCR
+        // ========================================
+
+        /**
+         * Extract text from PDF with OCR fallback
+         */
+        async function extractTextFromPDFAdvanced(pdfBlob) {
+            console.log('📄 [EXTRACT] Starting advanced PDF text extraction...');
+
+            try {
+                // Method 1: Try PDF.js text extraction first (faster)
+                const pdfText = await extractTextWithPDFjs(pdfBlob);
+
+                if (pdfText && pdfText.length > 50) {
+                    console.log('✅ [EXTRACT] PDF.js extraction successful:', pdfText.length, 'characters');
+                    return pdfText;
+                }
+
+                console.log('⚠️ [EXTRACT] PDF.js returned insufficient text, trying OCR...');
+
+                // Method 2: Use OCR as fallback (slower but handles scanned PDFs)
+                const ocrText = await extractTextWithOCR(pdfBlob);
+                console.log('✅ [EXTRACT] OCR extraction successful:', ocrText.length, 'characters');
+                return ocrText;
+
+            } catch (error) {
+                console.error('❌ [EXTRACT] Text extraction failed:', error);
+                return '';
+            }
+        }
+
+        /**
+         * Extract text using PDF.js
+         */
+        async function extractTextWithPDFjs(pdfBlob) {
+            const arrayBuffer = await pdfBlob.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+
+            return fullText.trim();
+        }
+
+        /**
+         * Extract text using Tesseract OCR
+         */
+        async function extractTextWithOCR(pdfBlob) {
+            // Convert PDF first page to image
+            const arrayBuffer = await pdfBlob.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1); // OCR first page only for speed
+
+            const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            // Run Tesseract OCR on the canvas
+            const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
+                logger: m => console.log('OCR Progress:', m)
+            });
+
+            return text;
+        }
+
+        /**
+         * Parse invoice data using AI
+         */
+        async function parseInvoiceWithAI(extractedText, transaction) {
+            console.log('🤖 [AI PARSE] Analyzing invoice text with AI...');
+
+            try {
+                const apiKey = getOpenAIKey();
+                if (!apiKey) {
+                    console.log('⚠️ [AI PARSE] No API key, skipping AI parsing');
+                    return null;
+                }
+
+                const prompt = `Extract the following information from this invoice text. Return ONLY valid JSON, nothing else.
+
+Invoice Text:
+${extractedText.substring(0, 3000)}
+
+Expected Transaction:
+- Date: ${transaction.date}
+- Amount: £${transaction.spent || transaction.received}
+- Merchant: ${transaction.description}
+
+Return JSON with this exact structure:
+{
+  "invoiceDate": "DD/MM/YYYY",
+  "invoiceAmount": "35.00",
+  "companyName": "Google",
+  "currency": "GBP",
+  "invoiceNumber": "...",
+  "confidence": "high|medium|low"
+}
+
+If you cannot find a field, use null. Be precise with the amount (don't include currency symbols in the amount field).`;
+
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are an invoice data extraction expert. Always return valid JSON only, no markdown or explanation.'
+                            },
+                            { role: 'user', content: prompt }
+                        ],
+                        max_tokens: 300,
+                        temperature: 0.1
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`OpenAI API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                let jsonStr = data.choices[0].message.content.trim();
+
+                // Remove markdown code blocks if present
+                jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+                const invoiceData = JSON.parse(jsonStr);
+                console.log('✅ [AI PARSE] Invoice data extracted:', invoiceData);
+
+                return invoiceData;
+
+            } catch (error) {
+                console.error('❌ [AI PARSE] Failed to parse invoice:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Score invoice using actual PDF data (AI-enhanced)
+         */
+        function scoreInvoiceWithPDFData(invoiceData, transaction, context) {
+            if (!invoiceData) {
+                return null; // Fall back to email-based scoring
+            }
+
+            let score = 0;
+            const scoring = {
+                company: 0,
+                amount: 0,
+                date: 0,
+                details: {}
+            };
+
+            // 1. COMPANY NAME MATCH (max 40 points)
+            const merchantKeyword = extractCoreMerchantKeyword(context.merchantName);
+            if (invoiceData.companyName) {
+                const companyLower = invoiceData.companyName.toLowerCase();
+                const merchantLower = merchantKeyword.toLowerCase();
+
+                if (companyLower.includes(merchantLower) || merchantLower.includes(companyLower)) {
+                    score += 40;
+                    scoring.company = 40;
+                    scoring.details.companyMatch = `✓ PDF shows "${invoiceData.companyName}"`;
+                } else {
+                    scoring.details.companyMatch = `⚠ PDF shows "${invoiceData.companyName}" (expected ${merchantKeyword})`;
+                }
+            } else {
+                scoring.details.companyMatch = `? Company not found in PDF`;
+            }
+
+            // 2. AMOUNT MATCH (max 35 points)
+            if (invoiceData.invoiceAmount) {
+                const pdfAmount = parseFloat(invoiceData.invoiceAmount);
+                const txAmount = context.amount;
+
+                if (Math.abs(pdfAmount - txAmount) < 0.01) { // Exact match
+                    score += 35;
+                    scoring.amount = 35;
+                    scoring.details.amountMatch = `✓ PDF shows £${pdfAmount.toFixed(2)} (exact match!)`;
+                } else if (Math.abs(pdfAmount - txAmount) < 1.0) { // Within £1
+                    score += 25;
+                    scoring.amount = 25;
+                    scoring.details.amountMatch = `~ PDF shows £${pdfAmount.toFixed(2)} (close match)`;
+                } else {
+                    scoring.details.amountMatch = `✗ PDF shows £${pdfAmount.toFixed(2)} (expected £${txAmount.toFixed(2)})`;
+                }
+            } else {
+                scoring.details.amountMatch = `? Amount not found in PDF`;
+            }
+
+            // 3. DATE PROXIMITY (max 25 points)
+            if (invoiceData.invoiceDate) {
+                try {
+                    const parts = invoiceData.invoiceDate.split('/');
+                    const pdfDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                    const txDate = context.date;
+                    const daysDiff = Math.abs(Math.floor((pdfDate - txDate) / (1000 * 60 * 60 * 24)));
+
+                    if (daysDiff === 0) {
+                        score += 25;
+                        scoring.date = 25;
+                        scoring.details.dateMatch = `✓ PDF date: ${invoiceData.invoiceDate} (same day!)`;
+                    } else if (daysDiff <= 2) {
+                        score += 20;
+                        scoring.date = 20;
+                        scoring.details.dateMatch = `✓ PDF date: ${invoiceData.invoiceDate} (${daysDiff} days)`;
+                    } else if (daysDiff <= 5) {
+                        score += 15;
+                        scoring.date = 15;
+                        scoring.details.dateMatch = `~ PDF date: ${invoiceData.invoiceDate} (${daysDiff} days)`;
+                    } else {
+                        score += 5;
+                        scoring.date = 5;
+                        scoring.details.dateMatch = `⚠ PDF date: ${invoiceData.invoiceDate} (${daysDiff} days)`;
+                    }
+                } catch (error) {
+                    scoring.details.dateMatch = `? Could not parse PDF date: ${invoiceData.invoiceDate}`;
+                }
+            } else {
+                scoring.details.dateMatch = `? Date not found in PDF`;
+            }
+
+            scoring.total = score;
+            scoring.source = 'PDF_AI_ANALYSIS';
+            scoring.invoiceNumber = invoiceData.invoiceNumber;
+
+            return scoring;
+        }
+
+        /**
+         * Generate smart search keywords using AI
+         */
+        async function generateAISearchKeywords(context) {
+            try {
+                // Use existing API key mechanism
+                const apiKey = getOpenAIKey();
+                if (!apiKey) {
+                    console.log('No API key, skipping AI enhancement');
+                    return null;
+                }
+
+                const prompt = `Given this purchase transaction, generate 5-7 search keywords that would appear in an invoice or receipt email.
+
+Transaction details:
+- Merchant: ${context.merchantName}
+- Amount: £${context.amount}
+- Description: ${context.description}
+${context.fromTo ? `- From/To: ${context.fromTo}` : ''}
+${context.userContext ? `- Project: ${context.userContext}` : ''}
+${context.userNotes ? `- User Notes: ${context.userNotes}` : ''}
+
+Consider:
+- Product/service names
+- Order number patterns
+- Common email subject line phrases
+- Transaction confirmation phrases
+- Any specific details mentioned in user notes
+
+Return ONLY a comma-separated list of keywords, no explanation.`;
+
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            { role: 'system', content: 'You are a search keyword generator. Return only comma-separated keywords, nothing else.' },
+                            { role: 'user', content: prompt }
+                        ],
+                        max_tokens: 100,
+                        temperature: 0.3
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`OpenAI API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const keywords = data.choices[0].message.content.trim().split(',').map(k => k.trim());
+
+                return keywords.slice(0, 7); // Limit to 7 keywords
+
+            } catch (error) {
+                console.error('AI keyword generation failed:', error);
+                searchLogger.logProgress('AI enhancement skipped (no API key or error)', 'warning');
+                return null; // Graceful fallback - continue without AI
+            }
+        }
+
+        // ========================================
         // INVOICE SEARCH UI HANDLERS
         // ========================================
+
+        /**
+         * Show styled Gmail connection alert
+         */
+        function showGmailConnectionAlert(transactionIndex) {
+            const transaction = allTransactions[transactionIndex];
+            const modal = document.getElementById('intelligentSearchModal');
+            const modalTitle = document.getElementById('searchModalTitle');
+            const searchLogContainer = document.getElementById('searchLogContainer');
+            const searchProgressBar = document.getElementById('searchProgressBar');
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            const actionButtons = document.getElementById('searchActionButtons');
+
+            // Show modal
+            modal.style.display = 'flex';
+
+            // Update title
+            modalTitle.textContent = 'Gmail Connection Required';
+
+            // Hide log and progress (but keep them in collapsed state)
+            const logHeader = document.getElementById('searchLogHeader');
+            if (logHeader) logHeader.style.display = 'none';
+            searchLogContainer.style.display = 'none';
+            searchProgressBar.style.display = 'none';
+
+            // Populate transaction summary
+            document.getElementById('searchTxDate').textContent = transaction.date || 'N/A';
+            document.getElementById('searchTxAmount').textContent = `£${transaction.spent || transaction.received || '0'}`;
+            document.getElementById('searchTxDesc').textContent = transaction.description || 'No description';
+
+            // Show From/To if available
+            if (transaction.from_to) {
+                document.getElementById('searchTxFromToContainer').style.display = 'block';
+                document.getElementById('searchTxFromTo').textContent = transaction.from_to;
+            } else {
+                document.getElementById('searchTxFromToContainer').style.display = 'none';
+            }
+
+            // Show user notes if available
+            if (transaction.manualDescription) {
+                document.getElementById('searchTxNotesContainer').style.display = 'block';
+                document.getElementById('searchTxNotes').textContent = transaction.manualDescription;
+            } else {
+                document.getElementById('searchTxNotesContainer').style.display = 'none';
+            }
+
+            // Show connection alert
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 3px solid #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                    <div style="font-size: 64px; margin-bottom: 20px; animation: bounce 1s ease-in-out infinite;">📧</div>
+                    <h3 style="margin: 0 0 15px 0; color: #92400e; font-size: 24px; font-weight: 700;">
+                        Gmail Not Connected
+                    </h3>
+                    <p style="color: #78350f; margin: 0 0 25px 0; font-size: 15px; line-height: 1.6; max-width: 400px; margin-left: auto; margin-right: auto;">
+                        You need to connect your Gmail account to search for invoices automatically.
+                        This allows the app to find matching invoices in your email.
+                    </p>
+
+                    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 300px; margin: 0 auto;">
+                        <button onclick="connectGmailAndRetry(${transactionIndex})"
+                            style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 14px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 4px 10px rgba(58, 175, 169, 0.3); transition: all 0.2s;"
+                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(58, 175, 169, 0.4)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 10px rgba(58, 175, 169, 0.3)'">
+                            🔗 Connect Gmail Now
+                        </button>
+                        <button onclick="closeIntelligentSearchModal()"
+                            style="background: #f3f4f6; color: #64748b; padding: 12px 24px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;"
+                            onmouseover="this.style.background='#e5e7eb'"
+                            onmouseout="this.style.background='#f3f4f6'">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 25px; padding: 15px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; border-left: 4px solid #3AAFA9;">
+                        <div style="font-size: 12px; color: #475569; text-align: left;">
+                            <strong style="color: #1e293b; display: block; margin-bottom: 8px;">ℹ️ What happens next:</strong>
+                            <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+                                <li>You'll be asked to sign in to your Gmail account</li>
+                                <li>Grant permission to read emails (search only)</li>
+                                <li>Invoice search will start automatically</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    @keyframes bounce {
+                        0%, 100% { transform: translateY(0); }
+                        50% { transform: translateY(-10px); }
+                    }
+                </style>
+            `;
+
+            // Update action buttons
+            actionButtons.innerHTML = '';
+        }
+
+        /**
+         * Connect Gmail and retry invoice search
+         */
+        async function connectGmailAndRetry(transactionIndex) {
+            console.log('🔗 [CONNECT] Initiating Gmail connection from alert...');
+
+            // Update modal to show connecting status
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            resultsContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 48px; margin-bottom: 20px; animation: spin 2s linear infinite;">⏳</div>
+                    <h4 style="margin: 0 0 10px 0; color: #1e293b;">Connecting to Gmail...</h4>
+                    <p style="color: #64748b; font-size: 14px;">Please complete the sign-in process in the popup window.</p>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
+
+            try {
+                // Attempt Gmail sign-in
+                await signInToGmail();
+
+                // Wait for auth to complete
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // Check if connection was successful
+                if (gmailAccounts.length > 0) {
+                    console.log('✅ [CONNECT] Gmail connected successfully, starting search...');
+
+                    // Close the alert modal
+                    closeIntelligentSearchModal();
+
+                    // Show success toast
+                    showToast('✅ Gmail connected! Starting invoice search...', 'success');
+
+                    // Wait a moment then trigger the search
+                    setTimeout(() => {
+                        handleInvoiceFetch(transactionIndex);
+                    }, 500);
+                } else {
+                    console.warn('⚠️ [CONNECT] Gmail connection incomplete');
+                    resultsContainer.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; background: #fef2f2; border-radius: 12px; border: 2px solid #dc2626;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">❌</div>
+                            <h4 style="margin: 0 0 10px 0; color: #991b1b;">Connection Failed</h4>
+                            <p style="color: #7f1d1d; margin: 0 0 20px 0;">
+                                Unable to connect to Gmail. Please try again or check your browser permissions.
+                            </p>
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button onclick="connectGmailAndRetry(${transactionIndex})" class="btn-primary">
+                                    Try Again
+                                </button>
+                                <button onclick="closeIntelligentSearchModal()" class="btn-secondary">
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ [CONNECT] Gmail connection error:', error);
+                resultsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; background: #fef2f2; border-radius: 12px; border: 2px solid #dc2626;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">❌</div>
+                        <h4 style="margin: 0 0 10px 0; color: #991b1b;">Connection Error</h4>
+                        <p style="color: #7f1d1d; margin: 0 0 20px 0;">
+                            ${error.message || 'An error occurred while connecting to Gmail.'}
+                        </p>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button onclick="connectGmailAndRetry(${transactionIndex})" class="btn-primary">
+                                Try Again
+                            </button>
+                            <button onclick="closeIntelligentSearchModal()" class="btn-secondary">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
 
         async function handleInvoiceFetch(index) {
             const transaction = allTransactions[index];
@@ -5428,60 +7864,28 @@ Summary:`;
 
             // Check if Gmail is connected
             if (gmailAccounts.length === 0) {
-                if (confirm('You need to connect your Gmail account first. Connect now?')) {
-                    await signInToGmail();
-                    // Wait a moment for auth to complete
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    if (gmailAccounts.length === 0) return;
-                } else {
-                    return;
-                }
+                // Show styled alert modal instead of basic confirm
+                showGmailConnectionAlert(index);
+                return;
             }
 
-            // Show modal with loading state
-            document.getElementById('searchTransactionInfo').innerHTML = `
-                <strong>${transaction.date}</strong> - ${escapeHtml(transaction.description)} -
-                £${transaction.spent || transaction.received}
-            `;
-            document.getElementById('invoiceSearchResults').innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <div style="font-size: 40px;">⏳</div>
-                    <div style="margin-top: 15px; color: #666;">Searching your Gmail...</div>
-                </div>
-            `;
-            document.getElementById('invoiceSearchModal').classList.add('active');
-
-            // Mark button as searching
+            // Update button state
             const btn = document.getElementById(`invoiceBtn${index}`);
-            btn.classList.add('searching');
-            btn.textContent = '⏳';
-
-            try {
-                // Search Gmail
-                const messages = await searchEmailsForTransaction(transaction);
-
-                if (messages.length === 0) {
-                    document.getElementById('invoiceSearchResults').innerHTML = `
-                        <div style="text-align: center; padding: 40px; color: #999;">
-                            <div style="font-size: 40px;">📭</div>
-                            <div style="margin-top: 15px;">No matching invoices found</div>
-                            <div style="font-size: 13px; margin-top: 10px;">Try uploading manually below</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Display results
-                await displayInvoiceSearchResults(messages, transaction);
-
-            } catch (error) {
-                console.error('Invoice search error:', error);
-                showToast('❌ Failed to search for invoices', 'error');
-                closeInvoiceSearchModal();
-            } finally {
-                btn.classList.remove('searching');
-                btn.textContent = '📧';
+            if (btn) {
+                btn.classList.add('searching');
+                btn.textContent = '⏳';
             }
+
+            // Show new intelligent search modal
+            showIntelligentSearchModal(transaction, index);
+
+            // Re-enable button after a short delay
+            setTimeout(() => {
+                if (btn) {
+                    btn.classList.remove('searching');
+                    btn.textContent = '📧';
+                }
+            }, 1000);
         }
 
         async function displayInvoiceSearchResults(messages, transaction) {
