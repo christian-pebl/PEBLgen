@@ -11,6 +11,7 @@ key.txt
 .env.local
 *_api_key*
 SECURITY_NOTICE.txt
+.supabase-credentials.js
 
 # Claude files
 .claude/
