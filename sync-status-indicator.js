@@ -15,6 +15,8 @@ const SYNC_STATUS = {
 let currentStatus = SYNC_STATUS.DISABLED;
 let statusIndicator = null;
 let lastSyncText = '';
+let retryCount = 0;
+const MAX_RETRIES = 20;
 
 /**
  * Initialize sync status indicator
@@ -36,10 +38,15 @@ function createSyncIndicator() {
     if (document.getElementById('sync-status-indicator')) return;
 
     // Find the navigation bar
-    const navBar = document.querySelector('.nav-links');
+    const navBar = document.querySelector('.nav-buttons');
     if (!navBar) {
-        console.warn('⚠️ [SYNC STATUS] Navigation bar not found, retrying...');
-        setTimeout(createSyncIndicator, 500);
+        retryCount++;
+        if (retryCount < MAX_RETRIES) {
+            console.warn(`⚠️ [SYNC STATUS] Navigation bar not found, retrying... (${retryCount}/${MAX_RETRIES})`);
+            setTimeout(createSyncIndicator, 500);
+        } else {
+            console.error('❌ [SYNC STATUS] Navigation bar not found after maximum retries. Giving up.');
+        }
         return;
     }
 
@@ -52,10 +59,12 @@ function createSyncIndicator() {
     `;
     indicator.title = 'Initializing backup...';
 
-    // Insert before the "Reset Backup" button (or at the end)
-    const resetButton = Array.from(navBar.children).find(btn => btn.textContent.includes('Reset Backup'));
-    if (resetButton) {
-        navBar.insertBefore(indicator, resetButton);
+    // Insert before the "↑ Top" button or "Reset Backup" button (or at the end if neither exists)
+    const topButton = Array.from(navBar.children).find(btn =>
+        btn.textContent.includes('Top') || btn.textContent.includes('Reset Backup')
+    );
+    if (topButton) {
+        navBar.insertBefore(indicator, topButton);
     } else {
         navBar.appendChild(indicator);
     }
