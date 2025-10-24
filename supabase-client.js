@@ -59,64 +59,31 @@ function waitForSupabase() {
 
 /**
  * Create anonymous user for migration phase
- * This allows users to start using Supabase without creating an account
+ * Uses Supabase's built-in anonymous authentication
  */
 async function signInAnonymously() {
     try {
         await waitForSupabase();
 
-        // Generate or retrieve device ID
-        let deviceId = localStorage.getItem('peblgen_device_id');
-        if (!deviceId) {
-            deviceId = crypto.randomUUID().replace(/-/g, ''); // Remove dashes for cleaner email
-            localStorage.setItem('peblgen_device_id', deviceId);
-            console.log('🔑 [SUPABASE] Generated new device ID');
-        }
-
-        // Create temporary email for this device (use valid email format)
-        const email = `user${deviceId}@peblgen.app`;
-        const password = deviceId + '_' + Date.now();
-
         console.log('🔐 [SUPABASE] Signing in anonymously...');
 
-        // Try to sign in first (in case user already exists)
-        let { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
-            email: email,
-            password: localStorage.getItem('peblgen_device_password') || password,
-        });
+        // Use Supabase's built-in anonymous authentication
+        const { data, error } = await supabaseClient.auth.signInAnonymously();
 
-        if (signInError) {
-            // If sign in fails, try to sign up
-            console.log('📝 [SUPABASE] Creating new user...');
-
-            const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    data: {
-                        display_name: 'Anonymous User',
-                        device_id: deviceId,
-                    }
-                }
-            });
-
-            if (signUpError) {
-                throw signUpError;
-            }
-
-            // Save password for future sign-ins
-            localStorage.setItem('peblgen_device_password', password);
-            currentUser = signUpData.user;
-
-        } else {
-            currentUser = signInData.user;
+        if (error) {
+            throw error;
         }
 
-        console.log('✅ [SUPABASE] Authenticated successfully');
+        currentUser = data.user;
+        console.log('✅ [SUPABASE] Authenticated successfully as anonymous user');
+        console.log(`   User ID: ${currentUser.id}`);
+
         return currentUser;
 
     } catch (error) {
         console.error('❌ [SUPABASE] Authentication failed:', error);
+        console.error('   Make sure anonymous sign-ins are enabled in Supabase dashboard');
+        console.error('   Go to: Authentication → Settings → Allow anonymous sign-ins');
         return null;
     }
 }
