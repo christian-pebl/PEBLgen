@@ -35,17 +35,31 @@ function createSyncIndicator() {
     // Check if already created
     if (document.getElementById('sync-status-indicator')) return;
 
-    // Create indicator HTML
-    const indicator = document.createElement('div');
-    indicator.id = 'sync-status-indicator';
-    indicator.className = 'sync-status-indicator';
-    indicator.innerHTML = `
-        <div class="sync-icon" id="syncIcon">☁️</div>
-        <div class="sync-tooltip" id="syncTooltip">Initializing backup...</div>
-    `;
+    // Find the navigation bar
+    const navBar = document.querySelector('.nav-links');
+    if (!navBar) {
+        console.warn('⚠️ [SYNC STATUS] Navigation bar not found, retrying...');
+        setTimeout(createSyncIndicator, 500);
+        return;
+    }
 
-    // Add to page
-    document.body.appendChild(indicator);
+    // Create indicator as a nav button
+    const indicator = document.createElement('button');
+    indicator.id = 'sync-status-indicator';
+    indicator.className = 'nav-btn sync-status-btn';
+    indicator.innerHTML = `
+        <span class="sync-icon" id="syncIcon">☁️</span>
+    `;
+    indicator.title = 'Initializing backup...';
+
+    // Insert before the "Reset Backup" button (or at the end)
+    const resetButton = Array.from(navBar.children).find(btn => btn.textContent.includes('Reset Backup'));
+    if (resetButton) {
+        navBar.insertBefore(indicator, resetButton);
+    } else {
+        navBar.appendChild(indicator);
+    }
+
     statusIndicator = indicator;
 
     // Add click handler to show details
@@ -149,9 +163,8 @@ function setSyncStatus(status, tooltipText) {
     lastSyncText = tooltipText;
 
     const icon = document.getElementById('syncIcon');
-    const tooltip = document.getElementById('syncTooltip');
 
-    if (!icon || !tooltip) return;
+    if (!icon) return;
 
     // Remove all status classes
     statusIndicator.classList.remove('synced', 'syncing', 'pending', 'error', 'disabled');
@@ -159,36 +172,38 @@ function setSyncStatus(status, tooltipText) {
     // Add current status class
     statusIndicator.classList.add(status);
 
-    // Update icon and tooltip
+    // Reset icon styles
+    icon.style.opacity = '1';
+    icon.style.animation = 'none';
+
+    // Update icon and animation based on status
     switch (status) {
         case SYNC_STATUS.SYNCED:
-            icon.textContent = '☁️';
-            icon.style.animation = 'none';
+            icon.innerHTML = '☁️<span class="sync-check">✓</span>';
             break;
 
         case SYNC_STATUS.SYNCING:
-            icon.textContent = '☁️';
+            icon.innerHTML = '☁️<span class="sync-spinner">⟳</span>';
             icon.style.animation = 'spin 2s linear infinite';
             break;
 
         case SYNC_STATUS.PENDING:
-            icon.textContent = '☁️';
+            icon.innerHTML = '☁️<span class="sync-pending">⏳</span>';
             icon.style.animation = 'pulse 2s ease-in-out infinite';
             break;
 
         case SYNC_STATUS.ERROR:
-            icon.textContent = '⚠️';
-            icon.style.animation = 'shake 0.5s ease-in-out';
+            icon.innerHTML = '☁️<span class="sync-error">⚠️</span>';
             break;
 
         case SYNC_STATUS.DISABLED:
-            icon.textContent = '☁️';
-            icon.style.opacity = '0.4';
-            icon.style.animation = 'none';
+            icon.innerHTML = '☁️';
+            icon.style.opacity = '0.5';
             break;
     }
 
-    tooltip.textContent = tooltipText;
+    // Update tooltip (title attribute)
+    statusIndicator.title = tooltipText;
 }
 
 /**
@@ -248,90 +263,81 @@ function showSyncDetails() {
 // Add CSS styles
 const style = document.createElement('style');
 style.textContent = `
-    /* Sync Status Indicator */
-    .sync-status-indicator {
-        position: fixed;
-        top: 70px;
-        right: 20px;
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 30px;
-        padding: 8px 16px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    /* Sync Status Button in Nav Bar */
+    .sync-status-btn {
+        position: relative;
+        padding: 8px 12px !important;
+        min-width: 45px;
         cursor: pointer;
         transition: all 0.3s ease;
-        z-index: 1000;
-        font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        font-size: 13px;
-        user-select: none;
     }
 
-    .sync-status-indicator:hover {
-        box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-        transform: translateY(-2px);
+    .sync-status-btn .sync-icon {
+        font-size: 24px;
+        display: inline-block;
+        position: relative;
+        line-height: 1;
     }
 
-    .sync-icon {
-        font-size: 20px;
+    /* Status indicator overlays */
+    .sync-status-btn .sync-check,
+    .sync-status-btn .sync-spinner,
+    .sync-status-btn .sync-pending,
+    .sync-status-btn .sync-error {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        font-size: 12px;
+        background: white;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
 
-    .sync-tooltip {
-        font-size: 12px;
-        color: #333;
-        font-weight: 500;
-        white-space: nowrap;
+    .sync-status-btn .sync-check {
+        color: #4caf50;
+        font-weight: bold;
     }
 
-    /* Status Colors */
-    .sync-status-indicator.synced {
-        border: 2px solid #4caf50;
+    .sync-status-btn .sync-spinner {
+        color: #2196f3;
+        animation: spin 2s linear infinite;
     }
 
-    .sync-status-indicator.synced .sync-icon {
-        filter: brightness(1.1);
+    .sync-status-btn .sync-pending {
+        font-size: 10px;
+        animation: pulse 2s ease-in-out infinite;
     }
 
-    .sync-status-indicator.synced .sync-tooltip {
-        color: #2e7d32;
+    .sync-status-btn .sync-error {
+        color: #f44336;
+        font-weight: bold;
     }
 
-    .sync-status-indicator.syncing {
-        border: 2px solid #2196f3;
+    /* Status Colors - subtle background tints */
+    .sync-status-btn.synced {
+        background-color: rgba(76, 175, 80, 0.1) !important;
     }
 
-    .sync-status-indicator.syncing .sync-tooltip {
-        color: #1565c0;
+    .sync-status-btn.syncing {
+        background-color: rgba(33, 150, 243, 0.1) !important;
     }
 
-    .sync-status-indicator.pending {
-        border: 2px solid #ff9800;
+    .sync-status-btn.pending {
+        background-color: rgba(255, 152, 0, 0.1) !important;
     }
 
-    .sync-status-indicator.pending .sync-tooltip {
-        color: #e65100;
+    .sync-status-btn.error {
+        background-color: rgba(244, 67, 54, 0.1) !important;
     }
 
-    .sync-status-indicator.error {
-        border: 2px solid #f44336;
-    }
-
-    .sync-status-indicator.error .sync-tooltip {
-        color: #c62828;
-    }
-
-    .sync-status-indicator.disabled {
-        border: 2px solid #9e9e9e;
+    .sync-status-btn.disabled {
+        background-color: rgba(158, 158, 158, 0.1) !important;
         opacity: 0.6;
-    }
-
-    .sync-status-indicator.disabled .sync-tooltip {
-        color: #757575;
     }
 
     /* Animations */
@@ -345,45 +351,32 @@ style.textContent = `
         50% { opacity: 0.5; }
     }
 
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-    }
-
-    /* Checkmark overlay for synced state */
-    .sync-status-indicator.synced .sync-icon::after {
-        content: '✓';
-        position: absolute;
-        font-size: 10px;
-        color: #4caf50;
-        background: white;
-        border-radius: 50%;
-        width: 12px;
-        height: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        bottom: -2px;
-        right: -2px;
-        font-weight: bold;
+    /* Hover effect */
+    .sync-status-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 
     /* Mobile responsive */
     @media (max-width: 768px) {
-        .sync-status-indicator {
-            top: 65px;
-            right: 10px;
-            padding: 6px 12px;
-            font-size: 11px;
+        .sync-status-btn {
+            padding: 6px 10px !important;
+            min-width: 40px;
         }
 
-        .sync-icon {
-            font-size: 18px;
+        .sync-status-btn .sync-icon {
+            font-size: 20px;
         }
 
-        .sync-tooltip {
-            font-size: 11px;
+        .sync-status-btn .sync-check,
+        .sync-status-btn .sync-spinner,
+        .sync-status-btn .sync-pending,
+        .sync-status-btn .sync-error {
+            width: 14px;
+            height: 14px;
+            font-size: 10px;
+            bottom: -2px;
+            right: -2px;
         }
     }
 `;
