@@ -771,7 +771,8 @@
             <a href="gantt.html" class="nav-btn">Gantt</a>
             <a href="timesheet.html" class="nav-btn">Timesheet</a>
             <a href="index.html" class="nav-btn">Sketcher</a>
-            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Scroll to top">↑ Top</button>
+            <button onclick="resetBackupAuth()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Reset cloud backup authentication">🔄 Reset Backup</button>
+            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
         </div>
     </div>
 
@@ -986,6 +987,25 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 console.warn('⚠️ No OpenAI API key found in localStorage. Please set it via the settings menu.');
             }
             return key;
+        }
+
+        // Reset cloud backup authentication
+        function resetBackupAuth() {
+            if (confirm('🔄 Reset Cloud Backup Authentication?\n\nThis will:\n✓ Clear your current backup credentials\n✓ Create a new backup account\n✓ Re-enable automatic backup\n\nYour data will NOT be deleted.\n\nContinue?')) {
+                console.log('🔄 Resetting backup authentication...');
+
+                // Clear old credentials
+                localStorage.removeItem('peblgen_device_id');
+                localStorage.removeItem('peblgen_device_password');
+
+                // Show success message
+                showToast('🔄 Backup credentials reset! Reloading page...', 'success');
+
+                // Reload page after 1 second
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }
         }
 
         let budgetData = [];
