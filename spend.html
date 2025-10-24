@@ -798,6 +798,7 @@
                     <th>Bank</th>
                     <th>Date</th>
                     <th>Description</th>
+                    <th>From/To</th>
                     <th>Spent</th>
                     <th>Spent (ex. VAT)</th>
                     <th>Received</th>
@@ -807,7 +808,7 @@
             </thead>
             <tbody id="tableBody">
                 <tr class="empty-state">
-                    <td colspan="8">No transactions loaded. Please upload a CSV file.</td>
+                    <td colspan="9">No transactions loaded. Please upload a CSV file.</td>
                 </tr>
             </tbody>
         </table>
@@ -2777,6 +2778,7 @@
                     <td style="text-align: center; font-weight: 600; color: ${transaction.bank === 'R' ? '#3AAFA9' : '#2B7A78'};">${transaction.bank || '?'}</td>
                     <td>${escapeHtml(transaction.date)}</td>
                     <td class="description-cell">${descriptionHtml}</td>
+                    <td style="font-size: 11px; color: #64748b;">${escapeHtml(transaction.fromTo || '')}</td>
                     <td class="amount-spent">${escapeHtml(transaction.spent)}</td>
                     <td class="amount-spent" style="color: #059669; font-weight: 500;">${spentExVAT}</td>
                     <td class="amount-received">${escapeHtml(transaction.received)}</td>
