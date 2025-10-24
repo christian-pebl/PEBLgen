@@ -999,12 +999,11 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 localStorage.removeItem('peblgen_device_password');
 
                 // Show success message
-                showToast('🔄 Backup credentials reset! Reloading page...', 'success');
+                alert('✅ Backup credentials cleared!\n\nPage will reload with fresh authentication.');
+                console.log('✅ Backup credentials cleared, reloading...');
 
-                // Reload page after 1 second
-                setTimeout(() => {
-                    location.reload();
-                }, 1000);
+                // Force hard reload (bypass cache) with timestamp
+                window.location.href = window.location.pathname + '?nocache=' + Date.now();
             }
         }
 
