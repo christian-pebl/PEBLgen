@@ -68,13 +68,13 @@ async function signInAnonymously() {
         // Generate or retrieve device ID
         let deviceId = localStorage.getItem('peblgen_device_id');
         if (!deviceId) {
-            deviceId = 'device_' + crypto.randomUUID();
+            deviceId = crypto.randomUUID().replace(/-/g, ''); // Remove dashes for cleaner email
             localStorage.setItem('peblgen_device_id', deviceId);
             console.log('🔑 [SUPABASE] Generated new device ID');
         }
 
-        // Create temporary email for this device
-        const email = `${deviceId}@temp.peblgen.local`;
+        // Create temporary email for this device (use valid email format)
+        const email = `user${deviceId}@peblgen.app`;
         const password = deviceId + '_' + Date.now();
 
         console.log('🔐 [SUPABASE] Signing in anonymously...');
