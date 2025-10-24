@@ -929,10 +929,14 @@
                 <button class="modal-close" onclick="closeTextPopup()">&times;</button>
             </div>
             <div class="modal-body">
-                <p id="textPopupContent" style="font-size: 13px; line-height: 1.6; color: #1e293b; word-wrap: break-word; white-space: pre-wrap;"></p>
+                <p id="textPopupContent" style="font-size: 13px; line-height: 1.6; color: #1e293b; word-wrap: break-word; white-space: pre-wrap; margin-bottom: 15px;"></p>
+                <textarea id="textPopupEdit" style="display: none; width: 100%; min-height: 150px; padding: 10px; font-size: 13px; line-height: 1.6; border: 2px solid #3b82f6; border-radius: 6px; font-family: inherit; resize: vertical;"></textarea>
             </div>
-            <div class="modal-footer">
-                <button class="modal-btn modal-btn-secondary" onclick="closeTextPopup()">Close</button>
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="modal-btn modal-btn-secondary" id="textPopupCloseBtn" onclick="closeTextPopup()">Close</button>
+                <button class="modal-btn modal-btn-primary" id="textPopupEditBtn" onclick="enableTextPopupEdit()" style="background: #3b82f6;">✏️ Edit</button>
+                <button class="modal-btn modal-btn-primary" id="textPopupSaveBtn" onclick="saveTextPopupEdit()" style="display: none; background: #22c55e;">✅ Save</button>
+                <button class="modal-btn modal-btn-secondary" id="textPopupCancelBtn" onclick="cancelTextPopupEdit()" style="display: none;">Cancel</button>
             </div>
         </div>
     </div>
@@ -3059,14 +3063,27 @@
                     <td class="action-buttons">
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                             <div style="display: flex; gap: 5px;">
-                                <button class="action-btn edit-btn" onclick="handleManualEdit(${index}); event.stopPropagation();" title="Add Expense Detail">✏️</button>
-                                <button class="action-btn mic-btn" id="micBtn${index}" onclick="toggleRowVoiceRecording(${index}); event.stopPropagation();" title="Voice Note">🎤</button>
+                                <button class="action-btn edit-btn" onclick="handleManualEdit(${index}); event.stopPropagation();" title="Add Expense Detail${selectedRowIndex === index ? ' (T)' : ''}" style="position: relative;">
+                                    ✏️
+                                    ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #3b82f6; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">T</span>' : ''}
+                                </button>
+                                <button class="action-btn mic-btn" id="micBtn${index}" onclick="toggleRowVoiceRecording(${index}); event.stopPropagation();" title="Voice Note${selectedRowIndex === index ? ' (V)' : ''}" style="position: relative;">
+                                    🎤
+                                    ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #8b5cf6; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">V</span>' : ''}
+                                </button>
                                 ${transaction.invoiceId ?
-                                    `<button class="action-btn pdf-btn" onclick="openAttachedInvoice(${index}); event.stopPropagation();" title="View Attached Invoice: ${escapeHtml(transaction.invoiceFilename || 'invoice.pdf')}" style="background: #22c55e;">📄</button>` :
-                                    `<button class="action-btn invoice-btn" id="invoiceBtn${index}" onclick="handleInvoiceFetch(${index}); event.stopPropagation();" title="Find Invoice">📧</button>`
+                                    `<button class="action-btn pdf-btn" onclick="openAttachedInvoice(${index}); event.stopPropagation();" title="View Attached Invoice: ${escapeHtml(transaction.invoiceFilename || 'invoice.pdf')}" style="background: #22c55e; position: relative;">
+                                        📄
+                                        ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #059669; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">E</span>' : ''}
+                                    </button>` :
+                                    `<button class="action-btn invoice-btn" id="invoiceBtn${index}" onclick="handleInvoiceFetch(${index}); event.stopPropagation();" title="Find Invoice${selectedRowIndex === index ? ' (E)' : ''}" style="position: relative;">
+                                        📧
+                                        ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #f59e0b; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">E</span>' : ''}
+                                    </button>`
                                 }
-                                <button class="action-btn delete-btn ${hasAssignments ? 'has-assignment' : ''}" onclick="handleAssign(${index}); event.stopPropagation();" oncontextmenu="handleUnassign(${index}); return false;" title="${assignBtnTitle}" id="assignBtn${index}">
+                                <button class="action-btn delete-btn ${hasAssignments ? 'has-assignment' : ''}" onclick="handleAssign(${index}); event.stopPropagation();" oncontextmenu="handleUnassign(${index}); return false;" title="${assignBtnTitle}${selectedRowIndex === index ? ' (1)' : ''}" id="assignBtn${index}" style="position: relative;">
                                     ${assignBtnIcon}
+                                    ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">1</span>' : ''}
                                 </button>
                             </div>
                             ${categoryBadges ? `<div style="display: flex; flex-wrap: wrap; justify-content: center; max-width: 100%; margin-top: 2px;">${categoryBadges}</div>` : ''}
@@ -4295,6 +4312,24 @@
                     console.log('⌨️ [MODAL DEBUG] Opening assign modal for row:', selectedRowIndex);
                     handleAssignWithPosition(selectedRowIndex);
                 }
+                // 'T' key - Manual text edit for selected row
+                else if ((e.key === 't' || e.key === 'T') && selectedRowIndex !== null) {
+                    e.preventDefault();
+                    console.log('⌨️ [SHORTCUT] Opening text editor for row:', selectedRowIndex);
+                    handleManualEdit(selectedRowIndex);
+                }
+                // 'V' key - Voice input for selected row
+                else if ((e.key === 'v' || e.key === 'V') && selectedRowIndex !== null) {
+                    e.preventDefault();
+                    console.log('⌨️ [SHORTCUT] Starting voice recording for row:', selectedRowIndex);
+                    toggleRowVoiceRecording(selectedRowIndex);
+                }
+                // 'E' key - Email invoice fetch for selected row
+                else if ((e.key === 'e' || e.key === 'E') && selectedRowIndex !== null) {
+                    e.preventDefault();
+                    console.log('⌨️ [SHORTCUT] Opening invoice search for row:', selectedRowIndex);
+                    handleInvoiceFetch(selectedRowIndex);
+                }
             }
             // Modal is open - number-based navigation
             else {
@@ -4998,13 +5033,21 @@
         // TEXT POPUP FOR LONG DESCRIPTIONS/DETAILS
         // ========================================
 
+        let currentTextPopupField = null;
+        let currentTextPopupRowIndex = null;
+
         function showTextPopup(fieldName, rowIndex) {
             const transaction = allTransactions[rowIndex];
             if (!transaction) return;
 
+            // Store current editing context
+            currentTextPopupField = fieldName;
+            currentTextPopupRowIndex = rowIndex;
+
             const modal = document.getElementById('textPopupModal');
             const title = document.getElementById('textPopupTitle');
             const content = document.getElementById('textPopupContent');
+            const editBox = document.getElementById('textPopupEdit');
 
             // Get the appropriate text based on field name
             let text = '';
@@ -5017,11 +5060,83 @@
             }
 
             content.textContent = text;
+            editBox.value = text;
+
+            // Reset to view mode
+            content.style.display = 'block';
+            editBox.style.display = 'none';
+            document.getElementById('textPopupCloseBtn').style.display = 'inline-block';
+            document.getElementById('textPopupEditBtn').style.display = 'inline-block';
+            document.getElementById('textPopupSaveBtn').style.display = 'none';
+            document.getElementById('textPopupCancelBtn').style.display = 'none';
+
             modal.style.display = 'flex';
+        }
+
+        function enableTextPopupEdit() {
+            const content = document.getElementById('textPopupContent');
+            const editBox = document.getElementById('textPopupEdit');
+
+            // Switch to edit mode
+            content.style.display = 'none';
+            editBox.style.display = 'block';
+            editBox.focus();
+
+            // Update buttons
+            document.getElementById('textPopupCloseBtn').style.display = 'none';
+            document.getElementById('textPopupEditBtn').style.display = 'none';
+            document.getElementById('textPopupSaveBtn').style.display = 'inline-block';
+            document.getElementById('textPopupCancelBtn').style.display = 'inline-block';
+        }
+
+        async function saveTextPopupEdit() {
+            const editBox = document.getElementById('textPopupEdit');
+            const newText = editBox.value.trim();
+
+            if (currentTextPopupRowIndex === null || !currentTextPopupField) return;
+
+            // Update transaction
+            if (currentTextPopupField === 'description') {
+                allTransactions[currentTextPopupRowIndex].description = newText;
+            } else if (currentTextPopupField === 'detail') {
+                allTransactions[currentTextPopupRowIndex].detail = newText;
+            }
+
+            // Save to storage
+            await saveTransactionsToStorage();
+
+            // Re-render table
+            renderTransactions();
+
+            // Show success
+            showToast('✅ Text updated successfully', 'success');
+
+            // Close modal
+            closeTextPopup();
+        }
+
+        function cancelTextPopupEdit() {
+            const content = document.getElementById('textPopupContent');
+            const editBox = document.getElementById('textPopupEdit');
+
+            // Reset edit box to original value
+            editBox.value = content.textContent;
+
+            // Switch back to view mode
+            content.style.display = 'block';
+            editBox.style.display = 'none';
+
+            // Update buttons
+            document.getElementById('textPopupCloseBtn').style.display = 'inline-block';
+            document.getElementById('textPopupEditBtn').style.display = 'inline-block';
+            document.getElementById('textPopupSaveBtn').style.display = 'none';
+            document.getElementById('textPopupCancelBtn').style.display = 'none';
         }
 
         function closeTextPopup() {
             document.getElementById('textPopupModal').style.display = 'none';
+            currentTextPopupField = null;
+            currentTextPopupRowIndex = null;
         }
 
         // Close popup when clicking outside
@@ -5752,11 +5867,17 @@ Description:`;
         /**
          * Extract structured data (company, amount, date) from invoice text using AI
          */
-        async function extractStructuredDataFromInvoice(invoiceText) {
+        async function extractStructuredDataFromInvoice(invoiceText, transactionContext = null) {
             const apiKey = getOpenAIKey();
             if (!apiKey) {
                 console.warn('⚠️ No API key available for structured extraction');
                 return null;
+            }
+
+            // Add context hint for better date inference
+            let contextHint = '';
+            if (transactionContext && transactionContext.date) {
+                contextHint = `\n\nContext: This invoice should be from around ${transactionContext.date}. If the invoice shows a date without a year (e.g., "Aug 19" or "19/08"), infer the year from this context date.`;
             }
 
             const prompt = `Extract the following information from this invoice/receipt text and return it as a JSON object:
@@ -5764,7 +5885,7 @@ Description:`;
 Required fields:
 - company: The company/vendor name (string)
 - amount: The total amount (number, no currency symbols)
-- date: The invoice/transaction date in YYYY-MM-DD format (string)
+- date: The invoice/transaction date in YYYY-MM-DD format (string). IMPORTANT: If the invoice shows a date without a year, infer the correct year based on the context.${contextHint}
 
 Invoice Text:
 ${invoiceText.substring(0, 4000)}
@@ -5830,7 +5951,7 @@ Example: {"company": "Acme Corp", "amount": 123.45, "date": "2025-01-15"}`;
             const amountDifference = Math.abs(transactionAmount - extractedAmount);
             const clientSideAmountMatch = amountDifference <= 0.02; // Allow 2p tolerance for rounding
 
-            // Client-side date validation (within 5 days)
+            // Client-side date validation (within 7 days - more flexible)
             let clientSideDateMatch = false;
             let dateDaysDifference = null;
             if (extractedData.date && transaction.date) {
@@ -5851,7 +5972,7 @@ Example: {"company": "Acme Corp", "amount": 123.45, "date": "2025-01-15"}`;
 
                     const timeDiff = Math.abs(extractedDate - transactionDate);
                     dateDaysDifference = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-                    clientSideDateMatch = dateDaysDifference <= 5; // Within 5 days = match
+                    clientSideDateMatch = dateDaysDifference <= 7; // Within 7 days = match (more flexible)
 
                     console.log('📅 [VALIDATE] Date parsing DETAILED:', {
                         transactionRaw: transaction.date,
@@ -5916,7 +6037,7 @@ IMPORTANT: Keep all reason fields concise (2-10 words maximum). Examples:
 Consider:
 - Company: Allow partial matches, common abbreviations, similar names
 - Amount: Match if difference is ≤ £0.02 (to account for rounding)
-- Date: Should be within ±5 days of transaction date
+- Date: Match if within ±7 days of transaction date (be VERY lenient with dates - invoices are often dated a few days before or after the transaction)
 
 Return ONLY valid JSON.`;
 
@@ -5955,9 +6076,9 @@ Return ONLY valid JSON.`;
                     validationResult.amountReason = `Amounts match within tolerance (difference: £${amountDifference.toFixed(2)})`;
                 }
 
-                // CLIENT-SIDE OVERRIDE: If dates within 5 days, override AI if it says they don't match
+                // CLIENT-SIDE OVERRIDE: If dates within 7 days, override AI if it says they don't match
                 if (clientSideDateMatch && !validationResult.dateMatch) {
-                    console.log('⚠️ [VALIDATE] AI said dates don\'t match, but client-side check says they do (within 5 days). Overriding AI decision.');
+                    console.log('⚠️ [VALIDATE] AI said dates don\'t match, but client-side check says they do (within 7 days). Overriding AI decision.');
                     console.log('📅 [OVERRIDE] Date override details:', {
                         clientSideDateMatch,
                         dateDaysDifference,
@@ -6899,7 +7020,7 @@ Return ONLY valid JSON.`;
                             if (ocrText && ocrText.trim().length > 20) {
                                 // Extract structured data (company, amount, date)
                                 searchLogger.logProgress(`  🤖 Extracting invoice data with AI...`, 'info');
-                                extractedData = await extractStructuredDataFromInvoice(ocrText);
+                                extractedData = await extractStructuredDataFromInvoice(ocrText, transaction);
 
                                 if (extractedData) {
                                     // Validate against transaction
@@ -7041,11 +7162,11 @@ Return ONLY valid JSON.`;
                     // Fallback to email-based scoring
                     companyColor = getMatchColor(item.scoring.company, 30);
                     amountColor = getMatchColor(item.scoring.amount, 25);
-                    dateColor = item.scoring.date >= 15 ? '#059669' : '#ea580c';
+                    dateColor = item.scoring.date >= 14 ? '#059669' : '#ea580c';  // Threshold 14: dates ≤5 days (15 pts) show green
 
                     companyIcon = getMatchIcon(item.scoring.company, 30);
                     amountIcon = getMatchIcon(item.scoring.amount, 25);
-                    dateIcon = getMatchIcon(item.scoring.date, 15);
+                    dateIcon = getMatchIcon(item.scoring.date, 14);  // Threshold 14: dates ≤5 days (15 pts) show ✓
 
                     console.log('📊 Using email scoring for pills (no OCR validation available)');
                 }
@@ -7124,12 +7245,44 @@ Return ONLY valid JSON.`;
                         ocrText: item.ocrText
                     };
 
-                    html += `<button onclick="previewAndAttachInvoice(${transactionIndex}, '${messageId}', '${att.id}', '${escapeHtml(att.filename)}', '${escapeHtml(item.accountEmail)}')"
-                        style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; width: 100%; transition: all 0.2s;"
-                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(58,175,169,0.3)'"
-                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                        📄 Preview Invoice (${sizeKB} KB)
-                    </button>`;
+                    // Layout: 2 buttons on left, drag-drop zone on right
+                    html += `
+                        <div style="display: flex; gap: 8px; align-items: stretch;">
+                            <!-- Left side: Two buttons stacked -->
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                                <button onclick="previewAndAttachInvoice(${transactionIndex}, '${messageId}', '${att.id}', '${escapeHtml(att.filename)}', '${escapeHtml(item.accountEmail)}')"
+                                    style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s;"
+                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(58,175,169,0.3)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                    📄 Preview (${sizeKB} KB)
+                                </button>
+                                <button
+                                    onclick="openEmailInGmail('${messageId}', '${escapeHtml(item.accountEmail)}')"
+                                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(234,67,53,0.3)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                                    title="Open this email in Gmail">
+                                    <span style="font-size: 12px;">📧</span>
+                                    <span>Gmail</span>
+                                </button>
+                            </div>
+
+                            <!-- Right side: Drag-and-drop zone -->
+                            <div
+                                id="dropZone_${transactionIndex}"
+                                onclick="document.getElementById('fileInput_${transactionIndex}').click()"
+                                ondragover="event.preventDefault(); this.style.background='#e0f2f1'; this.style.borderColor='#3AAFA9';"
+                                ondragleave="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1';"
+                                ondrop="handleInvoiceDrop(event, ${transactionIndex})"
+                                style="flex: 1; border: 2px dashed #cbd5e1; border-radius: 6px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; cursor: pointer; transition: all 0.2s; min-height: 70px;"
+                                title="Drag and drop or click to browse">
+                                <div style="font-size: 20px; margin-bottom: 2px;">📎</div>
+                                <div style="font-size: 9px; font-weight: 600; color: #64748b; text-align: center; line-height: 1.3;">Drag invoice here</div>
+                                <div style="font-size: 8px; color: #94a3b8; text-align: center; margin-top: 2px;">PDF, JPG, PNG</div>
+                            </div>
+                            <input type="file" id="fileInput_${transactionIndex}" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,image/*" style="display: none;" onchange="handleFileSelect(event, ${transactionIndex})" />
+                        </div>
+                    `;
 
                     // Show additional attachments if any
                     if (item.attachments.length > 1) {
@@ -7138,9 +7291,41 @@ Return ONLY valid JSON.`;
                         </div>`;
                     }
                 } else {
-                    html += `<div style="color: #f59e0b; font-size: 11px; padding: 6px; text-align: center; background: #fffbeb; border-radius: 4px;">
-                        ⚠️ No PDF attachments
-                    </div>`;
+                    // No PDF attachments - show Gmail button and drag-drop
+                    html += `
+                        <div style="display: flex; gap: 8px; align-items: stretch;">
+                            <!-- Left side: Warning and Gmail button -->
+                            <div style="flex: 1; background: #fffbeb; border-radius: 6px; padding: 10px; border: 1px dashed #f59e0b; display: flex; flex-direction: column; justify-content: center;">
+                                <div style="color: #d97706; font-size: 10px; text-align: center; margin-bottom: 6px; font-weight: 600;">
+                                    ⚠️ No PDF found
+                                </div>
+                                <button
+                                    onclick="openEmailInGmail('${messageId}', '${escapeHtml(item.accountEmail)}')"
+                                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(234,67,53,0.3)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                                    title="Open this email in Gmail">
+                                    <span style="font-size: 12px;">📧</span>
+                                    <span>Gmail</span>
+                                </button>
+                            </div>
+
+                            <!-- Right side: Drag-and-drop zone -->
+                            <div
+                                id="dropZone_${transactionIndex}"
+                                onclick="document.getElementById('fileInput_${transactionIndex}').click()"
+                                ondragover="event.preventDefault(); this.style.background='#e0f2f1'; this.style.borderColor='#3AAFA9';"
+                                ondragleave="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1';"
+                                ondrop="handleInvoiceDrop(event, ${transactionIndex})"
+                                style="flex: 1; border: 2px dashed #cbd5e1; border-radius: 6px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; cursor: pointer; transition: all 0.2s; min-height: 70px;"
+                                title="Drag and drop or click to browse">
+                                <div style="font-size: 20px; margin-bottom: 2px;">📎</div>
+                                <div style="font-size: 9px; font-weight: 600; color: #64748b; text-align: center; line-height: 1.3;">Drag invoice here</div>
+                                <div style="font-size: 8px; color: #94a3b8; text-align: center; margin-top: 2px;">PDF, JPG, PNG</div>
+                            </div>
+                            <input type="file" id="fileInput_${transactionIndex}" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,image/*" style="display: none;" onchange="handleFileSelect(event, ${transactionIndex})" />
+                        </div>
+                    `;
                 }
 
                 html += `</div>`;
@@ -7476,7 +7661,7 @@ Return ONLY valid JSON.`;
                 }
 
                 // Extract structured data
-                const extractedData = await extractStructuredDataFromInvoice(extractedText);
+                const extractedData = await extractStructuredDataFromInvoice(extractedText, transaction);
 
                 if (!extractedData) {
                     throw new Error('Failed to extract structured data');
@@ -7517,6 +7702,142 @@ Return ONLY valid JSON.`;
                     </div>
                 `;
             }
+        }
+
+        /**
+         * Handle file selection from file browser (click to browse)
+         * @param {Event} event - The change event from file input
+         * @param {number} transactionIndex - Index of the transaction
+         */
+        async function handleFileSelect(event, transactionIndex) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Simulate a drop event for code reuse
+            const fakeDropEvent = {
+                preventDefault: () => {},
+                stopPropagation: () => {},
+                currentTarget: document.getElementById(`dropZone_${transactionIndex}`),
+                dataTransfer: { files: [file] }
+            };
+
+            await handleInvoiceDrop(fakeDropEvent, transactionIndex);
+
+            // Reset file input so same file can be selected again
+            event.target.value = '';
+        }
+
+        /**
+         * Handle drag-and-drop of invoice files (PDF or images)
+         * @param {DragEvent} event - The drop event
+         * @param {number} transactionIndex - Index of the transaction
+         */
+        async function handleInvoiceDrop(event, transactionIndex) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Reset dropzone styling
+            const dropZone = event.currentTarget;
+            dropZone.style.background = '#f8fafc';
+            dropZone.style.borderColor = '#cbd5e1';
+
+            try {
+                const files = event.dataTransfer.files;
+
+                if (!files || files.length === 0) {
+                    showToast('❌ No file dropped', 'error');
+                    return;
+                }
+
+                const file = files[0];
+                const fileName = file.name;
+                const fileExt = fileName.split('.').pop().toLowerCase();
+
+                // Validate file type
+                const allowedTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+                if (!allowedTypes.includes(fileExt)) {
+                    showToast(`❌ Invalid file type: ${fileExt}. Please use PDF or image files.`, 'error');
+                    return;
+                }
+
+                console.log('📎 [DROP] File dropped:', { fileName, fileType: file.type, fileSize: file.size });
+
+                // Show loading in dropzone
+                dropZone.innerHTML = `
+                    <div style="font-size: 16px; margin-bottom: 4px;">⏳</div>
+                    <div style="font-size: 9px; color: #64748b; text-align: center;">Processing...</div>
+                `;
+
+                showToast(`⏳ Processing ${fileName}...`, 'info');
+
+                // Convert file to blob
+                const fileBlob = new Blob([await file.arrayBuffer()], { type: file.type });
+
+                // If it's an image, we'll treat it as a scanned invoice
+                // For PDFs, use directly
+                let invoiceBlob = fileBlob;
+                let finalFilename = fileName;
+
+                // If image, convert to PDF using jsPDF (optional - or just use image as-is)
+                if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExt)) {
+                    console.log('🖼️ [DROP] Image file detected, will process as scanned invoice');
+                    // For now, we'll keep the image as-is and let the OCR handle it
+                    // You could convert to PDF here if needed
+                }
+
+                // Save to IndexedDB and attach to transaction
+                const savedId = await saveInvoiceToDB(transactionIndex, invoiceBlob, finalFilename, null);
+
+                if (savedId) {
+                    // Update transaction with invoice
+                    allTransactions[transactionIndex].invoiceId = savedId;
+                    allTransactions[transactionIndex].invoiceFilename = finalFilename;
+
+                    // Save updated transactions to storage
+                    await saveTransactionsToStorage();
+
+                    // Update UI
+                    renderTransactions();
+
+                    showToast(`✅ Invoice attached: ${finalFilename}`, 'success');
+
+                    // Close the search modal
+                    closeIntelligentSearchModal();
+
+                    console.log('✅ [DROP] Invoice successfully attached via drag-and-drop');
+                } else {
+                    throw new Error('Failed to save invoice to database');
+                }
+
+            } catch (error) {
+                console.error('❌ [DROP] Error processing dropped file:', error);
+                showToast(`❌ Failed to process file: ${error.message}`, 'error');
+
+                // Reset dropzone
+                dropZone.innerHTML = `
+                    <div style="font-size: 20px; margin-bottom: 2px;">📎</div>
+                    <div style="font-size: 9px; font-weight: 600; color: #64748b; text-align: center; line-height: 1.3;">Drag invoice here</div>
+                    <div style="font-size: 8px; color: #94a3b8; text-align: center; margin-top: 2px;">PDF, JPG, PNG</div>
+                `;
+            }
+        }
+
+        /**
+         * Open a specific Gmail message in a new tab
+         * @param {string} messageId - Gmail message ID
+         * @param {string} accountEmail - Email account (for logging/display purposes)
+         */
+        function openEmailInGmail(messageId, accountEmail) {
+            if (!messageId) {
+                showToast('❌ Cannot open email: Message ID not available', 'error');
+                console.error('❌ [GMAIL] Missing messageId for Gmail link');
+                return;
+            }
+
+            const gmailUrl = `https://mail.google.com/mail/u/0/#all/${messageId}`;
+            console.log(`📧 [GMAIL] Opening email in Gmail:`, { messageId, accountEmail, url: gmailUrl });
+            showToast('📧 Opening email in Gmail...', 'info');
+            window.open(gmailUrl, '_blank');
         }
 
         /**
@@ -8476,8 +8797,36 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
                                 </button>
                             `;
                         });
+
+                        // Always show "Open in Gmail" option (invoice might also be in email body or as a link)
+                        html += `
+                            <button
+                                onclick="openEmailInGmail('${msg.id}', '${escapeHtml(msg.accountEmail)}')"
+                                class="modal-btn modal-btn-primary"
+                                style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px;">
+                                <span style="font-size: 16px;">📧</span>
+                                <span>Open in Gmail</span>
+                            </button>
+                        `;
                     } else {
-                        html += `<div style="color: #999; font-style: italic;">No PDF attachments</div>`;
+                        // No PDF attachments - provide Gmail link instead
+                        html += `
+                            <div style="background: #fffbeb; border-radius: 6px; padding: 12px; border: 1px dashed #f59e0b; margin-top: 10px;">
+                                <div style="color: #d97706; font-size: 12px; text-align: center; margin-bottom: 10px; font-weight: 600;">
+                                    ⚠️ No PDF attachments found
+                                </div>
+                                <button
+                                    onclick="openEmailInGmail('${msg.id}', '${escapeHtml(msg.accountEmail)}')"
+                                    class="modal-btn modal-btn-primary"
+                                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <span style="font-size: 16px;">📧</span>
+                                    <span>Open in Gmail</span>
+                                </button>
+                                <div style="font-size: 10px; color: #92400e; text-align: center; margin-top: 8px;">
+                                    The invoice may be in the email body or as a link
+                                </div>
+                            </div>
+                        `;
                     }
 
                     html += `</div>`;
@@ -8632,12 +8981,22 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
 
     <!-- Keyboard Shortcuts Hint -->
     <div id="keyboardHint" class="keyboard-shortcut-hint" style="display: none;">
-        <div style="font-weight: 600; margin-bottom: 6px;">⌨️ Keyboard Shortcuts</div>
-        <div style="font-size: 11px; opacity: 0.9;">
-            <div>↑↓ Navigate rows</div>
-            <div><kbd style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">A</kbd> Assign</div>
-            <div><kbd style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">Esc</kbd> Close</div>
-            <div>Type letters to search</div>
+        <div style="font-weight: 600; margin-bottom: 8px;">⌨️ Keyboard Shortcuts</div>
+        <div style="font-size: 11px; opacity: 0.9; line-height: 1.6;">
+            <div style="margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.2);">
+                <strong style="font-size: 10px; opacity: 0.7;">NAVIGATION</strong><br>
+                ↑↓ Navigate rows
+            </div>
+            <div style="margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.2);">
+                <strong style="font-size: 10px; opacity: 0.7;">ACTIONS (Select row first)</strong><br>
+                <kbd style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">1</kbd> Assign to budget<br>
+                <kbd style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">T</kbd> Text edit<br>
+                <kbd style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">V</kbd> Voice note<br>
+                <kbd style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">E</kbd> Find invoice
+            </div>
+            <div>
+                <kbd style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">Esc</kbd> Close modal
+            </div>
         </div>
     </div>
 
@@ -8645,7 +9004,8 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
         // Show keyboard hint when user first interacts with keyboard
         let hintShown = false;
         document.addEventListener('keydown', function showHintOnce(e) {
-            if (!hintShown && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'a' || e.key === 'A')) {
+            const shortcutKeys = ['ArrowDown', 'ArrowUp', '1', 't', 'T', 'v', 'V', 'e', 'E'];
+            if (!hintShown && shortcutKeys.includes(e.key)) {
                 const hint = document.getElementById('keyboardHint');
                 hint.style.display = 'block';
                 hint.classList.add('visible');
@@ -8656,7 +9016,7 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
                     setTimeout(() => {
                         hint.style.display = 'none';
                     }, 300);
-                }, 4000);
+                }, 5000);
 
                 document.removeEventListener('keydown', showHintOnce);
             }
