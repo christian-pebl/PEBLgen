@@ -35,8 +35,12 @@ async function initSupabase() {
 
         isSupabaseReady = true;
 
+        // Expose to window for other scripts
+        window.currentUser = currentUser;
+        window.supabaseClient = supabaseClient;
+
         // Trigger custom event so other scripts know Supabase is ready
-        window.dispatchEvent(new CustomEvent('supabaseReady'));
+        window.dispatchEvent(new CustomEvent('supabaseReady', { detail: { user: currentUser } }));
 
     } catch (error) {
         console.error('❌ [SUPABASE] Initialization failed:', error);
@@ -77,6 +81,12 @@ async function signInAnonymously() {
         currentUser = data.user;
         console.log('✅ [SUPABASE] Authenticated successfully as anonymous user');
         console.log(`   User ID: ${currentUser.id}`);
+
+        // Expose to window for other scripts
+        window.currentUser = currentUser;
+
+        // Trigger event to notify other scripts
+        window.dispatchEvent(new CustomEvent('userAuthenticated', { detail: { user: currentUser } }));
 
         return currentUser;
 

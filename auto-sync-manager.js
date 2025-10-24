@@ -33,6 +33,10 @@ const syncedItems = {
 // Restore flag (check once per session)
 let hasCheckedRestore = false;
 
+// Database setup check
+let hasDatabaseSetupError = false;
+let lastDatabaseError = null;
+
 /**
  * Initialize auto-sync system
  */
@@ -592,7 +596,7 @@ async function syncProjects() {
 
             if (syncedItems.projects.has(projectKey)) continue;
 
-            await supabaseClient
+            const { error } = await supabaseClient
                 .from('projects')
                 .upsert({
                     user_id: currentUser.id,
@@ -603,6 +607,19 @@ async function syncProjects() {
                 }, {
                     onConflict: 'user_id,project_name'
                 });
+
+            if (error) {
+                // Check if it's a 404 (table doesn't exist)
+                if (error.code === 'PGRST204' || error.message.includes('not found') || error.message.includes('404')) {
+                    hasDatabaseSetupError = true;
+                    lastDatabaseError = 'Database tables not created. Please run the SQL setup scripts.';
+                    console.error('❌ [AUTO-SYNC] Database not set up!');
+                    console.error('   Please go to Supabase Dashboard → SQL Editor');
+                    console.error('   and run the table creation scripts.');
+                    return; // Stop trying to sync
+                }
+                throw error;
+            }
 
             syncedItems.projects.add(projectKey);
         }
@@ -838,6 +855,8 @@ window.autoSync = {
     checkAndRestore,
     getLastSyncTime: () => lastSyncTime,
     isSyncing: () => isSyncing,
+    hasSetupError: () => hasDatabaseSetupError,
+    getLastError: () => lastDatabaseError,
     config: SYNC_CONFIG,
 };
 
