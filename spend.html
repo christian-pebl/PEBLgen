@@ -7616,6 +7616,13 @@ Return ONLY valid JSON.`;
          */
         function displayValidationResults(validation, extractedData, transaction) {
             const container = document.getElementById('validationResultsContainer');
+
+            // Check if validation UI exists in the modal (might not be present)
+            if (!container) {
+                console.warn('⚠️ [VALIDATION] Validation results container not found in modal - skipping display');
+                return;
+            }
+
             container.style.display = 'block';
 
             // Parse transaction amount for display
@@ -7628,6 +7635,12 @@ Return ONLY valid JSON.`;
             const companyReason = document.getElementById('companyReason');
             const companyExpected = document.getElementById('companyExpected');
             const companyFound = document.getElementById('companyFound');
+
+            // Verify all company elements exist
+            if (!companyValidation || !companyStatus || !companyReason || !companyExpected || !companyFound) {
+                console.warn('⚠️ [VALIDATION] Some company validation elements not found');
+                return;
+            }
 
             // Populate Expected vs Found
             companyExpected.textContent = (transaction.description || 'N/A').substring(0, 20);
@@ -7651,6 +7664,12 @@ Return ONLY valid JSON.`;
             const amountExpected = document.getElementById('amountExpected');
             const amountFound = document.getElementById('amountFound');
 
+            // Verify all amount elements exist
+            if (!amountValidation || !amountStatus || !amountReason || !amountExpected || !amountFound) {
+                console.warn('⚠️ [VALIDATION] Some amount validation elements not found');
+                return;
+            }
+
             // Populate Expected vs Found
             amountExpected.textContent = `£${transactionAmount.toFixed(2)}`;
             amountFound.textContent = extractedData?.amount ? `£${extractedData.amount}` : 'Not found';
@@ -7673,6 +7692,12 @@ Return ONLY valid JSON.`;
             const dateExpected = document.getElementById('dateExpected');
             const dateFound = document.getElementById('dateFound');
 
+            // Verify all date elements exist
+            if (!dateValidation || !dateStatus || !dateReason || !dateExpected || !dateFound) {
+                console.warn('⚠️ [VALIDATION] Some date validation elements not found');
+                return;
+            }
+
             // Populate Expected vs Found
             dateExpected.textContent = transaction.date || 'N/A';
             dateFound.textContent = extractedData?.date || 'Not found';
@@ -7692,6 +7717,12 @@ Return ONLY valid JSON.`;
             const recommendationContainer = document.getElementById('validationRecommendation');
             const recommendationIcon = document.getElementById('recommendationIcon');
             const recommendationText = document.getElementById('recommendationText');
+
+            // Check if elements exist before updating (they might not be in the modal)
+            if (!recommendationContainer || !recommendationIcon || !recommendationText) {
+                console.warn('⚠️ [VALIDATION] Some validation UI elements not found in modal');
+                return;
+            }
 
             const allMatch = validation.companyMatch && validation.amountMatch && validation.dateMatch;
 
@@ -7714,13 +7745,15 @@ Return ONLY valid JSON.`;
 
             // Update button text based on confidence
             const attachBtn = document.getElementById('attachInvoiceBtn');
-            if (validation.overallConfidence === 'high' && allMatch) {
-                attachBtn.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
-            } else if (validation.recommendation === 'reject') {
-                attachBtn.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
-                attachBtn.textContent = '⚠️ Attach Anyway';
-            } else {
-                attachBtn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+            if (attachBtn) {
+                if (validation.overallConfidence === 'high' && allMatch) {
+                    attachBtn.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+                } else if (validation.recommendation === 'reject') {
+                    attachBtn.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
+                    attachBtn.textContent = '⚠️ Attach Anyway';
+                } else {
+                    attachBtn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                }
             }
         }
 
