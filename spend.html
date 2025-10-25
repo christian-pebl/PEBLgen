@@ -6989,59 +6989,75 @@ Return ONLY valid JSON.`;
                     // Extract attachments
                     const attachments = extractAttachments(message.payload);
 
-                    // AUTOMATIC PDF PROCESSING: Download and extract data from PDFs
-                    let pdfBlob = null;
-                    let extractedData = null;
-                    let validation = null;
-                    let ocrText = null;
+                    // AUTOMATIC PDF PROCESSING: Download and extract data from ALL PDFs
+                    const processedAttachments = [];
 
                     if (attachments.length > 0) {
-                        try {
-                            searchLogger.logProgress(`  📄 Downloading and analyzing PDF...`, 'info');
+                        searchLogger.logProgress(`  📄 Found ${attachments.length} PDF attachment(s)`, 'info');
 
-                            // Download the first PDF attachment
-                            const attachment = attachments[0];
-                            // Token already set above, no need to set again
-                            const attachResponse = await gapi.client.gmail.users.messages.attachments.get({
-                                userId: 'me',
-                                messageId: msg.id,
-                                id: attachment.id
-                            });
+                        // Process each attachment separately
+                        for (let attIndex = 0; attIndex < attachments.length; attIndex++) {
+                            const attachment = attachments[attIndex];
+                            let pdfBlob = null;
+                            let extractedData = null;
+                            let validation = null;
+                            let ocrText = null;
 
-                            // Decode PDF
-                            const data = attachResponse.result.data;
-                            const pdfData = data.replace(/-/g, '+').replace(/_/g, '/');
-                            pdfBlob = base64ToBlob(pdfData, 'application/pdf');
+                            try {
+                                searchLogger.logProgress(`  📄 Downloading attachment ${attIndex + 1}/${attachments.length}: ${attachment.filename}`, 'info');
 
-                            // Extract text using OCR
-                            searchLogger.logProgress(`  🔍 Running OCR on PDF...`, 'info');
-                            ocrText = await extractTextFromPDF(pdfBlob);
+                                // Token already set above, no need to set again
+                                const attachResponse = await gapi.client.gmail.users.messages.attachments.get({
+                                    userId: 'me',
+                                    messageId: msg.id,
+                                    id: attachment.id
+                                });
 
-                            if (ocrText && ocrText.trim().length > 20) {
-                                // Extract structured data (company, amount, date)
-                                searchLogger.logProgress(`  🤖 Extracting invoice data with AI...`, 'info');
-                                extractedData = await extractStructuredDataFromInvoice(ocrText, transaction);
+                                // Decode PDF
+                                const data = attachResponse.result.data;
+                                const pdfData = data.replace(/-/g, '+').replace(/_/g, '/');
+                                pdfBlob = base64ToBlob(pdfData, 'application/pdf');
 
-                                if (extractedData) {
-                                    // Validate against transaction
-                                    searchLogger.logProgress(`  ✓ Validating invoice data...`, 'info');
-                                    validation = await validateInvoiceData(extractedData, transaction);
+                                // Extract text using OCR
+                                searchLogger.logProgress(`  🔍 Running OCR on ${attachment.filename}...`, 'info');
+                                ocrText = await extractTextFromPDF(pdfBlob);
 
-                                    console.log('✅ [AUTO-PROCESS] Extracted and validated:', {
-                                        company: extractedData.company,
-                                        amount: extractedData.amount,
-                                        date: extractedData.date,
-                                        validation: validation.recommendation
-                                    });
+                                if (ocrText && ocrText.trim().length > 20) {
+                                    // Extract structured data (company, amount, date)
+                                    searchLogger.logProgress(`  🤖 Extracting invoice data from ${attachment.filename}...`, 'info');
+                                    extractedData = await extractStructuredDataFromInvoice(ocrText, transaction);
+
+                                    if (extractedData) {
+                                        // Validate against transaction
+                                        searchLogger.logProgress(`  ✓ Validating invoice data...`, 'info');
+                                        validation = await validateInvoiceData(extractedData, transaction);
+
+                                        console.log(`✅ [AUTO-PROCESS] Extracted and validated (attachment ${attIndex + 1}):`, {
+                                            filename: attachment.filename,
+                                            company: extractedData.company,
+                                            amount: extractedData.amount,
+                                            date: extractedData.date,
+                                            validation: validation.recommendation
+                                        });
+                                    } else {
+                                        searchLogger.logProgress(`  ⚠️ Could not extract structured data from ${attachment.filename}`, 'warning');
+                                    }
                                 } else {
-                                    searchLogger.logProgress(`  ⚠️ Could not extract structured data`, 'warning');
+                                    searchLogger.logProgress(`  ⚠️ Insufficient text extracted from ${attachment.filename}`, 'warning');
                                 }
-                            } else {
-                                searchLogger.logProgress(`  ⚠️ Insufficient text extracted from PDF`, 'warning');
+                            } catch (pdfError) {
+                                console.error(`❌ [AUTO-PROCESS] PDF processing error for ${attachment.filename}:`, pdfError);
+                                searchLogger.logProgress(`  ⚠️ PDF processing failed for ${attachment.filename}: ${pdfError.message}`, 'warning');
                             }
-                        } catch (pdfError) {
-                            console.error('❌ [AUTO-PROCESS] PDF processing error:', pdfError);
-                            searchLogger.logProgress(`  ⚠️ PDF processing failed: ${pdfError.message}`, 'warning');
+
+                            // Store results for this attachment (even if some fields are null)
+                            processedAttachments.push({
+                                attachment,
+                                pdfBlob,
+                                extractedData,
+                                validation,
+                                ocrText
+                            });
                         }
                     }
 
@@ -7050,17 +7066,15 @@ Return ONLY valid JSON.`;
                         scoring,
                         attachments,
                         accountEmail: msg.accountEmail,
-                        pdfBlob,           // Store for later attachment
-                        extractedData,     // Store extracted invoice data
-                        validation,        // Store validation results
-                        ocrText            // Store OCR text
+                        processedAttachments  // Store array of processed attachments
                     });
 
                     console.log('📊 Scored email:', {
                         subject: message.payload.headers.find(h => h.name === 'Subject')?.value,
                         score: scoring.total,
                         breakdown: scoring.details,
-                        extracted: extractedData
+                        attachmentCount: processedAttachments.length,
+                        validatedAttachments: processedAttachments.filter(a => a.validation).length
                     });
 
                     // IMMEDIATE DISPLAY: Render results incrementally as each invoice is processed
@@ -7083,18 +7097,25 @@ Return ONLY valid JSON.`;
         function renderInvoiceResults(scoredMessages, transaction, transactionIndex, context, isComplete = false) {
             // Sort by validation quality first, then email score
             scoredMessages.sort((a, b) => {
-                // Calculate validation match count (0-3 for how many fields match)
-                const getValidationScore = (item) => {
-                    if (!item.validation) return -1; // No validation = lowest priority
-                    let score = 0;
-                    if (item.validation.companyMatch) score++;
-                    if (item.validation.amountMatch) score++;
-                    if (item.validation.dateMatch) score++;
-                    return score;
+                // Calculate best validation match count across all attachments (0-3 for how many fields match)
+                const getBestValidationScore = (item) => {
+                    if (!item.processedAttachments || item.processedAttachments.length === 0) return -1;
+
+                    let bestScore = -1;
+                    for (const processed of item.processedAttachments) {
+                        if (processed.validation) {
+                            let score = 0;
+                            if (processed.validation.companyMatch) score++;
+                            if (processed.validation.amountMatch) score++;
+                            if (processed.validation.dateMatch) score++;
+                            bestScore = Math.max(bestScore, score);
+                        }
+                    }
+                    return bestScore;
                 };
 
-                const aValidationScore = getValidationScore(a);
-                const bValidationScore = getValidationScore(b);
+                const aValidationScore = getBestValidationScore(a);
+                const bValidationScore = getBestValidationScore(b);
 
                 // Sort by validation score first (3 matches > 2 matches > 1 match > no validation)
                 if (aValidationScore !== bValidationScore) {
@@ -7143,20 +7164,42 @@ Return ONLY valid JSON.`;
                 // PRIORITY: Use validation results from OCR if available, otherwise fall back to email scoring
                 let companyColor, amountColor, dateColor, companyIcon, amountIcon, dateIcon;
 
-                if (item.validation) {
-                    // Use OCR validation results (more accurate!)
-                    companyColor = item.validation.companyMatch ? '#059669' : '#dc2626';
-                    amountColor = item.validation.amountMatch ? '#059669' : '#dc2626';
-                    dateColor = item.validation.dateMatch ? '#059669' : '#dc2626';
+                // Find best validation result across all attachments
+                let bestValidation = null;
+                let bestExtractedData = null;
+                if (item.processedAttachments && item.processedAttachments.length > 0) {
+                    for (const processed of item.processedAttachments) {
+                        if (processed.validation) {
+                            const matchCount = (processed.validation.companyMatch ? 1 : 0) +
+                                             (processed.validation.amountMatch ? 1 : 0) +
+                                             (processed.validation.dateMatch ? 1 : 0);
+                            const bestMatchCount = bestValidation ?
+                                ((bestValidation.companyMatch ? 1 : 0) +
+                                 (bestValidation.amountMatch ? 1 : 0) +
+                                 (bestValidation.dateMatch ? 1 : 0)) : 0;
 
-                    companyIcon = item.validation.companyMatch ? '✓' : '✗';
-                    amountIcon = item.validation.amountMatch ? '✓' : '✗';
-                    dateIcon = item.validation.dateMatch ? '✓' : '✗';
+                            if (matchCount > bestMatchCount) {
+                                bestValidation = processed.validation;
+                                bestExtractedData = processed.extractedData;
+                            }
+                        }
+                    }
+                }
+
+                if (bestValidation) {
+                    // Use OCR validation results (more accurate!)
+                    companyColor = bestValidation.companyMatch ? '#059669' : '#dc2626';
+                    amountColor = bestValidation.amountMatch ? '#059669' : '#dc2626';
+                    dateColor = bestValidation.dateMatch ? '#059669' : '#dc2626';
+
+                    companyIcon = bestValidation.companyMatch ? '✓' : '✗';
+                    amountIcon = bestValidation.amountMatch ? '✓' : '✗';
+                    dateIcon = bestValidation.dateMatch ? '✓' : '✗';
 
                     console.log('📊 Using OCR validation for pills:', {
-                        company: item.validation.companyMatch,
-                        amount: item.validation.amountMatch,
-                        date: item.validation.dateMatch
+                        company: bestValidation.companyMatch,
+                        amount: bestValidation.amountMatch,
+                        date: bestValidation.dateMatch
                     });
                 } else {
                     // Fallback to email-based scoring
@@ -7191,10 +7234,10 @@ Return ONLY valid JSON.`;
                             </span>
                         </div>`;
 
-                // Add validation status badge on the right side
-                if (item.extractedData && item.validation) {
-                    const allMatch = item.validation.companyMatch && item.validation.amountMatch && item.validation.dateMatch;
-                    const someMatch = item.validation.companyMatch || item.validation.amountMatch || item.validation.dateMatch;
+                // Add validation status badge on the right side (using best validation)
+                if (bestExtractedData && bestValidation) {
+                    const allMatch = bestValidation.companyMatch && bestValidation.amountMatch && bestValidation.dateMatch;
+                    const someMatch = bestValidation.companyMatch || bestValidation.amountMatch || bestValidation.dateMatch;
 
                     let validationIcon, validationText, validationColor;
                     if (allMatch) {
@@ -7231,65 +7274,97 @@ Return ONLY valid JSON.`;
 
                     <!-- Compact button -->`;
 
-                if (item.attachments.length > 0) {
-                    const att = item.attachments[0]; // Show first attachment
-                    const sizeKB = (att.size / 1024).toFixed(1);
+                if (item.processedAttachments && item.processedAttachments.length > 0) {
+                    // Layout: Attachment buttons on left, drag-drop zone on right, Gmail button below
+                    html += `<div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 6px;">`;
 
-                    // Store the processed data in a global map so previewAndAttachInvoice can access it
-                    const dataKey = `${messageId}_${att.id}`;
-                    if (!window.processedInvoiceData) window.processedInvoiceData = {};
-                    window.processedInvoiceData[dataKey] = {
-                        pdfBlob: item.pdfBlob,
-                        extractedData: item.extractedData,
-                        validation: item.validation,
-                        ocrText: item.ocrText
-                    };
+                    // Left side: Show buttons for ALL attachments
+                    html += `<div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">`;
 
-                    // Layout: 2 buttons on left, drag-drop zone on right
-                    html += `
-                        <div style="display: flex; gap: 8px; align-items: stretch;">
-                            <!-- Left side: Two buttons stacked -->
-                            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
-                                <button onclick="previewAndAttachInvoice(${transactionIndex}, '${messageId}', '${att.id}', '${escapeHtml(att.filename)}', '${escapeHtml(item.accountEmail)}')"
-                                    style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s;"
-                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(58,175,169,0.3)'"
-                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                                    📄 Preview (${sizeKB} KB)
-                                </button>
-                                <button
-                                    onclick="openEmailInGmail('${messageId}', '${escapeHtml(item.accountEmail)}')"
-                                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;"
-                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(234,67,53,0.3)'"
-                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
-                                    title="Open this email in Gmail">
-                                    <span style="font-size: 12px;">📧</span>
-                                    <span>Gmail</span>
-                                </button>
-                            </div>
+                    for (let attIdx = 0; attIdx < item.processedAttachments.length; attIdx++) {
+                        const processed = item.processedAttachments[attIdx];
+                        const att = processed.attachment;
+                        const sizeKB = (att.size / 1024).toFixed(1);
 
-                            <!-- Right side: Drag-and-drop zone -->
-                            <div
-                                id="dropZone_${transactionIndex}"
-                                onclick="document.getElementById('fileInput_${transactionIndex}').click()"
-                                ondragover="event.preventDefault(); this.style.background='#e0f2f1'; this.style.borderColor='#3AAFA9';"
-                                ondragleave="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1';"
-                                ondrop="handleInvoiceDrop(event, ${transactionIndex})"
-                                style="flex: 1; border: 2px dashed #cbd5e1; border-radius: 6px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; cursor: pointer; transition: all 0.2s; min-height: 70px;"
-                                title="Drag and drop or click to browse">
-                                <div style="font-size: 20px; margin-bottom: 2px;">📎</div>
-                                <div style="font-size: 9px; font-weight: 600; color: #64748b; text-align: center; line-height: 1.3;">Drag invoice here</div>
-                                <div style="font-size: 8px; color: #94a3b8; text-align: center; margin-top: 2px;">PDF, JPG, PNG</div>
-                            </div>
-                            <input type="file" id="fileInput_${transactionIndex}" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,image/*" style="display: none;" onchange="handleFileSelect(event, ${transactionIndex})" />
-                        </div>
-                    `;
+                        // Store the processed data in a global map so previewAndAttachInvoice can access it
+                        const dataKey = `${messageId}_${att.id}`;
+                        if (!window.processedInvoiceData) window.processedInvoiceData = {};
+                        window.processedInvoiceData[dataKey] = {
+                            pdfBlob: processed.pdfBlob,
+                            extractedData: processed.extractedData,
+                            validation: processed.validation,
+                            ocrText: processed.ocrText
+                        };
 
-                    // Show additional attachments if any
-                    if (item.attachments.length > 1) {
-                        html += `<div style="font-size: 10px; color: #64748b; margin-top: 4px; text-align: center;">
-                            +${item.attachments.length - 1} more attachment(s)
-                        </div>`;
+                        // Add validation badges next to filename
+                        let validationBadge = '';
+                        if (processed.validation) {
+                            const matchCount = (processed.validation.companyMatch ? 1 : 0) +
+                                             (processed.validation.amountMatch ? 1 : 0) +
+                                             (processed.validation.dateMatch ? 1 : 0);
+
+                            if (matchCount === 3) {
+                                validationBadge = '<span style="color: #22c55e; font-weight: bold; margin-left: 4px;">✅</span>';
+                            } else if (matchCount >= 1) {
+                                validationBadge = `<span style="color: #f59e0b; font-weight: bold; margin-left: 4px;">⚠️ ${matchCount}/3</span>`;
+                            } else {
+                                validationBadge = '<span style="color: #ef4444; font-weight: bold; margin-left: 4px;">❌</span>';
+                            }
+                        }
+
+                        // Shorten filename if too long
+                        let displayFilename = att.filename;
+                        if (displayFilename.length > 20) {
+                            const ext = displayFilename.split('.').pop();
+                            displayFilename = displayFilename.substring(0, 15) + '...' + ext;
+                        }
+
+                        html += `
+                            <button onclick="previewAndAttachInvoice(${transactionIndex}, '${messageId}', '${att.id}', '${escapeHtml(att.filename)}', '${escapeHtml(item.accountEmail)}')"
+                                style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s; text-align: left; display: flex; align-items: center; justify-content: space-between;"
+                                onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(58,175,169,0.3)'"
+                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                                title="${escapeHtml(att.filename)} (${sizeKB} KB)">
+                                <span>📄 ${escapeHtml(displayFilename)}</span>
+                                <span style="display: flex; align-items: center; gap: 4px;">
+                                    <span style="font-size: 9px; opacity: 0.8;">${sizeKB} KB</span>
+                                    ${validationBadge}
+                                </span>
+                            </button>
+                        `;
                     }
+
+                    html += `</div>`; // End left side buttons
+
+                    // Right side: Drag-and-drop zone
+                    html += `
+                        <div
+                            id="dropZone_${transactionIndex}"
+                            onclick="document.getElementById('fileInput_${transactionIndex}').click()"
+                            ondragover="event.preventDefault(); this.style.background='#e0f2f1'; this.style.borderColor='#3AAFA9';"
+                            ondragleave="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1';"
+                            ondrop="handleInvoiceDrop(event, ${transactionIndex})"
+                            style="flex: 0.6; border: 2px dashed #cbd5e1; border-radius: 6px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; cursor: pointer; transition: all 0.2s; min-height: 70px;"
+                            title="Drag and drop or click to browse">
+                            <div style="font-size: 20px; margin-bottom: 2px;">📎</div>
+                            <div style="font-size: 9px; font-weight: 600; color: #64748b; text-align: center; line-height: 1.3;">Drag invoice</div>
+                            <div style="font-size: 8px; color: #94a3b8; text-align: center; margin-top: 2px;">PDF/Image</div>
+                        </div>
+                        <input type="file" id="fileInput_${transactionIndex}" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,image/*" style="display: none;" onchange="handleFileSelect(event, ${transactionIndex})" />
+                    </div>`;
+
+                    // Gmail button below
+                    html += `
+                        <button
+                            onclick="openEmailInGmail('${messageId}', '${escapeHtml(item.accountEmail)}')"
+                            style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(234,67,53,0.3)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                            title="Open this email in Gmail">
+                            <span style="font-size: 12px;">📧</span>
+                            <span>Open in Gmail</span>
+                        </button>
+                    `;
                 } else {
                     // No PDF attachments - show Gmail button and drag-drop
                     html += `
