@@ -5761,8 +5761,8 @@
 
                 return fullText.trim();
             } catch (error) {
-                console.error('PDF extraction error:', error);
-                showToast('❌ Failed to extract text from PDF', 'error');
+                console.warn('⚠️ PDF extraction error:', error.message || error);
+                // Don't show toast here - let the caller handle it since we might be processing multiple PDFs
                 return null;
             }
         }
@@ -7022,7 +7022,10 @@ Return ONLY valid JSON.`;
                                 searchLogger.logProgress(`  🔍 Running OCR on ${attachment.filename}...`, 'info');
                                 ocrText = await extractTextFromPDF(pdfBlob);
 
-                                if (ocrText && ocrText.trim().length > 20) {
+                                if (ocrText === null) {
+                                    // PDF extraction failed (invalid structure, corrupt file, etc.)
+                                    searchLogger.logProgress(`  ⚠️ Could not read ${attachment.filename} - file may be corrupt or invalid`, 'warning');
+                                } else if (ocrText.trim().length > 20) {
                                     // Extract structured data (company, amount, date)
                                     searchLogger.logProgress(`  🤖 Extracting invoice data from ${attachment.filename}...`, 'info');
                                     extractedData = await extractStructuredDataFromInvoice(ocrText, transaction);
@@ -7043,7 +7046,8 @@ Return ONLY valid JSON.`;
                                         searchLogger.logProgress(`  ⚠️ Could not extract structured data from ${attachment.filename}`, 'warning');
                                     }
                                 } else {
-                                    searchLogger.logProgress(`  ⚠️ Insufficient text extracted from ${attachment.filename}`, 'warning');
+                                    // PDF read successfully but insufficient text found
+                                    searchLogger.logProgress(`  ⚠️ ${attachment.filename} appears to be blank or has no readable text`, 'warning');
                                 }
                             } catch (pdfError) {
                                 console.error(`❌ [AUTO-PROCESS] PDF processing error for ${attachment.filename}:`, pdfError);
@@ -7310,6 +7314,9 @@ Return ONLY valid JSON.`;
                             } else {
                                 validationBadge = '<span style="color: #ef4444; font-weight: bold; margin-left: 4px;">❌</span>';
                             }
+                        } else if (processed.ocrText === null) {
+                            // PDF couldn't be read (corrupt/invalid)
+                            validationBadge = '<span style="color: #94a3b8; font-size: 9px; font-weight: 600; margin-left: 4px;" title="Could not read PDF - file may be corrupt">🔒 Unreadable</span>';
                         }
 
                         // Shorten filename if too long
