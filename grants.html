@@ -772,7 +772,8 @@
             <a href="gantt.html" class="nav-btn">Gantt</a>
             <a href="timesheet.html" class="nav-btn">Timesheet</a>
             <a href="index.html" class="nav-btn">Sketcher</a>
-            <button onclick="resetBackupAuth()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Reset cloud backup authentication">🔄 Reset Backup</button>
+            <button onclick="refreshTransactionData()" class="nav-btn" style="background-color: rgba(76, 175, 80, 0.8); margin-left: auto;" title="Refresh transactions and PDFs from Spend page">🔄 Sync Spend Data</button>
+            <button onclick="resetBackupAuth()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Reset cloud backup authentication">🔄 Reset Backup</button>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
         </div>
     </div>
@@ -1271,6 +1272,58 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             });
         }
 
+        // Helper function to find invoice for a transaction
+        function getInvoiceForTransaction(transaction, invoices) {
+            if (!transaction || !invoices || invoices.length === 0) {
+                return null;
+            }
+
+            // Method 1: Check if transaction has invoiceId
+            if (transaction.invoiceId) {
+                const match = invoices.find(inv => inv.id === transaction.invoiceId);
+                if (match) {
+                    console.log('📎 [PDF MATCH] Found by invoiceId:', transaction.invoiceId);
+                    return match;
+                }
+            }
+
+            // Method 2: Try matching by transaction index
+            if (transaction.originalIndex !== undefined) {
+                const match = invoices.find(inv => inv.transactionIndex === transaction.originalIndex);
+                if (match) {
+                    console.log('📎 [PDF MATCH] Found by originalIndex:', transaction.originalIndex);
+                    return match;
+                }
+            }
+
+            // Method 3: Try matching by date and description (fuzzy match)
+            const dateMatch = invoices.find(inv => {
+                if (!inv.transactionDate || !transaction.date) return false;
+
+                const dateMatches = inv.transactionDate === transaction.date;
+                const descMatch = inv.description && transaction.description &&
+                    (inv.description.toLowerCase().includes(transaction.description.toLowerCase().substring(0, 20)) ||
+                     transaction.description.toLowerCase().includes(inv.description.toLowerCase().substring(0, 20)));
+
+                return dateMatches && descMatch;
+            });
+
+            if (dateMatch) {
+                console.log('📎 [PDF MATCH] Found by date+description fuzzy match');
+                return dateMatch;
+            }
+
+            console.log('📎 [PDF MATCH] No match found for transaction:', {
+                date: transaction.date,
+                desc: transaction.description?.substring(0, 30),
+                invoiceId: transaction.invoiceId,
+                originalIndex: transaction.originalIndex,
+                availableInvoices: invoices.length
+            });
+
+            return null;
+        }
+
         // Render transaction details table
         function renderTransactionDetails(transactions, projectId, category, itemKey, quarter, invoices) {
             if (!transactions || transactions.length === 0) {
@@ -1283,11 +1336,19 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 const spentAmount = parseAmount(transaction.spent);
                 const valueExTax = spentAmount > 0 ? (spentAmount / 1.2).toFixed(2) : '0.00';
 
-                // Combine manual description and voice notes for Detail column
-                const detailParts = [];
-                if (transaction.manualDescription) detailParts.push(transaction.manualDescription);
-                if (transaction.voiceNotes) detailParts.push(`🎤 ${transaction.voiceNotes}`);
-                const detail = detailParts.length > 0 ? detailParts.join(' | ') : '-';
+                // Detail column - prioritize detail field, then fall back to legacy fields
+                let detail = '-';
+                if (transaction.detail) {
+                    detail = transaction.detail;
+                } else {
+                    // Legacy support: combine manual description and voice notes
+                    const detailParts = [];
+                    if (transaction.manualDescription) detailParts.push(transaction.manualDescription);
+                    if (transaction.voiceNotes) detailParts.push(`🎤 ${transaction.voiceNotes}`);
+                    if (detailParts.length > 0) {
+                        detail = detailParts.join(' | ');
+                    }
+                }
 
                 // Find the specific assignment for this item
                 const assignment = transaction.assignments.find(a =>
@@ -1302,6 +1363,18 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 // Check for PDF attachment
                 const invoice = getInvoiceForTransaction(transaction, invoices);
+
+                // Debug logging for all transactions to help diagnose matching issues
+                console.log(`🔍 [PDF DEBUG] Transaction ${transactions.indexOf(transaction) + 1}/${transactions.length}:`, {
+                    date: transaction.date,
+                    description: transaction.description?.substring(0, 40),
+                    invoiceId: transaction.invoiceId,
+                    originalIndex: transaction.originalIndex,
+                    invoicesAvailable: invoices ? invoices.length : 0,
+                    matchFound: invoice ? `✓ ID:${invoice.id}` : '✗ No match',
+                    matchedFile: invoice ? invoice.filename : null
+                });
+
                 const pdfCell = invoice
                     ? `<button class="view-pdf-btn" data-invoice-id="${invoice.id}" onclick="viewInvoicePDF(${invoice.id})" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">📎 View PDF</button>`
                     : '<span style="color: #94a3b8;">-</span>';
@@ -1321,7 +1394,13 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             return `
                 <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    <h5 style="margin: 0 0 10px 0; color: #3b82f6; font-size: 0.95em;">💳 Assigned Transactions</h5>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <h5 style="margin: 0; color: #3b82f6; font-size: 0.95em;">💳 Assigned Transactions</h5>
+                        <button onclick="refreshTransactionData(); event.stopPropagation();" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; font-weight: 600; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)';" title="Reload transactions and PDFs from Spend page database">
+                            <span>🔄</span>
+                            <span>Sync PDFs</span>
+                        </button>
+                    </div>
                     <table class="transaction-details-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                         <thead>
                             <tr style="background: #f1f5f9;">
@@ -1449,6 +1528,35 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             }
         }
 
+        // Load all invoice attachments from IndexedDB
+        async function loadInvoiceAttachments() {
+            if (!db) await initIndexedDB();
+            if (!db) return [];
+
+            try {
+                // Check if invoices store exists
+                if (!db.objectStoreNames.contains(INVOICES_STORE_NAME)) {
+                    console.log('📎 [INVOICES] Invoices store not found');
+                    return [];
+                }
+
+                const transaction = db.transaction([INVOICES_STORE_NAME], 'readonly');
+                const store = transaction.objectStore(INVOICES_STORE_NAME);
+
+                const allInvoices = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                console.log(`📎 [INVOICES] Loaded ${allInvoices.length} invoices from database`);
+                return allInvoices;
+            } catch (error) {
+                console.error('❌ [INVOICES] Failed to load invoices:', error);
+                return [];
+            }
+        }
+
         // Pre-load transactions and invoices on page load
         async function preloadTransactionData() {
             console.log('📊 [PRELOAD] Loading transaction data...');
@@ -1456,6 +1564,65 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             cachedInvoices = await loadInvoiceAttachments();
             console.log(`✅ [PRELOAD] Cached ${cachedTransactions.length} transactions and ${cachedInvoices.length} invoices`);
         }
+
+        // Refresh transaction and invoice data (call this when page becomes visible)
+        async function refreshTransactionData() {
+            console.log('🔄 [REFRESH] Refreshing transaction data...');
+            const oldTxCount = cachedTransactions ? cachedTransactions.length : 0;
+            const oldInvCount = cachedInvoices ? cachedInvoices.length : 0;
+
+            // Show loading notification
+            addLog('🔄 Syncing spend data from database...');
+
+            cachedTransactions = await loadAllTransactions();
+            cachedInvoices = await loadInvoiceAttachments();
+
+            const newTxCount = cachedTransactions.length;
+            const newInvCount = cachedInvoices.length;
+
+            console.log(`✅ [REFRESH] Updated cache: ${oldTxCount} → ${newTxCount} transactions, ${oldInvCount} → ${newInvCount} invoices`);
+
+            // Log invoice details for debugging
+            if (cachedInvoices.length > 0) {
+                console.log('📎 [INVOICES] Available invoices:', cachedInvoices.map(inv => ({
+                    id: inv.id,
+                    filename: inv.filename,
+                    transactionIndex: inv.transactionIndex,
+                    transactionDate: inv.transactionDate,
+                    description: inv.description?.substring(0, 30)
+                })));
+            }
+
+            // Re-render the results to show updated data
+            if (window.budgetProjects && window.budgetProjects.length > 0) {
+                console.log('🔄 [REFRESH] Re-rendering budget display...');
+                displayResults();
+            }
+
+            // Show success notification with details
+            const txChanged = newTxCount !== oldTxCount;
+            const invChanged = newInvCount !== oldInvCount;
+
+            if (txChanged || invChanged) {
+                addLog(`✅ Synced! ${newTxCount} transactions, ${newInvCount} PDFs (${txChanged ? 'transactions updated' : ''}${txChanged && invChanged ? ', ' : ''}${invChanged ? 'PDFs updated' : ''})`);
+            } else {
+                addLog(`✅ Synced! ${newTxCount} transactions, ${newInvCount} PDFs available (no changes)`);
+            }
+        }
+
+        // Auto-refresh when page becomes visible (user switches back from spend.html)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                console.log('👁️ [VISIBILITY] Page became visible - refreshing data...');
+                refreshTransactionData();
+            }
+        });
+
+        // Also refresh on window focus (alternative to visibility change)
+        window.addEventListener('focus', function() {
+            console.log('🎯 [FOCUS] Window focused - refreshing data...');
+            refreshTransactionData();
+        });
 
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
