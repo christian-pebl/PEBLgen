@@ -210,7 +210,7 @@
             display: flex;
             gap: 8px;
             justify-content: center;
-            white-space: nowrap;
+            white-space: normal;
         }
         .action-btn {
             background-color: #f5f5f5;
@@ -649,9 +649,9 @@
         }
         .invoice-result-card {
             background: #f9f9f9;
-            padding: 15px;
+            padding: 12px;
             border-radius: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             border-left: 4px solid #3AAFA9;
         }
         .invoice-result-card:hover {
@@ -661,6 +661,48 @@
             margin: 5px 5px 0 0;
             font-size: 13px;
             padding: 8px 15px;
+        }
+        .invoice-mini-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 12px;
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .invoice-mini-table th {
+            background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%);
+            color: white;
+            padding: 6px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .invoice-mini-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .invoice-mini-table tr:last-child td {
+            border-bottom: none;
+        }
+        .invoice-mini-table .row-label {
+            font-weight: 600;
+            color: #64748b;
+            width: 110px;
+        }
+        .invoice-mini-table .match-icon {
+            text-align: center;
+            font-size: 16px;
+        }
+        .invoice-mini-table .amount-cell {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .invoice-mini-table .pending-cell {
+            color: #94a3b8;
+            font-style: italic;
         }
         /* Custom scrollbar for results container */
         #searchResultsContainer {
@@ -1227,7 +1269,7 @@
 
                 <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 6px; border: 1px solid #ffc107;">
                     <strong>💡 Tip:</strong> No results? You can manually upload an invoice PDF using the button below.
-                    <input type="file" id="manualInvoiceUpload" accept=".pdf" style="display: none;" onchange="handleManualInvoiceUpload()">
+                    <input type="file" id="manualInvoiceUpload" accept=".pdf,image/*" style="display: none;" onchange="handleManualInvoiceUpload()">
                     <button onclick="document.getElementById('manualInvoiceUpload').click()" class="modal-btn modal-btn-secondary" style="margin-top: 10px; width: 100%;">
                         📎 Upload PDF Manually
                     </button>
@@ -1272,26 +1314,16 @@
                 <button onclick="closeIntelligentSearchModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">&times;</button>
             </div>
             <div class="modal-body">
-                <!-- Gmail Account Selector -->
-                <div id="gmailAccountSelector" style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <div style="color: white; font-weight: 600; margin-bottom: 10px; font-size: 14px;">📧 Search in Gmail Accounts:</div>
-                    <div style="color: white; font-size: 12px; margin-bottom: 10px; opacity: 0.9;">Tick/untick accounts to control search. Changes apply immediately.</div>
-                    <div id="accountCheckboxList" style="background: white; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Checkboxes will be inserted here -->
-                    </div>
-                </div>
-
                 <!-- Transaction summary -->
-                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+                <div style="background: #f8fafc; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px;">
                         <div><strong>Date:</strong> <span id="searchTxDate"></span></div>
+                        <div style="color: #cbd5e1;">•</div>
                         <div><strong>Amount:</strong> <span id="searchTxAmount"></span></div>
-                        <div style="grid-column: 1 / -1;"><strong>Description:</strong> <span id="searchTxDesc"></span></div>
-                        <div style="grid-column: 1 / -1; display: none;" id="searchTxFromToContainer">
+                        <div style="color: #cbd5e1;">•</div>
+                        <div style="flex: 1; min-width: 200px;"><strong>Description:</strong> <span id="searchTxDesc"></span></div>
+                        <div style="width: 100%; display: none;" id="searchTxFromToContainer">
                             <strong>From/To:</strong> <span id="searchTxFromTo"></span>
-                        </div>
-                        <div style="grid-column: 1 / -1; display: none;" id="searchTxNotesContainer">
-                            <strong>User Notes:</strong> <span id="searchTxNotes" style="font-style: italic; color: #6366f1;"></span>
                         </div>
                     </div>
                 </div>
@@ -1324,8 +1356,23 @@
                     <!-- Results will be inserted here -->
                 </div>
 
+                <!-- Manual Upload Section (Always Visible) -->
+                <div style="margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; border: 2px dashed #3b82f6;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <span style="font-size: 20px;">📤</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #1e40af; font-size: 14px;">Manual Upload</div>
+                            <div style="font-size: 12px; color: #64748b;">Can't find the invoice? Upload it manually from your computer</div>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('manualInvoiceUpload').click()" class="modal-btn modal-btn-primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);">
+                        <span style="font-size: 18px;">📎</span>
+                        <span>Upload PDF or Image</span>
+                    </button>
+                </div>
+
                 <!-- Action buttons -->
-                <div id="searchActionButtons" style="display: flex; gap: 10px; justify-content: flex-end;">
+                <div id="searchActionButtons" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
                     <button onclick="closeIntelligentSearchModal()" class="btn-secondary">Cancel</button>
                 </div>
             </div>
@@ -1436,14 +1483,63 @@
 
                 <!-- Attachment Buttons -->
                 <div style="padding: 15px; background: #f8fafc; border-top: 2px solid #e5e7eb;" id="pdfPreviewFooter">
-                    <div style="display: flex; gap: 10px;" id="pdfPreviewButtons">
-                        <button onclick="confirmAttachInvoice()" class="btn-primary" id="attachInvoiceBtn" style="flex: 1; padding: 10px; font-size: 14px; font-weight: 600;">
-                            ✅ Attach Invoice
+                    <div style="display: flex; flex-direction: column; gap: 10px;" id="pdfPreviewButtons">
+                        <button onclick="confirmAttachInvoice()" class="btn-primary" id="attachInvoiceBtn" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <span>✅</span>
+                            <span>Attach Invoice</span>
                         </button>
-                        <button onclick="closePDFPreview()" class="btn-secondary" style="flex: 1; padding: 10px; font-size: 14px;">
-                            ❌ Cancel
+
+                        <button onclick="openManualUploadFromPreview()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #3b82f6; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <span>📤</span>
+                            <span>Upload Different File</span>
+                        </button>
+
+                        <button onclick="closePDFPreview()" class="btn-secondary" style="width: 100%; padding: 10px; font-size: 14px;">
+                            Cancel
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Attachment Confirmation Modal -->
+    <div id="invoiceConfirmModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>📎</span>
+                    <span>Attach Invoice</span>
+                </h3>
+                <button onclick="closeInvoiceConfirmModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: #64748b; margin: 0 0 20px 0;">
+                    Found invoice: <strong id="invoiceConfirmFilename" style="color: #1e293b;">invoice.pdf</strong>
+                </p>
+                <p style="color: #64748b; margin: 0 0 20px 0;">
+                    What would you like to do?
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button onclick="confirmPreviewAndAttach()" class="btn-primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>👁️</span>
+                        <span>Preview & Attach</span>
+                    </button>
+
+                    <button onclick="confirmDirectAttach()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #22c55e; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>✅</span>
+                        <span>Attach Without Preview</span>
+                    </button>
+
+                    <button onclick="confirmManualUpload()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #3b82f6; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>📤</span>
+                        <span>Upload Manually Instead</span>
+                    </button>
+
+                    <button onclick="closeInvoiceConfirmModal()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px;">
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>
@@ -3370,8 +3466,8 @@
                         const isGeneral = assignment.projectId === 'GENERAL_EXPENSES';
                         const badgeStyle = isGeneral ? 'background-color: #fef3c7; border: 1px solid #fbbf24;' : '';
                         const compactInfo = `${icon}${escapeHtml(assignment.itemName)}${percentage} • ${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}${quarter}`;
-                        return `<span class="assigned-category" title="${compactInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-block; margin: 2px 2px 2px 0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;">
-                            <span style="font-size: 10px; font-weight: 500; line-height: 1;">${compactInfo}</span>
+                        return `<span class="assigned-category" title="${compactInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-block; margin: 2px 2px 2px 0; white-space: normal; word-wrap: break-word;">
+                            <span style="font-size: 10px; font-weight: 500; line-height: 1.3;">${compactInfo}</span>
                             <button onclick="handleUnassign(${index}, ${assignmentIndex}); event.stopPropagation();"
                                     style="position: absolute; top: 2px; right: 2px; background: #dc2626; border: none; border-radius: 2px; width: 14px; height: 14px; cursor: pointer; font-size: 10px; line-height: 1; padding: 0; color: white; transition: all 0.15s; font-weight: bold;"
                                     onmouseover="this.style.background='#b91c1c'; this.style.transform='scale(1.1)';"
@@ -3384,8 +3480,8 @@
                     const isGeneral = transaction.assignedProject === 'GENERAL_EXPENSES';
                     const badgeStyle = isGeneral ? 'background-color: #fef3c7; border: 1px solid #fbbf24;' : '';
                     const compactInfo = `${escapeHtml(transaction.assignedItemName)} • ${escapeHtml(transaction.assignedCategory)}`;
-                    categoryBadges = `<span class="assigned-category" title="${compactInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-block; margin: 2px 2px 2px 0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;">
-                        <span style="font-size: 10px; font-weight: 500; line-height: 1;">${compactInfo}</span>
+                    categoryBadges = `<span class="assigned-category" title="${compactInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-block; margin: 2px 2px 2px 0; white-space: normal; word-wrap: break-word;">
+                        <span style="font-size: 10px; font-weight: 500; line-height: 1.3;">${compactInfo}</span>
                         <button onclick="handleUnassign(${index}); event.stopPropagation();"
                                 style="position: absolute; top: 2px; right: 2px; background: #dc2626; border: none; border-radius: 2px; width: 14px; height: 14px; cursor: pointer; font-size: 10px; line-height: 1; padding: 0; color: white; transition: all 0.15s; font-weight: bold;"
                                 onmouseover="this.style.background='#b91c1c'; this.style.transform='scale(1.1)';"
@@ -3445,8 +3541,8 @@
                     <td class="amount-received">${receivedDisplay}</td>
                     <td class="notes-cell">${notesContent}</td>
                     <td class="action-buttons">
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                            <div style="display: flex; gap: 5px;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 250px;">
+                            <div style="display: flex; gap: 5px; white-space: nowrap;">
                                 <button class="action-btn edit-btn" onclick="handleManualEdit(${index}); event.stopPropagation();" title="Add Expense Detail${selectedRowIndex === index ? ' (T)' : ''}" style="position: relative;">
                                     ✏️
                                     ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #3b82f6; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">T</span>' : ''}
@@ -3477,7 +3573,7 @@
                                     ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">1</span>' : ''}
                                 </button>
                             </div>
-                            ${categoryBadges ? `<div style="display: flex; flex-wrap: wrap; justify-content: center; max-width: 100%; margin-top: 2px;">${categoryBadges}</div>` : ''}
+                            ${categoryBadges ? `<div style="display: flex; flex-wrap: wrap; justify-content: center; width: 100%; margin-top: 2px; gap: 2px;">${categoryBadges}</div>` : ''}
                         </div>
                     </td>
                     <td class="complete-checkbox-cell" style="text-align: center; padding: 8px; width: 60px; min-width: 60px;">
@@ -5797,8 +5893,13 @@
                     apiKey: GOOGLE_API_KEY,
                     discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'],
                 });
+
+                // Explicitly load Gmail API to ensure it's available
+                await gapi.client.load('gmail', 'v1');
+
                 gapiInited = true;
                 console.log('GAPI client initialized');
+                console.log('Gmail API loaded:', !!gapi.client.gmail);
                 maybeEnableButtons();
             });
         }
@@ -6183,6 +6284,11 @@
 
         async function searchGmail(query, accessToken) {
             try {
+                // Verify Gmail API is loaded
+                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.gmail) {
+                    throw new Error('Gmail API not initialized');
+                }
+
                 // Set the access token for this request
                 gapi.client.setToken({ access_token: accessToken });
 
@@ -6201,6 +6307,11 @@
 
         async function extractPDFsFromEmail(messageId, accessToken) {
             try {
+                // Verify Gmail API is loaded
+                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.gmail) {
+                    throw new Error('Gmail API not initialized');
+                }
+
                 // Set the access token for this request
                 gapi.client.setToken({ access_token: accessToken });
 
@@ -7160,50 +7271,6 @@ Return ONLY valid JSON.`;
         function showIntelligentSearchModal(transaction, transactionIndex) {
             const modal = document.getElementById('intelligentSearchModal');
 
-            // Populate Gmail account checkboxes (all checked by default)
-            const checkboxContainer = document.getElementById('accountCheckboxList');
-            checkboxContainer.innerHTML = '';
-
-            if (gmailAccounts.length === 0) {
-                checkboxContainer.innerHTML = '<div style="color: #64748b; font-size: 13px; text-align: center; padding: 10px;">No Gmail accounts connected</div>';
-            } else {
-                const now = Date.now();
-
-                gmailAccounts.forEach((account, index) => {
-                    const accountNumber = index + 1;
-                    const checkboxId = `searchAccount_${index}`;
-
-                    // Check if account has a valid token
-                    const hasValidToken = account.accessToken &&
-                                         (!account.tokenExpiresAt || account.tokenExpiresAt > now);
-
-                    const statusIndicator = hasValidToken
-                        ? '<span style="color: #22c55e; font-size: 16px;" title="Token valid">✓</span>'
-                        : '<span style="color: #ef4444; font-size: 16px;" title="Token expired or missing">⚠</span>';
-
-                    const isDisabled = !hasValidToken;
-                    const labelStyle = isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : '';
-
-                    checkboxContainer.innerHTML += `
-                        <label style="display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 4px; cursor: pointer; transition: background 0.2s; ${labelStyle}"
-                               onmouseover="this.style.background='#f8fafc'"
-                               onmouseout="this.style.background='transparent'">
-                            <input type="checkbox"
-                                   id="${checkboxId}"
-                                   value="${account.email}"
-                                   ${hasValidToken ? 'checked' : 'disabled'}
-                                   style="width: 18px; height: 18px; cursor: ${hasValidToken ? 'pointer' : 'not-allowed'};">
-                            <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
-                                ${statusIndicator}
-                                <span style="font-weight: 600; color: #3AAFA9; min-width: 75px;">Account ${accountNumber}:</span>
-                                <span style="color: #1e293b; font-size: 13px;">${account.email}</span>
-                                ${!hasValidToken ? '<span style="color: #ef4444; font-size: 11px; margin-left: auto;">(Re-auth needed)</span>' : ''}
-                            </div>
-                        </label>
-                    `;
-                });
-            }
-
             // Set transaction details
             document.getElementById('searchTxDate').textContent = transaction.date || 'N/A';
 
@@ -7398,7 +7465,46 @@ Return ONLY valid JSON.`;
                 });
 
                 if (validAccounts.length === 0) {
-                    throw new Error('No valid Gmail accounts available');
+                    const expiredAccounts = gmailAccounts.filter(acc => acc.tokenExpiresAt && acc.tokenExpiresAt <= Date.now());
+
+                    if (expiredAccounts.length > 0) {
+                        // Tokens expired - auto-trigger reconnect
+                        this.logToTask(task, `⚠️ Gmail access tokens have expired for ${expiredAccounts.length} account(s)`, 'warning');
+                        this.logToTask(task, '🔄 Opening reconnect dialog...', 'info');
+
+                        // Find the index of the first expired account and reconnect it
+                        const accountIndex = gmailAccounts.findIndex(acc =>
+                            acc.tokenExpiresAt && acc.tokenExpiresAt <= Date.now()
+                        );
+
+                        // Trigger reconnect dialog
+                        setTimeout(() => {
+                            if (accountIndex >= 0) {
+                                reconnectAccount(accountIndex);
+                            } else {
+                                signInToGmail(); // Fallback to general connect
+                            }
+                        }, 500);
+
+                        throw new Error('Gmail access tokens expired. Opening reconnect dialog...');
+                    } else if (gmailAccounts.length === 0) {
+                        // No accounts connected - auto-trigger connect
+                        this.logToTask(task, '❌ No Gmail accounts connected', 'error');
+                        this.logToTask(task, '📧 Opening Gmail connection dialog...', 'info');
+
+                        // Trigger Gmail connection dialog
+                        setTimeout(() => signInToGmail(), 500);
+
+                        throw new Error('No Gmail accounts connected. Opening connection dialog...');
+                    } else {
+                        // Accounts exist but have no tokens
+                        this.logToTask(task, '⚠️ Gmail accounts need authentication', 'warning');
+                        this.logToTask(task, '🔄 Opening reconnect dialog...', 'info');
+
+                        setTimeout(() => reconnectAccount(0), 500);
+
+                        throw new Error('No valid Gmail access tokens. Opening reconnect dialog...');
+                    }
                 }
 
                 task.searchedAccounts = validAccounts.map(acc => acc.email);
@@ -7516,6 +7622,12 @@ Return ONLY valid JSON.`;
                 const progressPerStep = 50 / totalSteps; // 40-90% range
                 let currentStep = 0;
 
+                // Verify Gmail API is loaded
+                if (typeof gapi === 'undefined' || !gapi.client || !gapi.client.gmail) {
+                    this.logToTask(task, '❌ Gmail API not initialized. Please refresh the page.', 'error');
+                    throw new Error('Gmail API not initialized');
+                }
+
                 // Search each account with top queries
                 for (const account of accounts) {
                     gapi.client.setToken({ access_token: account.accessToken });
@@ -7589,10 +7701,43 @@ Return ONLY valid JSON.`;
                         bgColor = '#3b82f6';
                     }
                 } else if (task.status === 'failed') {
-                    icon = '❌';
-                    title = 'Search Failed';
-                    message = `${task.error} - ${shortDesc}`;
-                    bgColor = '#ef4444';
+                    // Check if this is an auth-related error that auto-triggered reconnect
+                    const isAuthError = task.error.includes('expired') ||
+                                       task.error.includes('not connected') ||
+                                       task.error.includes('No valid') ||
+                                       task.error.includes('Opening');
+
+                    if (isAuthError) {
+                        icon = '🔄';
+                        title = 'Reconnecting Gmail...';
+                        message = task.error.includes('Opening') ?
+                                 'Gmail reconnect dialog should open automatically' :
+                                 `${task.error}`;
+                        bgColor = '#f59e0b'; // Orange for warning/action needed
+                    } else {
+                        icon = '❌';
+                        title = 'Search Failed';
+                        message = `${task.error} - ${shortDesc}`;
+                        bgColor = '#ef4444';
+                    }
+                }
+
+                // Determine which actions to show based on error type
+                const actions = [];
+
+                if (task.status === 'failed' && (
+                    task.error.includes('expired') ||
+                    task.error.includes('not connected') ||
+                    task.error.includes('No valid') ||
+                    task.error.includes('Opening')
+                )) {
+                    // For auth issues, reconnect dialog opens automatically - just show dismissable toast
+                    // No action buttons needed since reconnect is auto-triggered
+                } else if (task.status === 'completed' || task.status === 'failed') {
+                    actions.push({
+                        label: 'View Results',
+                        onClick: () => openSearchResults(task.id)
+                    });
                 }
 
                 showToast({
@@ -7600,13 +7745,8 @@ Return ONLY valid JSON.`;
                     title,
                     message,
                     bgColor,
-                    duration: 8000,
-                    actions: [
-                        {
-                            label: 'View Results',
-                            onClick: () => openSearchResults(task.id)
-                        }
-                    ]
+                    duration: task.status === 'failed' ? 12000 : 8000, // Longer duration for errors
+                    actions
                 });
             }
 
@@ -7958,16 +8098,17 @@ Return ONLY valid JSON.`;
             // Hide progress bar (search is complete)
             document.getElementById('searchProgressBar').style.display = 'none';
 
-            // Show search log with final results
+            // Show search log with final results (collapsed by default)
             const logHeader = document.getElementById('searchLogHeader');
             const logContainer = document.getElementById('searchLogContainer');
             const logContent = document.getElementById('searchLogContent');
 
             if (logHeader) logHeader.style.display = 'flex';
-            if (logContainer) {
-                logContainer.style.display = 'block';
-                logContainer.style.maxHeight = '200px';
-            }
+            // Keep log minimized by default - user can click to expand if needed
+            // if (logContainer) {
+            //     logContainer.style.display = 'block';
+            //     logContainer.style.maxHeight = '200px';
+            // }
 
             // Render complete logs
             if (logContent && task.logs && task.logs.length > 0) {
@@ -8014,44 +8155,80 @@ Return ONLY valid JSON.`;
                     <div style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 8px;">
                         <div style="font-size: 48px; margin-bottom: 15px;">🔍</div>
                         <h4 style="margin: 0 0 10px 0; color: #64748b;">No Invoices Found</h4>
-                        <p style="color: #94a3b8; margin: 0;">Try searching again with a different date range or merchant name.</p>
+                        <p style="color: #94a3b8; margin: 0 0 20px 0;">Try searching again with a different date range or merchant name.</p>
+
+                        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px;">
+                            <p style="color: #64748b; margin: 0 0 15px 0; font-size: 14px; font-weight: 500;">Or upload an invoice manually:</p>
+                            <button onclick="document.getElementById('manualInvoiceUpload').click()" class="modal-btn modal-btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);">
+                                <span style="font-size: 18px;">📤</span>
+                                <span>Upload PDF or Image</span>
+                            </button>
+                        </div>
                     </div>
                 `;
             } else {
-                let html = `<div style="font-weight: 600; margin-bottom: 15px; color: #10b981;">Found ${results.messagesFound} email(s) with ${results.pdfsFound} PDF(s):</div>`;
+                let html = `<div style="font-weight: 600; margin-bottom: 12px; color: #10b981; font-size: 13px;">Found ${results.messagesFound} email(s) with ${results.pdfsFound} PDF(s):</div>`;
 
-                results.emailMatches.forEach(match => {
+                const tx = task.transaction;
+                const txAmount = (tx.spent || tx.received || '0.00').toString().replace(/£/g, '');
+                const txDate = tx.date || 'N/A';
+
+                results.emailMatches.forEach((match, matchIndex) => {
+                    // Extract company from transaction description or fromTo
+                    const txCompany = tx.fromTo || tx.description || 'Unknown';
+
                     html += `
-                        <div class="invoice-result-card" style="margin-bottom: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                            <div style="font-size: 12px; color: #3AAFA9; margin-bottom: 5px;">
-                                <strong>Account:</strong> ${escapeHtml(match.accountEmail)}
+                        <div class="invoice-result-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div style="font-size: 11px; color: #3AAFA9; font-weight: 600;">
+                                    📧 ${escapeHtml(match.subject.substring(0, 45))}${match.subject.length > 45 ? '...' : ''}
+                                </div>
+                                <button onclick="openEmailInGmail('${escapeJs(match.messageId)}', '${escapeJs(match.accountEmail)}')"
+                                        style="padding: 3px 8px; background: #EA4335; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 600;">
+                                    Open Gmail
+                                </button>
                             </div>
-                            <div style="font-weight: 600; margin-bottom: 5px;">📧 ${escapeHtml(match.subject)}</div>
-                            <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
-                                <strong>From:</strong> ${escapeHtml(match.from)}<br>
-                                <strong>Date:</strong> ${match.date}
+                            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 8px;">
+                                <strong>From:</strong> ${escapeHtml(match.from.substring(0, 40))}${match.from.length > 40 ? '...' : ''} |
+                                <strong>Account:</strong> ${escapeHtml(match.accountEmail)}
                             </div>`;
 
                     if (match.pdfs.length > 0) {
-                        html += `<div style="margin-top: 10px;"><strong>Attachments (${match.pdfs.length}):</strong></div>`;
-                        match.pdfs.forEach(pdf => {
+                        match.pdfs.forEach((pdf, pdfIndex) => {
                             html += `
+                                <table class="invoice-mini-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 110px;"></th>
+                                            <th>Company</th>
+                                            <th style="width: 100px;">Amount</th>
+                                            <th style="width: 90px;">Date</th>
+                                            <th style="width: 50px; text-align: center;">Match</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="row-label">Transaction</td>
+                                            <td>${escapeHtml(txCompany.substring(0, 25))}${txCompany.length > 25 ? '...' : ''}</td>
+                                            <td class="amount-cell">£${txAmount}</td>
+                                            <td>${escapeHtml(txDate)}</td>
+                                            <td class="match-icon">-</td>
+                                        </tr>
+                                        <tr id="pdf_${matchIndex}_${pdfIndex}_data">
+                                            <td class="row-label">PDF Invoice</td>
+                                            <td class="pending-cell" colspan="3">Processing after download...</td>
+                                            <td class="match-icon">⏳</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                                 <button onclick="attachInvoiceToTransaction('${escapeJs(match.messageId)}', '${escapeJs(pdf.attachmentId)}', '${escapeJs(pdf.filename)}', ${task.transactionIndex}, '${escapeJs(match.accountEmail)}')"
-                                        class="modal-btn modal-btn-primary pdf-attachment-btn"
-                                        style="width: 100%; margin-top: 8px; padding: 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                                    📎 ${escapeHtml(pdf.filename)} (${formatFileSize(pdf.size)})
+                                        class="modal-btn modal-btn-primary"
+                                        style="width: 100%; margin-top: 6px; padding: 8px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">
+                                    📎 Download & Process: ${escapeHtml(pdf.filename)} (${formatFileSize(pdf.size)})
                                 </button>`;
                         });
-
-                        html += `
-                            <button onclick="openEmailInGmail('${escapeJs(match.messageId)}', '${escapeJs(match.accountEmail)}')"
-                                    class="modal-btn modal-btn-primary"
-                                    style="width: 100%; margin-top: 8px; padding: 10px; background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <span style="font-size: 16px;">📧</span>
-                                <span>Open in Gmail</span>
-                            </button>`;
                     } else {
-                        html += `<div style="color: #94a3b8; font-size: 13px; margin-top: 8px;">No PDF attachments</div>`;
+                        html += `<div style="color: #94a3b8; font-size: 12px; margin-top: 6px; text-align: center; padding: 10px; background: #f8fafc; border-radius: 4px;">No PDF attachments</div>`;
                     }
 
                     html += `</div>`;
@@ -8516,6 +8693,50 @@ Return ONLY valid JSON.`;
                     description: `Wide search for "${merchantKeyword}" with any attachment`,
                     weight: 0.5
                 });
+            }
+
+            // ========================================
+            // SECONDARY QUERIES - Emails WITHOUT PDFs
+            // (Lower priority, but can find relevant emails to open in Gmail)
+            // ========================================
+
+            // Only add non-PDF queries in stage 1 to avoid too much noise
+            if (stage.stage === 1) {
+                // Query NP-1: AI domain search without PDF filter
+                if (context.aiMerchantInfo && context.aiMerchantInfo.likelyDomain) {
+                    queries.push({
+                        query: `from:@${context.aiMerchantInfo.likelyDomain} (invoice OR receipt OR payment OR "order confirmation")`,
+                        description: `🤖 Searching emails from @${context.aiMerchantInfo.likelyDomain} (no PDF)`,
+                        weight: 0.6
+                    });
+                }
+
+                // Query NP-2: AI company name search without PDF filter
+                if (context.aiMerchantInfo && context.aiMerchantInfo.companyName && context.aiMerchantInfo.companyName !== context.merchantName) {
+                    queries.push({
+                        query: `"${context.aiMerchantInfo.companyName}" (invoice OR receipt OR payment)`,
+                        description: `🤖 Searching "${context.aiMerchantInfo.companyName}" (no PDF)`,
+                        weight: 0.55
+                    });
+                }
+
+                // Query NP-3: Merchant keyword + payment terms without PDF filter
+                if (merchantKeyword) {
+                    queries.push({
+                        query: `${merchantKeyword} (invoice OR receipt OR payment OR bill)`,
+                        description: `Searching "${merchantKeyword}" with payment terms (no PDF)`,
+                        weight: 0.5
+                    });
+                }
+
+                // Query NP-4: Subject line search (most reliable for non-PDF matches)
+                if (merchantKeyword) {
+                    queries.push({
+                        query: `subject:(${merchantKeyword} (invoice OR receipt OR payment))`,
+                        description: `Searching subject for "${merchantKeyword} invoice/payment" (no PDF)`,
+                        weight: 0.55
+                    });
+                }
             }
 
             // Sort queries by weight (highest first) - AI queries will be tried first!
@@ -9582,6 +9803,7 @@ Return ONLY valid JSON.`;
 
         // Store current attachment details
         let currentAttachmentData = null;
+        let pendingInvoiceAttachment = null; // Stores data for confirmation modal
 
         /**
          * Display validation results in the UI
@@ -9761,6 +9983,12 @@ Return ONLY valid JSON.`;
                     throw new Error('Validation failed');
                 }
 
+                // Check if modal was closed during validation
+                if (!currentAttachmentData) {
+                    console.log('⚠️ [VALIDATE] Modal was closed, skipping result storage');
+                    return;
+                }
+
                 // Store validation results
                 currentAttachmentData.validation = validation;
                 currentAttachmentData.extractedData = extractedData;
@@ -9773,21 +10001,25 @@ Return ONLY valid JSON.`;
             } catch (error) {
                 console.error('❌ [VALIDATE] Validation error:', error);
 
-                // Show error state
+                // Show error state only if modal is still open
                 const container = document.getElementById('validationResultsContainer');
-                container.style.display = 'block';
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 20px; background: #fef2f2; border-radius: 8px;">
-                        <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
-                        <div style="color: #dc2626; font-weight: 600;">Validation Failed</div>
-                        <div style="color: #64748b; font-size: 14px; margin-top: 5px;">
-                            ${error.message || 'Unable to validate invoice automatically'}
+                if (container && currentAttachmentData) {
+                    container.style.display = 'block';
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 20px; background: #fef2f2; border-radius: 8px;">
+                            <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+                            <div style="color: #dc2626; font-weight: 600;">Validation Failed</div>
+                            <div style="color: #64748b; font-size: 14px; margin-top: 5px;">
+                                ${error.message || 'Unable to validate invoice automatically'}
+                            </div>
+                            <div style="color: #64748b; font-size: 13px; margin-top: 10px;">
+                                You can still attach this invoice manually.
+                            </div>
                         </div>
-                        <div style="color: #64748b; font-size: 13px; margin-top: 10px;">
-                            You can still attach this invoice manually.
-                        </div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    console.log('⚠️ [VALIDATE] Error occurred but modal was closed, skipping error display');
+                }
             }
         }
 
@@ -10287,11 +10519,18 @@ Return ONLY valid JSON.`;
             const footerButtons = document.getElementById('pdfPreviewButtons');
             if (footerButtons) {
                 footerButtons.innerHTML = `
-                    <button onclick="confirmAttachInvoice()" class="btn-primary" id="attachInvoiceBtn" style="flex: 1; padding: 10px; font-size: 14px; font-weight: 600;">
-                        ✅ Attach Invoice
+                    <button onclick="confirmAttachInvoice()" class="btn-primary" id="attachInvoiceBtn" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>✅</span>
+                        <span>Attach Invoice</span>
                     </button>
-                    <button onclick="closePDFPreview()" class="btn-secondary" style="flex: 1; padding: 10px; font-size: 14px;">
-                        ❌ Cancel
+
+                    <button onclick="openManualUploadFromPreview()" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #3b82f6; color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>📤</span>
+                        <span>Upload Different File</span>
+                    </button>
+
+                    <button onclick="closePDFPreview()" class="btn-secondary" style="width: 100%; padding: 10px; font-size: 14px;">
+                        Cancel
                     </button>
                 `;
             }
@@ -10332,7 +10571,7 @@ Return ONLY valid JSON.`;
             const attachBtn = document.getElementById('attachInvoiceBtn');
             if (attachBtn) {
                 attachBtn.disabled = false;
-                attachBtn.textContent = '✅ Attach Invoice';
+                attachBtn.innerHTML = '<span>✅</span><span>Attach Invoice</span>';
                 attachBtn.style.background = '';
             }
 
@@ -10342,6 +10581,152 @@ Return ONLY valid JSON.`;
             }
 
             currentAttachmentData = null;
+        }
+
+        /**
+         * Open manual upload dialog from preview modal
+         */
+        function openManualUploadFromPreview() {
+            // Close preview modal
+            closePDFPreview();
+
+            // Trigger manual file upload
+            const fileInput = document.getElementById('manualInvoiceUpload');
+            if (fileInput) {
+                fileInput.click();
+            }
+        }
+
+        /**
+         * Show invoice attachment confirmation modal
+         */
+        function showInvoiceConfirmModal(messageId, attachmentId, filename, transactionIndex, accountEmail) {
+            // Store pending attachment data
+            pendingInvoiceAttachment = {
+                messageId,
+                attachmentId,
+                filename,
+                transactionIndex,
+                accountEmail
+            };
+
+            // Update filename in modal
+            document.getElementById('invoiceConfirmFilename').textContent = filename;
+
+            // Show modal
+            document.getElementById('invoiceConfirmModal').style.display = 'flex';
+        }
+
+        /**
+         * Close invoice attachment confirmation modal
+         */
+        function closeInvoiceConfirmModal() {
+            document.getElementById('invoiceConfirmModal').style.display = 'none';
+            pendingInvoiceAttachment = null;
+        }
+
+        /**
+         * Handle "Preview & Attach" button - opens full preview modal
+         */
+        function confirmPreviewAndAttach() {
+            if (!pendingInvoiceAttachment) return;
+
+            const { transactionIndex, messageId, attachmentId, filename, accountEmail } = pendingInvoiceAttachment;
+
+            closeInvoiceConfirmModal();
+            previewAndAttachInvoice(transactionIndex, messageId, attachmentId, filename, accountEmail);
+        }
+
+        /**
+         * Handle "Attach Without Preview" button - proceeds with direct attachment
+         */
+        async function confirmDirectAttach() {
+            if (!pendingInvoiceAttachment) return;
+
+            const { messageId, attachmentId, filename, transactionIndex, accountEmail } = pendingInvoiceAttachment;
+
+            closeInvoiceConfirmModal();
+            await performDirectAttachment(messageId, attachmentId, filename, transactionIndex, accountEmail);
+        }
+
+        /**
+         * Handle "Upload Manually Instead" button - opens file picker
+         */
+        function confirmManualUpload() {
+            if (!pendingInvoiceAttachment) return;
+
+            closeInvoiceConfirmModal();
+
+            // Trigger the file input click
+            const fileInput = document.getElementById('manualInvoiceUpload');
+            if (fileInput) {
+                fileInput.click();
+            }
+        }
+
+        /**
+         * Perform direct invoice attachment (without preview)
+         */
+        async function performDirectAttachment(messageId, attachmentId, filename, transactionIndex, accountEmail) {
+            try {
+                showSimpleToast('⏳ Downloading invoice...', 'info');
+
+                // Get the access token for this account
+                const account = gmailAccounts.find(acc => acc.email === accountEmail);
+                if (!account) {
+                    showSimpleToast('❌ Account not found', 'error');
+                    return;
+                }
+
+                // Download PDF
+                const pdfBlob = await downloadPDFAttachment(messageId, attachmentId, account.accessToken);
+                if (!pdfBlob) {
+                    showSimpleToast('❌ Failed to download invoice', 'error');
+                    return;
+                }
+
+                // Save to IndexedDB
+                const invoiceId = await saveInvoiceToDB(transactionIndex, pdfBlob, filename, messageId);
+
+                // Update transaction object with invoice details so button changes to PDF view mode
+                allTransactions[transactionIndex].invoiceId = invoiceId;
+                allTransactions[transactionIndex].invoiceFilename = filename;
+
+                // Extract text
+                showSimpleToast('📄 Extracting text from invoice...', 'info');
+                const extractedText = await extractTextFromPDF(pdfBlob);
+
+                if (extractedText) {
+                    // Update invoice with extracted text
+                    await updateInvoiceText(invoiceId, extractedText);
+
+                    // Generate AI description
+                    showSimpleToast('🤖 Generating description...', 'info');
+                    const aiDescription = await generateDescriptionFromInvoice(
+                        extractedText,
+                        allTransactions[transactionIndex]
+                    );
+
+                    if (aiDescription) {
+                        await updateInvoiceWithAIDescription(invoiceId, aiDescription);
+
+                        // Apply description to transaction
+                        allTransactions[transactionIndex].manualDescription = aiDescription;
+                    }
+                }
+
+                // Save updated transactions to IndexedDB for cross-page sync
+                await saveTransactionsToStorage();
+
+                // Render to show PDF button instead of invoice search button
+                renderTransactions();
+                showSimpleToast('✅ Invoice attached successfully!', 'success');
+                closeInvoiceSearchModal();
+
+            } catch (error) {
+                console.error('Error attaching invoice:', error);
+                showSimpleToast('❌ Failed to attach invoice', 'error');
+            }
         }
 
         /**
@@ -11375,16 +11760,17 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
 
             progressBar.style.display = 'block';
 
-            // Show search log with live updates
+            // Show search log with live updates (collapsed by default)
             const logHeader = document.getElementById('searchLogHeader');
             const logContainer = document.getElementById('searchLogContainer');
             const logContent = document.getElementById('searchLogContent');
 
             if (logHeader) logHeader.style.display = 'flex';
-            if (logContainer) {
-                logContainer.style.display = 'block';
-                logContainer.style.maxHeight = '250px';
-            }
+            // Keep log minimized by default - user can click to expand if needed
+            // if (logContainer) {
+            //     logContainer.style.display = 'block';
+            //     logContainer.style.maxHeight = '250px';
+            // }
 
             // Function to render logs
             function renderLogs(currentTask) {
@@ -11454,18 +11840,32 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
 
         async function displayInvoiceSearchResults(messages, transaction) {
             const selectedCount = gmailAccounts.filter(acc => acc.selected).length;
-            let html = `<div style="font-weight: 600; margin-bottom: 10px;">Found ${messages.length} potential match(es) across ${selectedCount} account(s):</div>`;
 
+            console.log('🎯 Starting two-stage invoice analysis for', messages.length, 'emails');
+
+            // Start building HTML with progress indicator
+            let html = `
+                <div style="font-weight: 600; margin-bottom: 15px; padding: 12px; background: #f0f9ff; border-radius: 8px; border: 2px solid #3b82f6;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="font-size: 18px;">📧</span>
+                        <span style="color: #1e40af;">Found ${messages.length} email(s) across ${selectedCount} account(s)</span>
+                    </div>
+                    <div id="stage1Progress" style="font-size: 12px; color: #3b82f6; display: flex; align-items: center; gap: 6px;">
+                        <span style="animation: pulse 1.5s infinite;">🤖</span>
+                        <span>Analyzing email content...</span>
+                    </div>
+                </div>
+            `;
+
+            // Create placeholder cards for each email
             for (const msg of messages) {
                 try {
-                    // Get the access token for this message's account
                     const account = gmailAccounts.find(acc => acc.email === msg.accountEmail);
                     if (!account) continue;
 
-                    // Set the access token for Gmail API calls
                     gapi.client.setToken({ access_token: account.accessToken });
 
-                    // Get full message details
+                    // Get basic email info for display
                     const messageDetail = await gapi.client.gmail.users.messages.get({
                         userId: 'me',
                         id: msg.id,
@@ -11478,141 +11878,316 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
                     const subject = headers.find(h => h.name === 'Subject')?.value || 'No Subject';
                     const date = headers.find(h => h.name === 'Date')?.value || '';
 
-                    // Extract PDFs
-                    const pdfs = await extractPDFsFromEmail(msg.id, account.accessToken);
+                    // Store in message object for later use
+                    msg.from = from;
+                    msg.subject = subject;
+                    msg.date = date;
 
                     html += `
-                        <div class="invoice-result-card">
-                            <div style="font-size: 12px; color: #3AAFA9; margin-bottom: 5px;">
-                                <strong>Account:</strong> ${escapeHtml(msg.accountEmail)}
+                        <div class="invoice-result-card" id="emailCard_${msg.id}">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 12px; color: #3AAFA9; margin-bottom: 4px;">
+                                        <strong>Account:</strong> ${escapeHtml(msg.accountEmail)}
+                                    </div>
+                                    <div style="font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                                        <span>📧 ${escapeHtml(subject)}</span>
+                                        <span id="stage1Badge_${msg.id}" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: #e5e7eb; color: #64748b;">
+                                            Analyzing...
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 13px; color: #666;">
+                                        <strong>From:</strong> ${escapeHtml(from)}<br>
+                                        <strong>Date:</strong> ${date}
+                                    </div>
+                                </div>
+                                <div style="background: #3b82f6; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0;">
+                                    ${matchIndex + 1}
+                                </div>
                             </div>
-                            <div style="font-weight: 600; margin-bottom: 5px;">📧 ${escapeHtml(subject)}</div>
-                            <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
-                                <strong>From:</strong> ${escapeHtml(from)}<br>
-                                <strong>Date:</strong> ${date}
+
+                            <!-- Stage 1: Email Analysis Results (populated after analysis) -->
+                            <div id="stage1Results_${msg.id}" style="display: none; margin-top: 12px;">
+                                <!-- Populated after email analysis -->
                             </div>
+
+                            <!-- Stage 2: PDF Analysis Results (hidden initially) -->
+                            <div id="stage2Results_${msg.id}" style="display: none; margin-top: 12px;">
+                                <!-- Populated after PDF analysis -->
+                            </div>
+
+                            <!-- PDF Attachment Buttons -->
+                            <div id="pdfButtons_${msg.id}" style="margin-top: 12px;">
+                                <!-- Populated after stage 1 -->
+                            </div>
+                        </div>
                     `;
-
-                    if (pdfs.length > 0) {
-                        html += `<div style="margin-top: 10px;"><strong>Attachments (${pdfs.length}):</strong></div>`;
-                        pdfs.forEach((pdf) => {
-                            html += `
-                                <button
-                                    onclick="attachInvoiceToTransaction('${escapeJs(msg.id)}', '${escapeJs(pdf.attachmentId)}', '${escapeJs(pdf.filename)}', ${currentInvoiceSearchIndex}, '${escapeJs(msg.accountEmail)}')"
-                                    class="modal-btn modal-btn-primary pdf-attachment-btn">
-                                    📎 ${escapeHtml(pdf.filename)} (${formatFileSize(pdf.size)})
-                                </button>
-                            `;
-                        });
-
-                        // Always show "Open in Gmail" option (invoice might also be in email body or as a link)
-                        html += `
-                            <button
-                                onclick="openEmailInGmail('${escapeJs(msg.id)}', '${escapeJs(msg.accountEmail)}')"
-                                class="modal-btn modal-btn-primary"
-                                style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px;">
-                                <span style="font-size: 16px;">📧</span>
-                                <span>Open in Gmail</span>
-                            </button>
-                        `;
-                    } else {
-                        // No PDF attachments - provide Gmail link instead
-                        html += `
-                            <div style="background: #fffbeb; border-radius: 6px; padding: 12px; border: 1px dashed #f59e0b; margin-top: 10px;">
-                                <div style="color: #d97706; font-size: 12px; text-align: center; margin-bottom: 10px; font-weight: 600;">
-                                    ⚠️ No PDF attachments found
-                                </div>
-                                <button
-                                    onclick="openEmailInGmail('${msg.id}', '${escapeHtml(msg.accountEmail)}')"
-                                    class="modal-btn modal-btn-primary"
-                                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                    <span style="font-size: 16px;">📧</span>
-                                    <span>Open in Gmail</span>
-                                </button>
-                                <div style="font-size: 10px; color: #92400e; text-align: center; margin-top: 8px;">
-                                    The invoice may be in the email body or as a link
-                                </div>
-                            </div>
-                        `;
-                    }
-
-                    html += `</div>`;
                 } catch (error) {
-                    console.error('Error processing message:', msg.id, error);
+                    console.error('Error getting email metadata:', msg.id, error);
                 }
             }
 
             document.getElementById('invoiceSearchResults').innerHTML = html;
-        }
 
-        async function attachInvoiceToTransaction(messageId, attachmentId, filename, transactionIndex, accountEmail) {
+            // ==========================================
+            // STAGE 1: Email Content Analysis (FAST)
+            // ==========================================
+
             try {
-                showSimpleToast('⏳ Downloading invoice...', 'info');
+                const progressDiv = document.getElementById('stage1Progress');
 
-                // Get the access token for this account
-                const account = gmailAccounts.find(acc => acc.email === accountEmail);
-                if (!account) {
-                    showSimpleToast('❌ Account not found', 'error');
+                if (!progressDiv) {
+                    console.warn('Progress div not found, skipping Stage 1');
                     return;
                 }
 
-                // Download PDF
-                const pdfBlob = await downloadPDFAttachment(messageId, attachmentId, account.accessToken);
-                if (!pdfBlob) {
-                    showSimpleToast('❌ Failed to download invoice', 'error');
+                // Extract email metadata for AI analysis
+                console.log('📧 Stage 1: Extracting email metadata...');
+                const emailData = await Promise.all(
+                    messages.map(msg => extractEmailMetadata(msg.id, msg.accountEmail))
+                );
+
+                // Filter out nulls
+                const validEmailData = emailData.filter(e => e !== null);
+
+                if (validEmailData.length === 0) {
+                    progressDiv.innerHTML = `<span>⚠️</span><span style="color: #f59e0b;">Could not extract email data</span>`;
                     return;
                 }
 
-                // Save to IndexedDB
-                const invoiceId = await saveInvoiceToDB(transactionIndex, pdfBlob, filename, messageId);
+                // Batch analyze all emails with AI
+                progressDiv.innerHTML = `
+                    <span style="animation: pulse 1.5s infinite;">🤖</span>
+                    <span>Running AI analysis on ${validEmailData.length} email(s)...</span>
+                `;
 
-                // Update transaction object with invoice details so button changes to PDF view mode
-                allTransactions[transactionIndex].invoiceId = invoiceId;
-                allTransactions[transactionIndex].invoiceFilename = filename;
+                console.log('🤖 Stage 1: Analyzing emails with AI...');
+                const stage1Results = await analyzeEmailsWithAI(validEmailData, transaction);
 
-                // Extract text
-                showSimpleToast('📄 Extracting text from invoice...', 'info');
-                const extractedText = await extractTextFromPDF(pdfBlob);
+                // Update progress
+                if (stage1Results) {
+                    progressDiv.innerHTML = `
+                        <span>✅</span>
+                        <span style="color: #10b981; font-weight: 600;">Email analysis complete! Loading PDFs...</span>
+                    `;
 
-                if (extractedText) {
-                    // Update invoice with extracted text
-                    await updateInvoiceText(invoiceId, extractedText);
+                    // Update UI with Stage 1 results
+                    stage1Results.forEach(result => {
+                        const email = messages[result.emailIndex];
+                        if (!email) return;
 
-                    // Generate AI description
-                    showSimpleToast('🤖 Generating description...', 'info');
-                    const aiDescription = await generateDescriptionFromInvoice(
-                        extractedText,
-                        allTransactions[transactionIndex]
-                    );
+                        const badge = document.getElementById(`stage1Badge_${email.id}`);
+                        if (badge) {
+                            const matchIcon = result.preliminaryScore >= 80 ? '🎯' :
+                                             result.preliminaryScore >= 60 ? '✅' : '⚠️';
+                            const matchColor = result.preliminaryScore >= 80 ? '#10b981' :
+                                              result.preliminaryScore >= 60 ? '#22c55e' : '#f59e0b';
 
-                    if (aiDescription) {
-                        await updateInvoiceWithAIDescription(invoiceId, aiDescription);
+                            badge.style.background = matchColor;
+                            badge.style.color = 'white';
+                            badge.innerHTML = `${matchIcon} ${result.preliminaryScore}% (Email)`;
+                            badge.title = result.reasoning || 'Email analysis score';
+                        }
 
-                        // Apply description to transaction
-                        allTransactions[transactionIndex].manualDescription = aiDescription;
+                        // Populate Stage 1 results table with extracted email information
+                        const stage1Container = document.getElementById(`stage1Results_${email.id}`);
+                        if (stage1Container) {
+                            const emailData = validEmailData.find(e => e.messageId === email.id);
+
+                            stage1Container.style.display = 'block';
+                            stage1Container.innerHTML = `
+                                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #fbbf24; border-radius: 8px; padding: 12px;">
+                                    <div style="font-size: 11px; font-weight: 600; color: #92400e; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                        <span>📧</span>
+                                        <span>EMAIL PREVIEW (Before opening PDF)</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 8px;">
+                                        <div>
+                                            <div style="font-size: 10px; color: #92400e; font-weight: 600; margin-bottom: 3px;">COMPANY MENTIONED</div>
+                                            <div style="font-size: 12px; color: #1e293b; font-weight: 600;">${escapeHtml(result.companyMentioned || '-')}</div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 10px; color: #92400e; font-weight: 600; margin-bottom: 3px;">SENDER RELEVANCE</div>
+                                            <div style="font-size: 12px; color: #1e293b; font-weight: 600; text-transform: capitalize;">
+                                                ${result.senderRelevance || '-'}
+                                                ${result.senderRelevance === 'high' ? '✅' : result.senderRelevance === 'medium' ? '⚠️' : '❌'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 10px; color: #92400e; font-weight: 600; margin-bottom: 3px;">INVOICE KEYWORDS</div>
+                                            <div style="font-size: 12px; color: #1e293b; font-weight: 600;">
+                                                ${result.hasInvoiceKeywords ? 'Yes ✅' : 'No ❌'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 10px; color: #92400e; font-weight: 600; margin-bottom: 3px;">MATCH SCORE</div>
+                                            <div style="font-size: 12px; color: #1e293b; font-weight: 600;">${result.preliminaryScore}%</div>
+                                        </div>
+                                    </div>
+                                    ${emailData ? `
+                                    <div style="background: white; padding: 8px; border-radius: 4px; margin-top: 8px;">
+                                        <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 4px;">EMAIL SNIPPET:</div>
+                                        <div style="font-size: 11px; color: #475569; font-style: italic; line-height: 1.4;">
+                                            "${escapeHtml(emailData.snippet.substring(0, 200))}${emailData.snippet.length > 200 ? '...' : ''}"
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    <div style="background: white; padding: 8px; border-radius: 4px; margin-top: 8px;">
+                                        <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 4px;">AI REASONING:</div>
+                                        <div style="font-size: 11px; color: #475569;">
+                                            ${escapeHtml(result.reasoning || 'No reasoning provided')}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                } else {
+                    progressDiv.innerHTML = `
+                        <span>⚠️</span>
+                        <span style="color: #f59e0b;">Stage 1 skipped (no API key or error)</span>
+                    `;
+                }
+
+                // ==========================================
+                // GET PDF LISTS & CREATE PRIORITY QUEUE
+                // ==========================================
+
+                console.log('📎 Getting PDF lists for each email...');
+                const pdfsMap = new Map();
+
+                for (const msg of messages) {
+                    try {
+                        const account = gmailAccounts.find(acc => acc.email === msg.accountEmail);
+                        if (!account) continue;
+
+                        gapi.client.setToken({ access_token: account.accessToken });
+                        const pdfs = await extractPDFsFromEmail(msg.id, account.accessToken);
+
+                        pdfsMap.set(msg.id, pdfs);
+
+                        // Show PDF buttons
+                        const buttonsContainer = document.getElementById(`pdfButtons_${msg.id}`);
+                        if (!buttonsContainer) continue;
+
+                        if (pdfs.length > 0) {
+                            buttonsContainer.innerHTML = `
+                                <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px;">
+                                    Attachments (${pdfs.length}):
+                                </div>
+                            `;
+                            pdfs.forEach(pdf => {
+                                buttonsContainer.innerHTML += `
+                                    <button
+                                        onclick="attachInvoiceToTransaction('${escapeJs(msg.id)}', '${escapeJs(pdf.attachmentId)}', '${escapeJs(pdf.filename)}', ${currentInvoiceSearchIndex}, '${escapeJs(msg.accountEmail)}')"
+                                        class="modal-btn modal-btn-primary pdf-attachment-btn"
+                                        style="margin-top: 6px;">
+                                        📎 ${escapeHtml(pdf.filename)} (${formatFileSize(pdf.size)})
+                                    </button>
+                                `;
+                            });
+
+                            // Add "Open in Gmail" button
+                            buttonsContainer.innerHTML += `
+                                <button
+                                    onclick="openEmailInGmail('${escapeJs(msg.id)}', '${escapeJs(msg.accountEmail)}')"
+                                    class="modal-btn modal-btn-primary"
+                                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px;">
+                                    <span style="font-size: 16px;">📧</span>
+                                    <span>Open in Gmail</span>
+                                </button>
+                            `;
+                        } else {
+                            buttonsContainer.innerHTML = `
+                                <div style="background: #fffbeb; border-radius: 6px; padding: 12px; border: 1px dashed #f59e0b;">
+                                    <div style="color: #d97706; font-size: 12px; text-align: center; margin-bottom: 10px; font-weight: 600;">
+                                        ⚠️ No PDF attachments found
+                                    </div>
+                                    <button
+                                        onclick="openEmailInGmail('${escapeJs(msg.id)}', '${escapeJs(msg.accountEmail)}')"
+                                        class="modal-btn modal-btn-primary"
+                                        style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <span style="font-size: 16px;">📧</span>
+                                        <span>Open in Gmail</span>
+                                    </button>
+                                    <div style="font-size: 10px; color: #92400e; text-align: center; margin-top: 8px;">
+                                        The invoice may be in the email body or as a link
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } catch (error) {
+                        console.error('Error getting PDFs for message:', msg.id, error);
                     }
                 }
 
-                // Save updated transactions to IndexedDB for cross-page sync
-                await saveTransactionsToStorage();
+                // ==========================================
+                // STAGE 2: Smart PDF Analysis (PRIORITIZED)
+                // ==========================================
 
-                // Render to show PDF button instead of invoice search button
-                renderTransactions();
-                showSimpleToast('✅ Invoice attached successfully!', 'success');
-                closeInvoiceSearchModal();
+                if (stage1Results) {
+                    console.log('🎯 Stage 2: Creating priority queue...');
+                    const queue = createPriorityQueue(messages, stage1Results, pdfsMap);
+
+                    if (queue.length > 0) {
+                        progressDiv.innerHTML = `
+                            <span style="animation: pulse 1.5s infinite;">📄</span>
+                            <span>Analyzing ${queue.length} PDF(s) in priority order...</span>
+                        `;
+
+                        console.log('📄 Stage 2: Processing PDFs...');
+                        await processQueueWithPriority(queue, transaction, (messageId, result) => {
+                            updateStage2Display(messageId, result);
+                        });
+
+                        // Final update
+                        progressDiv.innerHTML = `
+                            <span>✅</span>
+                            <span style="color: #10b981; font-weight: 600;">Analysis complete! Results sorted by match score.</span>
+                        `;
+                    } else {
+                        progressDiv.innerHTML = `
+                            <span>ℹ️</span>
+                            <span style="color: #3b82f6;">No PDFs to analyze</span>
+                        `;
+                    }
+                } else {
+                    console.log('⏭️ Skipping Stage 2 (Stage 1 not completed)');
+                    if (progressDiv) {
+                        progressDiv.innerHTML = `
+                            <span>ℹ️</span>
+                            <span style="color: #3b82f6;">PDF analysis skipped (Stage 1 incomplete)</span>
+                        `;
+                    }
+                }
 
             } catch (error) {
-                console.error('Error attaching invoice:', error);
-                showSimpleToast('❌ Failed to attach invoice', 'error');
+                console.error('Invoice analysis error:', error);
+                const progressDiv = document.getElementById('stage1Progress');
+                if (progressDiv) {
+                    progressDiv.innerHTML = `
+                        <span>❌</span>
+                        <span style="color: #ef4444;">Analysis error: ${error.message}</span>
+                    `;
+                }
             }
+        }
+
+        async function attachInvoiceToTransaction(messageId, attachmentId, filename, transactionIndex, accountEmail) {
+            // Go directly to preview mode
+            previewAndAttachInvoice(transactionIndex, messageId, attachmentId, filename, accountEmail);
         }
 
         async function handleManualInvoiceUpload() {
             const fileInput = document.getElementById('manualInvoiceUpload');
             const file = fileInput.files[0];
 
-            if (!file || file.type !== 'application/pdf') {
-                showSimpleToast('❌ Please select a PDF file', 'error');
+            // Accept PDFs and images
+            const isPDF = file && file.type === 'application/pdf';
+            const isImage = file && file.type.startsWith('image/');
+
+            if (!file || (!isPDF && !isImage)) {
+                showSimpleToast('❌ Please select a PDF or image file', 'error');
                 return;
             }
 
@@ -11627,11 +12202,15 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
                 console.log('📎 [MANUAL UPLOAD] Starting upload...', {
                     transactionIndex: currentInvoiceSearchIndex,
                     filename: file.name,
+                    fileType: file.type,
+                    isPDF,
+                    isImage,
                     transactionBefore: allTransactions[currentInvoiceSearchIndex]
                 });
 
-                const pdfBlob = new Blob([await file.arrayBuffer()], { type: 'application/pdf' });
-                const invoiceId = await saveInvoiceToDB(currentInvoiceSearchIndex, pdfBlob, file.name, null);
+                // Preserve original file type in blob
+                const fileBlob = new Blob([await file.arrayBuffer()], { type: file.type });
+                const invoiceId = await saveInvoiceToDB(currentInvoiceSearchIndex, fileBlob, file.name, null);
 
                 console.log('📎 [MANUAL UPLOAD] Invoice saved, updating transaction...', {
                     invoiceId,
@@ -11648,23 +12227,29 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
                     hasInvoiceFilename: !!allTransactions[currentInvoiceSearchIndex].invoiceFilename
                 });
 
-                // Extract and process
-                showSimpleToast('📄 Extracting text from invoice...', 'info');
-                const extractedText = await extractTextFromPDF(pdfBlob);
+                // Extract and process (only for PDFs - images would need OCR)
+                if (isPDF) {
+                    showSimpleToast('📄 Extracting text from invoice...', 'info');
+                    const extractedText = await extractTextFromPDF(fileBlob);
 
-                if (extractedText) {
-                    await updateInvoiceText(invoiceId, extractedText);
+                    if (extractedText) {
+                        await updateInvoiceText(invoiceId, extractedText);
 
-                    showSimpleToast('🤖 Generating description...', 'info');
-                    const aiDescription = await generateDescriptionFromInvoice(
-                        extractedText,
-                        allTransactions[currentInvoiceSearchIndex]
-                    );
+                        showSimpleToast('🤖 Generating description...', 'info');
+                        const aiDescription = await generateDescriptionFromInvoice(
+                            extractedText,
+                            allTransactions[currentInvoiceSearchIndex]
+                        );
 
-                    if (aiDescription) {
-                        await updateInvoiceWithAIDescription(invoiceId, aiDescription);
-                        allTransactions[currentInvoiceSearchIndex].manualDescription = aiDescription;
+                        if (aiDescription) {
+                            await updateInvoiceWithAIDescription(invoiceId, aiDescription);
+                            allTransactions[currentInvoiceSearchIndex].manualDescription = aiDescription;
+                        }
                     }
+                } else {
+                    // Image uploaded - skip text extraction (would need OCR)
+                    console.log('📎 [MANUAL UPLOAD] Image file uploaded, skipping text extraction');
+                    showSimpleToast('📸 Image uploaded (text extraction not available for images)', 'info');
                 }
 
                 // Save updated transactions to IndexedDB for cross-page sync
@@ -11692,6 +12277,519 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
             if (bytes < 1024) return bytes + ' B';
             if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // ========================================
+        // TWO-STAGE INVOICE ANALYSIS SYSTEM
+        // ========================================
+
+        /**
+         * STAGE 1: Extract email metadata (subject, from, snippet)
+         * This is fast - no PDF downloads yet
+         */
+        async function extractEmailMetadata(messageId, accountEmail) {
+            try {
+                const account = gmailAccounts.find(acc => acc.email === accountEmail);
+                if (!account) return null;
+
+                gapi.client.setToken({ access_token: account.accessToken });
+
+                const response = await gapi.client.gmail.users.messages.get({
+                    userId: 'me',
+                    id: messageId,
+                    format: 'full'
+                });
+
+                const message = response.result;
+                const headers = message.payload.headers;
+
+                return {
+                    messageId,
+                    subject: headers.find(h => h.name === 'Subject')?.value || 'No Subject',
+                    from: headers.find(h => h.name === 'From')?.value || 'Unknown',
+                    date: headers.find(h => h.name === 'Date')?.value || '',
+                    snippet: message.snippet || '',
+                    accountEmail
+                };
+            } catch (error) {
+                console.error('Error extracting email metadata:', error);
+                return null;
+            }
+        }
+
+        /**
+         * STAGE 1: Batch analyze all emails with AI (no PDF downloads)
+         * Returns preliminary match scores based on subject line and email body
+         */
+        async function analyzeEmailsWithAI(emailData, transaction) {
+            const API_KEY = getOpenAIKey();
+            if (!API_KEY) {
+                console.warn('No OpenAI key, skipping Stage 1 analysis');
+                return null;
+            }
+
+            try {
+                // Build batch analysis prompt
+                const emailSummaries = emailData.map((email, idx) => {
+                    return `Email ${idx + 1}:
+Subject: ${email.subject}
+From: ${email.from}
+Date: ${email.date}
+Body Preview: ${email.snippet}
+---`;
+                }).join('\n\n');
+
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `You are analyzing emails to find invoices matching a transaction.
+
+Transaction Details:
+Company: ${transaction.description}
+Amount: ${transaction.currency}${Math.abs(transaction.amount)}
+Date: ${new Date(transaction.date).toLocaleDateString()}
+
+Analyze each email and return a JSON array with preliminary match scores.
+For each email, extract what you can see from the subject and body preview.
+
+Return JSON array format:
+[
+  {
+    "emailIndex": 0,
+    "companyMentioned": "Anthropic",
+    "hasInvoiceKeywords": true,
+    "senderRelevance": "high",
+    "preliminaryScore": 85,
+    "reasoning": "Subject contains 'Invoice', sender domain matches company name"
+  }
+]
+
+Score 0-100 where:
+- 80-100: Strong match (invoice keywords + company match)
+- 60-79: Possible match (some indicators present)
+- 0-59: Weak match (few or no indicators)
+`
+                            },
+                            {
+                                role: 'user',
+                                content: emailSummaries
+                            }
+                        ],
+                        temperature: 0.1,
+                        max_tokens: 1500
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('Stage 1 API error:', response.status);
+                    return null;
+                }
+
+                const data = await response.json();
+                const results = JSON.parse(data.choices[0].message.content);
+
+                console.log('📧 Stage 1 Analysis Results:', results);
+                return results;
+
+            } catch (error) {
+                console.error('Stage 1 analysis error:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Create priority queue sorted by Stage 1 scores
+         * High-scoring emails get their PDFs analyzed first
+         */
+        function createPriorityQueue(messages, stage1Results, pdfsMap) {
+            if (!stage1Results) return [];
+
+            const queue = [];
+
+            messages.forEach((msg, idx) => {
+                const analysis = stage1Results.find(r => r.emailIndex === idx);
+                if (!analysis) return;
+
+                const pdfs = pdfsMap.get(msg.id) || [];
+
+                // Each PDF in this email gets the email's preliminary score
+                pdfs.forEach(pdf => {
+                    queue.push({
+                        messageId: msg.id,
+                        accountEmail: msg.accountEmail,
+                        attachmentId: pdf.attachmentId,
+                        filename: pdf.filename,
+                        size: pdf.size,
+                        preliminaryScore: analysis.preliminaryScore,
+                        stage1Data: analysis
+                    });
+                });
+            });
+
+            // Sort by preliminary score (highest first)
+            queue.sort((a, b) => b.preliminaryScore - a.preliminaryScore);
+
+            console.log('📊 Priority Queue created:', queue);
+            return queue;
+        }
+
+        /**
+         * STAGE 2: Process PDFs in priority order
+         * High-scoring items analyzed first, all PDFs will be processed
+         */
+        async function processQueueWithPriority(queue, transaction, updateCallback) {
+            const MAX_CONCURRENT = 2; // Analyze 2 PDFs at a time
+
+            console.log(`📊 Queue: ${queue.length} PDFs to analyze (sorted by priority)`);
+
+            // Process ALL items in priority order (no threshold filtering)
+            const results = [];
+            for (let i = 0; i < queue.length; i += MAX_CONCURRENT) {
+                const batch = queue.slice(i, i + MAX_CONCURRENT);
+
+                const batchPromises = batch.map(item =>
+                    analyzeSinglePDFStage2(item, transaction).then(result => {
+                        // Update UI immediately as each completes
+                        updateCallback(item.messageId, result);
+                        return result;
+                    }).catch(error => {
+                        console.error(`PDF analysis failed for ${item.filename}:`, error);
+                        updateCallback(item.messageId, {
+                            status: 'failed',
+                            filename: item.filename,
+                            error: error.message
+                        });
+                        return null;
+                    })
+                );
+
+                const batchResults = await Promise.allSettled(batchPromises);
+                results.push(...batchResults);
+            }
+
+            return results;
+        }
+
+        /**
+         * STAGE 2: Analyze a single PDF with full extraction
+         */
+        async function analyzeSinglePDFStage2(item, transaction) {
+            try {
+                console.log(`📄 Analyzing PDF: ${item.filename}`);
+
+                // 1. Download PDF
+                const account = gmailAccounts.find(acc => acc.email === item.accountEmail);
+                if (!account) throw new Error('Account not found');
+
+                const pdfBlob = await downloadPDFAttachment(item.messageId, item.attachmentId, account.accessToken);
+                if (!pdfBlob) throw new Error('PDF download failed');
+
+                // 2. Extract text
+                const pdfText = await extractTextFromPDF(pdfBlob);
+                if (!pdfText || pdfText.length < 50) {
+                    throw new Error('Could not extract text from PDF');
+                }
+
+                // 3. Analyze with AI
+                const analysis = await extractInvoiceDataWithAI(pdfText, transaction);
+                if (!analysis) throw new Error('AI analysis failed');
+
+                return {
+                    status: 'analyzed',
+                    filename: item.filename,
+                    preliminaryScore: item.preliminaryScore,
+                    data: analysis,
+                    transactionAmount: Math.abs(transaction.amount),
+                    transactionDate: transaction.date
+                };
+
+            } catch (error) {
+                console.error('Stage 2 PDF analysis error:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Extract structured invoice data from PDF text using AI
+         */
+        async function extractInvoiceDataWithAI(pdfText, transaction) {
+            const API_KEY = getOpenAIKey();
+            if (!API_KEY) return null;
+
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `Extract invoice data as JSON. Return only valid JSON with this structure:
+{
+  "company": "Company Name",
+  "amount": 123.45,
+  "currency": "GBP",
+  "date": "2025-09-09",
+  "invoiceNumber": "INV-123",
+  "confidence": {
+    "company": 0.95,
+    "amount": 1.0,
+    "date": 0.90
+  }
+}
+
+Always return valid JSON. If data is missing, use null.`
+                            },
+                            {
+                                role: 'user',
+                                content: `Transaction: ${transaction.description} - ${transaction.currency}${Math.abs(transaction.amount)} on ${new Date(transaction.date).toLocaleDateString()}
+
+PDF Text (first 4000 chars):
+${pdfText.substring(0, 4000)}
+
+Extract the invoice data.`
+                            }
+                        ],
+                        temperature: 0.1,
+                        max_tokens: 400
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('AI extraction API error:', response.status);
+                    return null;
+                }
+
+                const data = await response.json();
+                const extracted = JSON.parse(data.choices[0].message.content);
+
+                // Calculate match score
+                const matchScore = calculateMatchScore(extracted, transaction);
+
+                return { ...extracted, matchScore };
+
+            } catch (error) {
+                console.error('AI extraction error:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Calculate match score between extracted invoice data and transaction
+         */
+        function calculateMatchScore(extracted, transaction) {
+            let score = 0;
+
+            // Company match (40 points)
+            if (extracted.company && transaction.description) {
+                const companyMatch = fuzzyMatch(
+                    extracted.company.toLowerCase(),
+                    transaction.description.toLowerCase()
+                );
+                score += companyMatch * 40;
+            }
+
+            // Amount match (40 points)
+            if (extracted.amount) {
+                const transactionAmt = Math.abs(transaction.amount);
+                const amountDiff = Math.abs(extracted.amount - transactionAmt);
+                const amountMatch = amountDiff < 0.10 ? 1 : (amountDiff < 1 ? 0.5 : 0);
+                score += amountMatch * 40;
+            }
+
+            // Date match (20 points)
+            if (extracted.date && transaction.date) {
+                const daysDiff = Math.abs(
+                    (new Date(extracted.date) - new Date(transaction.date)) / 86400000
+                );
+                const dateMatch = daysDiff <= 7 ? 1 : (daysDiff <= 14 ? 0.5 : 0);
+                score += dateMatch * 20;
+            }
+
+            // Apply confidence multiplier
+            const avgConfidence = extracted.confidence ? (
+                (extracted.confidence.company +
+                 extracted.confidence.amount +
+                 extracted.confidence.date) / 3
+            ) : 0.8;
+
+            return Math.round(score * avgConfidence);
+        }
+
+        /**
+         * Fuzzy string matching (simple implementation)
+         */
+        function fuzzyMatch(str1, str2) {
+            if (!str1 || !str2) return 0;
+
+            str1 = str1.toLowerCase().trim();
+            str2 = str2.toLowerCase().trim();
+
+            // Exact match
+            if (str1 === str2) return 1;
+
+            // One contains the other
+            if (str1.includes(str2) || str2.includes(str1)) return 0.9;
+
+            // Levenshtein distance based similarity
+            const longer = str1.length > str2.length ? str1 : str2;
+            const shorter = str1.length > str2.length ? str2 : str1;
+
+            if (longer.length === 0) return 1;
+
+            const distance = editDistance(longer, shorter);
+            return Math.max(0, (longer.length - distance) / longer.length);
+        }
+
+        /**
+         * Calculate Levenshtein distance between two strings
+         */
+        function editDistance(s1, s2) {
+            const costs = [];
+            for (let i = 0; i <= s1.length; i++) {
+                let lastValue = i;
+                for (let j = 0; j <= s2.length; j++) {
+                    if (i === 0) {
+                        costs[j] = j;
+                    } else if (j > 0) {
+                        let newValue = costs[j - 1];
+                        if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+                            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                        }
+                        costs[j - 1] = lastValue;
+                        lastValue = newValue;
+                    }
+                }
+                if (i > 0) costs[s2.length] = lastValue;
+            }
+            return costs[s2.length];
+        }
+
+        /**
+         * Check if two dates match within tolerance
+         */
+        function isDateMatch(invoiceDate, transactionDate) {
+            if (!invoiceDate || !transactionDate) return false;
+            const diff = Math.abs(
+                (new Date(invoiceDate) - new Date(transactionDate)) / 86400000
+            );
+            return diff <= 7;
+        }
+
+        /**
+         * Format date for display (DD/MM/YY)
+         */
+        function formatDateShort(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '-';
+            return date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit'
+            });
+        }
+
+        /**
+         * Update email card with Stage 2 PDF analysis results
+         */
+        function updateStage2Display(messageId, result) {
+            const resultsContainer = document.getElementById(`stage2Results_${messageId}`);
+            const badge = document.getElementById(`stage1Badge_${messageId}`);
+
+            if (!resultsContainer) return;
+
+            if (result.status === 'skipped') {
+                // Show skipped status
+                resultsContainer.style.display = 'block';
+                resultsContainer.innerHTML = `
+                    <div style="background: #fef3c7; border: 2px dashed #f59e0b; border-radius: 8px; padding: 10px; text-align: center; margin-top: 10px;">
+                        <div style="font-size: 11px; color: #92400e; margin-bottom: 6px;">
+                            ⏭️ PDF analysis skipped (email match: ${result.preliminaryScore}%)
+                        </div>
+                        <div style="font-size: 10px; color: #92400e; font-style: italic;">
+                            ${escapeHtml(result.filename)}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (result.status === 'failed' || !result.data) {
+                // Analysis failed
+                resultsContainer.style.display = 'block';
+                resultsContainer.innerHTML = `
+                    <div style="background: #fee2e2; border: 2px solid #ef4444; border-radius: 8px; padding: 10px; text-align: center; margin-top: 10px; font-size: 11px; color: #991b1b;">
+                        ❌ PDF analysis failed: ${escapeHtml(result.filename)}
+                    </div>
+                `;
+                return;
+            }
+
+            // Show Stage 2 results
+            const data = result.data;
+            const matchIcon = data.matchScore >= 90 ? '⭐' :
+                             data.matchScore >= 75 ? '✅' :
+                             data.matchScore >= 60 ? '⚠️' : '❌';
+            const matchColor = data.matchScore >= 90 ? '#10b981' :
+                              data.matchScore >= 75 ? '#22c55e' :
+                              data.matchScore >= 60 ? '#f59e0b' : '#ef4444';
+
+            // Update badge to show final score
+            if (badge) {
+                badge.style.background = matchColor;
+                badge.style.color = 'white';
+                badge.innerHTML = `${matchIcon} ${data.matchScore}% (PDF)`;
+                badge.title = `Upgraded from ${result.preliminaryScore}% (email) to ${data.matchScore}% (PDF)`;
+            }
+
+            // Check match indicators
+            const amountMatch = result.transactionAmount && data.amount ?
+                Math.abs(data.amount - result.transactionAmount) < 0.10 : false;
+            const dateMatch = isDateMatch(data.date, result.transactionDate);
+
+            // Show detailed table
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = `
+                <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid ${matchColor}; border-radius: 8px; padding: 12px; margin-top: 10px;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 10px;">
+                        <div>
+                            <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 4px;">COMPANY</div>
+                            <div style="font-size: 13px; color: #1e293b; font-weight: 600;">${escapeHtml(data.company || '-')}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 4px;">AMOUNT</div>
+                            <div style="font-size: 13px; color: #1e293b; font-weight: 600;">
+                                ${data.currency || ''}${data.amount ? data.amount.toFixed(2) : '-'}
+                                ${amountMatch ? ' ✅' : ' ⚠️'}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 4px;">DATE</div>
+                            <div style="font-size: 13px; color: #1e293b; font-weight: 600;">
+                                ${formatDateShort(data.date)}
+                                ${dateMatch ? ' ✅' : ' ⚠️'}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="font-size: 10px; color: #64748b; font-style: italic; padding: 8px; background: white; border-radius: 4px;">
+                        📄 ${escapeHtml(result.filename)}
+                        ${data.invoiceNumber ? ` • Invoice #${escapeHtml(data.invoiceNumber)}` : ''}
+                    </div>
+                </div>
+            `;
         }
 
         // Close invoice modal when clicking outside

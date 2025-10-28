@@ -1493,8 +1493,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             modal.innerHTML = `
                 <div style="background: white; border-radius: 8px; width: 90%; max-width: 900px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-                    <div style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="margin: 0; font-size: 1.1em; color: #333;">📎 ${escapeHtml(filename)}</h3>
+                    <div style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <h3 style="margin: 0; font-size: 1.1em; color: #333; flex: 1;">📎 ${escapeHtml(filename)}</h3>
+                        <a href="${pdfUrl}" download="${escapeHtml(filename)}" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">⬇️ Download</a>
                         <button onclick="closePDFModal()" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕ Close</button>
                     </div>
                     <div style="flex: 1; overflow: hidden;">
@@ -2121,7 +2122,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     console.log(`📌 [LOAD] Updated dropdown to show: ${projectDisplayName}`);
                 }
 
-                displayDetailedBudget();
+                await displayDetailedBudget();
                 document.getElementById('detailedBudgetResults').classList.add('show');
                 addLog(`✅ Loaded project: ${project.projectName || project.projectNumber || 'Unnamed'}`);
             } else {
@@ -2163,7 +2164,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const loadedProject = JSON.parse(e.target.result);
 
@@ -2181,7 +2182,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     addLog(`Project: ${projectBudget.projectName || projectBudget.projectNumber || 'Unnamed'}`);
                     addLog('═══════════════════════════════════════════════');
 
-                    displayDetailedBudget();
+                    await displayDetailedBudget();
                     document.getElementById('detailedBudgetResults').classList.add('show');
 
                     // Auto-save to IndexedDB
@@ -3569,7 +3570,7 @@ Rules:
                 await saveToIndexedDB();
 
                 addLog('🎨 Rendering detailed budget view...');
-                displayDetailedBudget();
+                await displayDetailedBudget();
 
             } catch (error) {
                 console.error('Error parsing simple summary budget:', error);
@@ -3725,7 +3726,7 @@ Rules:
 
                     addLog('🎨 Rendering detailed budget view...');
                     // Display detailed budget
-                    displayDetailedBudget();
+                    await displayDetailedBudget();
 
                 } else {
                     // SIMPLE QUARTERLY FORECAST PARSING (Old AI method)
@@ -3940,10 +3941,25 @@ ${inputText}`
             document.getElementById('results').classList.add('show');
         }
 
-        function displayDetailedBudget() {
+        async function displayDetailedBudget() {
             console.log('📊 [DISPLAY] Displaying detailed budget');
             console.log('📊 [DISPLAY] Funding Body:', projectBudget.fundingBody);
             addLog('🎨 Rendering detailed budget sections...');
+
+            // Ensure transactions and invoices are loaded before displaying
+            if (!cachedTransactions || cachedTransactions.length === 0) {
+                console.log('⏳ [DISPLAY] Waiting for transactions to load...');
+                cachedTransactions = await loadAllTransactions();
+                console.log(`✅ [DISPLAY] Transactions loaded: ${cachedTransactions.length}`);
+            }
+
+            if (!cachedInvoices || cachedInvoices.length === 0) {
+                console.log('⏳ [DISPLAY] Waiting for invoices to load...');
+                cachedInvoices = await loadInvoiceAttachments();
+                console.log(`✅ [DISPLAY] Invoices loaded: ${cachedInvoices.length}`);
+            }
+
+            console.log(`📊 [DISPLAY] Ready to render with ${cachedTransactions.length} transactions and ${cachedInvoices.length} invoices`);
 
             // Check if this is a Welsh Gov project
             const isWelshGov = projectBudget.fundingBody === 'Welsh Gov' || projectBudget.welshGovData;
@@ -5309,7 +5325,7 @@ ${inputText}`
             addLog(`✏️ Project number set to: ${projectBudget.projectNumber}`);
         }
 
-        function updateProjectStartDate() {
+        async function updateProjectStartDate() {
             const monthSelect = document.getElementById('projectStartMonth');
             const yearSelect = document.getElementById('projectStartYear');
 
@@ -5324,7 +5340,7 @@ ${inputText}`
                     addLog(`✏️ Project start date set to: ${getMonthName(month)} ${year}`);
 
                     // Re-render to show updated end date
-                    displayDetailedBudget();
+                    await displayDetailedBudget();
 
                     // Auto-save
                     saveToIndexedDB();
@@ -5332,7 +5348,7 @@ ${inputText}`
             }
         }
 
-        function updateProjectDuration() {
+        async function updateProjectDuration() {
             const durationInput = document.getElementById('projectDurationMonths');
             if (durationInput) {
                 const duration = parseInt(durationInput.value);
@@ -5342,7 +5358,7 @@ ${inputText}`
                     addLog(`✏️ Project duration set to: ${duration} months`);
 
                     // Re-render to show updated end date and quarters
-                    displayDetailedBudget();
+                    await displayDetailedBudget();
 
                     // Auto-save
                     saveToIndexedDB();
@@ -5702,11 +5718,11 @@ ${inputText}`
         // Track active quarter for highlighting
         let activeQuarterIndex = null;
 
-        function setActiveQuarter(quarterIndex) {
+        async function setActiveQuarter(quarterIndex) {
             activeQuarterIndex = quarterIndex;
 
             // Refresh the entire budget display to update button states and summary
-            displayDetailedBudget();
+            await displayDetailedBudget();
 
             addLog(`✅ Active quarter set to Q${quarterIndex}`);
 
