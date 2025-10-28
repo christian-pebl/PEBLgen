@@ -704,6 +704,21 @@
             color: #94a3b8;
             font-style: italic;
         }
+
+        /* Match score indicators */
+        .match-perfect {
+            background-color: #d1fae5 !important;
+        }
+        .match-good {
+            background-color: #fef3c7 !important;
+        }
+        .match-possible {
+            background-color: #fed7aa !important;
+        }
+        .match-weak {
+            background-color: #fee2e2 !important;
+        }
+
         /* Custom scrollbar for results container */
         #searchResultsContainer {
             scrollbar-width: thin;
@@ -1081,7 +1096,7 @@
                     </div>
 
                     <!-- Received Section -->
-                    <div>
+                    <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6;">
                         <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px;">💰 Received (Income)</div>
 
                         <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
@@ -1089,6 +1104,19 @@
                             <div>
                                 <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Received Column</div>
                                 <div style="font-size: 10px; color: #6b7280;">Display received amount column</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Filter Options Section -->
+                    <div>
+                        <div style="font-size: 11px; font-weight: 600; color: #dc2626; margin-bottom: 4px;">🚩 Filter Options</div>
+
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                            <input type="checkbox" id="showOnlyFlaggedToggle" onchange="toggleFlaggedFilter()" style="cursor: pointer;">
+                            <div>
+                                <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Only Flagged</div>
+                                <div style="font-size: 10px; color: #6b7280;">Display only flagged entries</div>
                             </div>
                         </label>
                     </div>
@@ -1121,6 +1149,9 @@
                             🔄 Reset CSVs
                         </button>
                     </div>
+                    <button onclick="downloadCurrentTableAsCSV()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 11px; width: 100%; background: #10b981; color: white;" title="Download currently displayed transactions as CSV">
+                        📥 Download Current Table
+                    </button>
                 </div>
             </div>
         </div>
@@ -1269,7 +1300,7 @@
 
                 <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 6px; border: 1px solid #ffc107;">
                     <strong>💡 Tip:</strong> No results? You can manually upload an invoice PDF using the button below.
-                    <input type="file" id="manualInvoiceUpload" accept=".pdf,image/*" style="display: none;" onchange="handleManualInvoiceUpload()">
+                    <input type="file" id="manualInvoiceUpload" accept=".pdf,image/*" multiple style="display: none;" onchange="handleManualInvoiceUpload()">
                     <button onclick="document.getElementById('manualInvoiceUpload').click()" class="modal-btn modal-btn-secondary" style="margin-top: 10px; width: 100%;">
                         📎 Upload PDF Manually
                     </button>
@@ -1545,6 +1576,40 @@
         </div>
     </div>
 
+    <!-- Invoice Manager Modal (Multiple Invoices) -->
+    <div id="invoiceManagerModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+            <div class="modal-header">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>📄</span>
+                    <span id="invoiceManagerTitle">Attached Invoices</span>
+                </h3>
+                <button onclick="closeInvoiceManager()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb;">
+                    <button onclick="addAnotherInvoice()" class="btn-primary" style="flex: 1; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>➕</span>
+                        <span>Add Another Document</span>
+                    </button>
+                    <button onclick="handleInvoiceFetch(currentInvoiceManagerTransactionIndex, null)" class="btn-secondary" style="flex: 1; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; background: #3b82f6; color: white; border: none;">
+                        <span>🔍</span>
+                        <span>Search Gmail</span>
+                    </button>
+                </div>
+
+                <!-- Invoice List -->
+                <div id="invoiceListContainer">
+                    <!-- Invoices will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for adding additional invoices -->
+    <input type="file" id="addInvoiceInput" accept=".pdf,image/*" multiple style="display: none;" onchange="handleAddInvoiceFiles(this.files)">
+
     <script>
         // ========================================
         // API KEY MANAGEMENT (Secure - Not Exposed)
@@ -1743,6 +1808,7 @@
         // Table display settings
         let showSpentColumn = true; // Show spent column by default
         let showReceivedColumn = false; // Hide received column by default
+        let showOnlyFlagged = false; // Show all entries by default (false = show all, true = show only flagged)
 
         // Load settings from localStorage
         function loadDisplaySettings() {
@@ -1752,6 +1818,7 @@
                     const settings = JSON.parse(savedSettings);
                     showSpentColumn = settings.showSpentColumn ?? true;
                     showReceivedColumn = settings.showReceivedColumn ?? false;
+                    showOnlyFlagged = settings.showOnlyFlagged ?? false;
                     console.log('📋 [SETTINGS] Loaded saved settings from localStorage:', settings);
                 } catch (e) {
                     console.error('❌ [SETTINGS] Failed to load settings:', e);
@@ -1760,7 +1827,7 @@
                 console.log('📋 [SETTINGS] No saved settings found, using defaults');
             }
 
-            console.log(`📋 [SETTINGS] Active column settings: showSpentColumn=${showSpentColumn}, showReceivedColumn=${showReceivedColumn}`);
+            console.log(`📋 [SETTINGS] Active column settings: showSpentColumn=${showSpentColumn}, showReceivedColumn=${showReceivedColumn}, showOnlyFlagged=${showOnlyFlagged}`);
 
             // Sync checkbox states with loaded settings
             syncCheckboxStates();
@@ -1772,9 +1839,11 @@
         function syncCheckboxStates() {
             const spentColToggle = document.getElementById('showSpentColumnToggle');
             const receivedColToggle = document.getElementById('showReceivedColumnToggle');
+            const flaggedFilterToggle = document.getElementById('showOnlyFlaggedToggle');
 
             if (spentColToggle) spentColToggle.checked = showSpentColumn;
             if (receivedColToggle) receivedColToggle.checked = showReceivedColumn;
+            if (flaggedFilterToggle) flaggedFilterToggle.checked = showOnlyFlagged;
 
             console.log('🔄 [SETTINGS] Synced checkbox states with settings');
         }
@@ -1785,11 +1854,14 @@
             localStorage.removeItem('spendTableSettings');
             showSpentColumn = true;
             showReceivedColumn = false;
+            showOnlyFlagged = false;
             document.getElementById('showSpentColumnToggle').checked = true;
             document.getElementById('showReceivedColumnToggle').checked = false;
+            document.getElementById('showOnlyFlaggedToggle').checked = false;
             saveDisplaySettings();
             applyColumnVisibility();
-            console.log('✅ [SETTINGS] Reset complete! Spent column visible, Received column hidden.');
+            renderTransactions();
+            console.log('✅ [SETTINGS] Reset complete! Spent column visible, Received column hidden, showing all entries.');
             showSimpleToast('✅ Settings reset to defaults', 'success');
         }
 
@@ -1797,7 +1869,8 @@
         function saveDisplaySettings() {
             const settings = {
                 showSpentColumn,
-                showReceivedColumn
+                showReceivedColumn,
+                showOnlyFlagged
             };
             localStorage.setItem('spendTableSettings', JSON.stringify(settings));
             console.log('💾 [SETTINGS] Saved display settings:', settings);
@@ -1891,6 +1964,27 @@
             const message = showReceivedColumn ?
                 '✅ Showing received column' :
                 '🔒 Hiding received column';
+            showToast(message, 'success', toastPosition);
+        }
+
+        // Toggle flagged entries filter
+        function toggleFlaggedFilter() {
+            showOnlyFlagged = document.getElementById('showOnlyFlaggedToggle').checked;
+            console.log('🔄 [SETTINGS] Toggle flagged filter:', showOnlyFlagged);
+
+            // Get settings button position for toast
+            const settingsBtn = document.getElementById('tableSettingsBtn');
+            const btnRect = settingsBtn?.getBoundingClientRect();
+            const toastPosition = btnRect ? { x: btnRect.right, y: btnRect.top } : null;
+
+            saveDisplaySettings();
+
+            // Re-render transactions to apply filter
+            renderTransactions();
+
+            const message = showOnlyFlagged ?
+                '🚩 Showing only flagged entries' :
+                '✅ Showing all entries';
             showToast(message, 'success', toastPosition);
         }
 
@@ -2806,6 +2900,175 @@
             }
         }
 
+        // Download currently displayed table as CSV
+        function downloadCurrentTableAsCSV() {
+            console.log('📥 [CSV EXPORT] Starting CSV export...');
+
+            if (allTransactions.length === 0) {
+                showSimpleToast('⚠️ No transactions to export', 'warning');
+                return;
+            }
+
+            // Apply same filters as renderTransactions
+            let transactionsWithIndices = allTransactions.map((transaction, originalIndex) => ({
+                transaction,
+                originalIndex
+            }));
+
+            // Filter by completion mode
+            transactionsWithIndices = transactionsWithIndices.filter(item => {
+                const isCompleted = item.transaction.completed === true;
+                return completionMode === 'complete' ? isCompleted : !isCompleted;
+            });
+
+            // Filter by flagged status if enabled
+            if (showOnlyFlagged) {
+                transactionsWithIndices = transactionsWithIndices.filter(item => {
+                    return item.transaction.flagged === true;
+                });
+            }
+
+            // Apply project/category filters
+            if (currentFilterProject || currentFilterCategory) {
+                transactionsWithIndices = transactionsWithIndices.filter(item => {
+                    const transaction = item.transaction;
+                    if (!transaction.assignments || transaction.assignments.length === 0) {
+                        return false;
+                    }
+                    return transaction.assignments.some(assignment => {
+                        let projectMatch = true;
+                        let categoryMatch = true;
+                        if (currentFilterProject) {
+                            projectMatch = assignment.projectId == currentFilterProject;
+                        }
+                        if (currentFilterCategory) {
+                            categoryMatch = assignment.category === currentFilterCategory;
+                        }
+                        return projectMatch && categoryMatch;
+                    });
+                });
+            }
+
+            if (transactionsWithIndices.length === 0) {
+                showSimpleToast('⚠️ No transactions match current filters', 'warning');
+                return;
+            }
+
+            console.log(`📥 [CSV EXPORT] Exporting ${transactionsWithIndices.length} transactions`);
+
+            // CSV Headers
+            const headers = [
+                'Bank',
+                'Date',
+                'Description',
+                'Detail',
+                'From/To',
+                'Spent',
+                'Spent (ex. VAT)',
+                'Received',
+                'Notes',
+                'Assigned To',
+                'Category',
+                'Project',
+                'Quarter',
+                'Invoice Attached',
+                'Completed',
+                'Flagged'
+            ];
+
+            // Build CSV rows
+            const csvRows = [headers.join(',')];
+
+            transactionsWithIndices.forEach(item => {
+                const t = item.transaction;
+
+                // Helper to escape CSV fields
+                const escapeCSV = (field) => {
+                    if (field === null || field === undefined) return '';
+                    const str = String(field);
+                    // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return `"${str.replace(/"/g, '""')}"`;
+                    }
+                    return str;
+                };
+
+                // Check if invoice is attached
+                const invoiceAttached = (t.invoices && t.invoices.length > 0) || t.invoiceId ? 'Yes' : 'No';
+
+                // Calculate VAT-exclusive amount
+                const spentAmount = parseFloat(t.spent?.replace(/[£,]/g, '') || 0);
+                const spentExVAT = spentAmount > 0 ? (spentAmount / 1.2).toFixed(2) : '';
+
+                // Build assignment info (handle multiple assignments)
+                let assignedTo = '';
+                let assignedCategory = '';
+                let assignedProject = '';
+                let assignedQuarter = '';
+
+                if (t.assignments && t.assignments.length > 0) {
+                    // For multiple assignments, join with semicolon
+                    assignedTo = t.assignments.map(a => {
+                        const percentage = a.percentage === 100 ? '' : ` (${a.percentage}%)`;
+                        return `${a.itemName}${percentage}`;
+                    }).join('; ');
+                    assignedCategory = t.assignments.map(a => a.category).join('; ');
+                    assignedProject = t.assignments.map(a => a.projectName || 'Unknown').join('; ');
+                    assignedQuarter = t.assignments.map(a => a.quarter ? `Q${a.quarter}` : '').join('; ');
+                } else if (t.assignedItemName) {
+                    // Legacy single assignment
+                    assignedTo = t.assignedItemName;
+                    assignedCategory = t.assignedCategory || '';
+                    assignedProject = t.assignedProjectName || '';
+                }
+
+                const row = [
+                    escapeCSV(t.bank || ''),
+                    escapeCSV(t.date || ''),
+                    escapeCSV(t.description || ''),
+                    escapeCSV(t.detail || t.manualDescription || ''),
+                    escapeCSV(t.fromTo || ''),
+                    escapeCSV(t.spent || ''),
+                    escapeCSV(spentExVAT),
+                    escapeCSV(t.received || ''),
+                    escapeCSV(t.voiceNotes || ''),
+                    escapeCSV(assignedTo),
+                    escapeCSV(assignedCategory),
+                    escapeCSV(assignedProject),
+                    escapeCSV(assignedQuarter),
+                    escapeCSV(invoiceAttached),
+                    escapeCSV(t.completed ? 'Yes' : 'No'),
+                    escapeCSV(t.flagged ? 'Yes' : 'No')
+                ];
+
+                csvRows.push(row.join(','));
+            });
+
+            // Create CSV content
+            const csvContent = csvRows.join('\n');
+
+            // Create blob and download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            // Generate filename with timestamp and filter info
+            const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const modeLabel = completionMode === 'complete' ? 'completed' : 'incomplete';
+            const filterLabel = showOnlyFlagged ? '_flagged' : '';
+            const filename = `spend_export_${modeLabel}${filterLabel}_${timestamp}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log(`✅ [CSV EXPORT] Downloaded ${transactionsWithIndices.length} transactions as ${filename}`);
+            showSimpleToast(`📥 Downloaded ${transactionsWithIndices.length} transactions`, 'success');
+        }
+
         // Initialize on page load
         let isPageInitialized = false;
         document.addEventListener('DOMContentLoaded', async () => {
@@ -3388,6 +3651,13 @@
                 return completionMode === 'complete' ? isCompleted : !isCompleted;
             });
 
+            // Filter by flagged status if enabled
+            if (showOnlyFlagged) {
+                transactionsWithIndices = transactionsWithIndices.filter(item => {
+                    return item.transaction.flagged === true;
+                });
+            }
+
             // Then apply project/category filters
             if (currentFilterProject || currentFilterCategory) {
                 transactionsWithIndices = transactionsWithIndices.filter(item => {
@@ -3551,9 +3821,9 @@
                                     🎤
                                     ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #8b5cf6; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">V</span>' : ''}
                                 </button>
-                                ${transaction.invoiceId ?
-                                    `<button class="action-btn pdf-btn" onclick="openAttachedInvoice(${index}); event.stopPropagation();" title="View Attached Invoice: ${escapeHtml(transaction.invoiceFilename || 'invoice.pdf')}" style="background: #22c55e; position: relative;">
-                                        📄
+                                ${(transaction.invoices && transaction.invoices.length > 0) || transaction.invoiceId ?
+                                    `<button class="action-btn pdf-btn" onclick="openAttachedInvoiceManager(${index}); event.stopPropagation();" title="${(transaction.invoices && transaction.invoices.length > 1) ? `View ${transaction.invoices.length} Attached Invoices` : `View Attached Invoice: ${escapeHtml((transaction.invoices && transaction.invoices[0] && transaction.invoices[0].filename) || transaction.invoiceFilename || 'invoice.pdf')}`}" style="background: #22c55e; position: relative;">
+                                        📄${(transaction.invoices && transaction.invoices.length > 1) ? `<span style="position: absolute; top: -2px; right: -2px; background: #059669; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 8px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">${transaction.invoices.length}</span>` : ''}
                                         ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #059669; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">E</span>' : ''}
                                     </button>` :
                                     `<button class="action-btn invoice-btn" id="invoiceBtn${index}" onclick="handleInvoiceFetch(${index}, event); event.stopPropagation();" title="Find Invoice (Shift+Click for modal view)${selectedRowIndex === index ? ' (E)' : ''}" style="position: relative;">
@@ -8179,19 +8449,23 @@ Return ONLY valid JSON.`;
 
                     html += `
                         <div class="invoice-result-card">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <div style="font-size: 11px; color: #3AAFA9; font-weight: 600;">
-                                    📧 ${escapeHtml(match.subject.substring(0, 45))}${match.subject.length > 45 ? '...' : ''}
-                                </div>
-                                <button onclick="openEmailInGmail('${escapeJs(match.messageId)}', '${escapeJs(match.accountEmail)}')"
-                                        style="padding: 3px 8px; background: #EA4335; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 600;">
-                                    Open Gmail
-                                </button>
-                            </div>
-                            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 8px;">
-                                <strong>From:</strong> ${escapeHtml(match.from.substring(0, 40))}${match.from.length > 40 ? '...' : ''} |
-                                <strong>Account:</strong> ${escapeHtml(match.accountEmail)}
-                            </div>`;
+                            <!-- Main flex container: Left side (info) and Right side (buttons) -->
+                            <div style="display: flex; gap: 12px; align-items: flex-start;">
+
+                                <!-- Left side: Email info and content analysis -->
+                                <div style="flex: 1; min-width: 0;">
+                                    <!-- Email subject and sender -->
+                                    <div style="font-size: 11px; color: #3AAFA9; font-weight: 600; margin-bottom: 4px;">
+                                        📧 ${escapeHtml(match.subject)}
+                                    </div>
+                                    <div style="font-size: 10px; color: #94a3b8; margin-bottom: 8px;">
+                                        <strong>From:</strong> ${escapeHtml(match.from)} | <strong>Account:</strong> ${escapeHtml(match.accountEmail)}
+                                    </div>
+
+                                    <!-- Transaction vs PDF comparison table (will be populated by autoProcessAllEmails) -->`;
+
+                    // Store match index for table cell IDs
+                    match.matchIndex = matchIndex;
 
                     if (match.pdfs.length > 0) {
                         match.pdfs.forEach((pdf, pdfIndex) => {
@@ -8200,10 +8474,10 @@ Return ONLY valid JSON.`;
                                     <thead>
                                         <tr>
                                             <th style="width: 110px;"></th>
-                                            <th>Company</th>
-                                            <th style="width: 100px;">Amount</th>
-                                            <th style="width: 90px;">Date</th>
-                                            <th style="width: 50px; text-align: center;">Match</th>
+                                            <th>COMPANY</th>
+                                            <th style="width: 100px;">AMOUNT</th>
+                                            <th style="width: 90px;">DATE</th>
+                                            <th style="width: 60px; text-align: center;">MATCH</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -8214,30 +8488,955 @@ Return ONLY valid JSON.`;
                                             <td>${escapeHtml(txDate)}</td>
                                             <td class="match-icon">-</td>
                                         </tr>
+                                        <tr id="email_${matchIndex}_${pdfIndex}_data">
+                                            <td class="row-label">Email</td>
+                                            <td class="pending-cell" colspan="3">⏳ Analyzing...</td>
+                                            <td class="match-icon">⏳</td>
+                                        </tr>
                                         <tr id="pdf_${matchIndex}_${pdfIndex}_data">
                                             <td class="row-label">PDF Invoice</td>
-                                            <td class="pending-cell" colspan="3">Processing after download...</td>
+                                            <td class="pending-cell" colspan="3">⏳ Waiting...</td>
                                             <td class="match-icon">⏳</td>
                                         </tr>
                                     </tbody>
-                                </table>
-                                <button onclick="attachInvoiceToTransaction('${escapeJs(match.messageId)}', '${escapeJs(pdf.attachmentId)}', '${escapeJs(pdf.filename)}', ${task.transactionIndex}, '${escapeJs(match.accountEmail)}')"
-                                        class="modal-btn modal-btn-primary"
-                                        style="width: 100%; margin-top: 6px; padding: 8px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">
-                                    📎 Download & Process: ${escapeHtml(pdf.filename)} (${formatFileSize(pdf.size)})
-                                </button>`;
+                                </table>`;
                         });
                     } else {
                         html += `<div style="color: #94a3b8; font-size: 12px; margin-top: 6px; text-align: center; padding: 10px; background: #f8fafc; border-radius: 4px;">No PDF attachments</div>`;
                     }
 
-                    html += `</div>`;
+                    html += `
+                                </div>
+
+                                <!-- Right side: Action buttons -->
+                                <div style="display: flex; flex-direction: column; gap: 6px; min-width: 180px;">`;
+
+                    if (match.pdfs.length > 0) {
+                        match.pdfs.forEach((pdf, pdfIndex) => {
+                            html += `
+                                <button onclick="attachInvoiceToTransaction('${escapeJs(match.messageId)}', '${escapeJs(pdf.attachmentId)}', '${escapeJs(pdf.filename)}', ${task.transactionIndex}, '${escapeJs(match.accountEmail)}')"
+                                        class="modal-btn modal-btn-primary"
+                                        style="padding: 10px 12px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 10px; text-align: center; box-shadow: 0 2px 4px rgba(34,197,94,0.2); transition: all 0.2s;"
+                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(34,197,94,0.4)'"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(34,197,94,0.2)'">
+                                    <div style="font-size: 18px; margin-bottom: 4px;">📥</div>
+                                    <div style="margin-bottom: 2px;">Download & Process</div>
+                                    <div style="font-size: 8px; opacity: 0.9; font-weight: 500;">${escapeHtml(pdf.filename)} (${formatFileSize(pdf.size)})</div>
+                                </button>`;
+                        });
+                    }
+
+                    html += `
+                                    <button onclick="openEmailInGmail('${escapeJs(match.messageId)}', '${escapeJs(match.accountEmail)}')"
+                                            style="padding: 8px 12px; background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.2s;"
+                                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(234,67,53,0.3)'"
+                                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                        <span style="font-size: 12px;">📧</span>
+                                        <span>Open in Gmail</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>`;
                 });
 
                 resultsContainer.innerHTML = html;
             }
 
             modal.style.display = 'flex';
+
+            // Automatically start parallel processing
+            autoProcessAllEmails(results, task);
+        }
+
+        // ========================================
+        // PARALLEL EMAIL ANALYSIS SYSTEM
+        // ========================================
+
+        /**
+         * Auto-processing configuration
+         */
+        const AUTO_PROCESS_SETTINGS = {
+            minEmailMatchThreshold: 10,     // Minimum email match % to trigger auto-processing (10%)
+            autoStopThreshold: 90,          // Auto-stop when PDF match >= 90%
+            maxPDFsToProcess: 10,           // Maximum PDFs to process
+            batchSize: 3,                   // Process N PDFs at a time
+            confirmThreshold: 85,           // Ask user before continuing if match >= 85%
+            allowBackground: true           // Allow background processing
+        };
+
+        /**
+         * Automatic parallel processing of all emails
+         */
+        async function autoProcessAllEmails(results, task) {
+            console.log('🚀 [AUTO-PROCESS] Starting parallel analysis for', results.emailMatches.length, 'emails');
+            console.log('🔍 [DEBUG] Results structure:', results);
+
+            const transaction = task.transaction;
+            const txAmount = parseFloat((transaction.spent || transaction.received || '0').toString().replace(/£/g, '').replace(/,/g, ''));
+            const txDate = parseTransactionDate(transaction.date);
+            const txCompany = transaction.fromTo || transaction.description || 'Unknown';
+
+            console.log('💰 [DEBUG] Transaction:', { txCompany, txAmount, txDate });
+
+            // PHASE 1: Analyze email content (all parallel - instant)
+            console.log('📧 [PHASE 1] Analyzing email content...');
+            const emailAnalysisPromises = results.emailMatches.map(async (match, idx) => {
+                console.log(`📧 [DEBUG] Analyzing email ${idx}:`, {
+                    subject: match.subject,
+                    from: match.from,
+                    date: match.date,
+                    matchIndex: match.matchIndex,
+                    pdfCount: match.pdfs?.length
+                });
+                return analyzeEmailContent(match, transaction, txCompany, txAmount, txDate);
+            });
+
+            const emailScores = await Promise.all(emailAnalysisPromises);
+            console.log('✅ [PHASE 1] Email analysis complete:', emailScores);
+
+            // Update UI with email scores
+            results.emailMatches.forEach((match, idx) => {
+                match.emailScore = emailScores[idx];
+
+                // Update all email rows for this match
+                if (match.pdfs && match.pdfs.length > 0) {
+                    match.pdfs.forEach((pdf, pdfIdx) => {
+                        const emailCellId = `email_${match.matchIndex}_${pdfIdx}_data`;
+                        console.log(`🔧 [DEBUG] Updating email cell: ${emailCellId}`, emailScores[idx]);
+                        updateEmailTableRow(emailCellId, emailScores[idx], txAmount, txCompany, txDate);
+                    });
+                }
+            });
+
+            // Re-order results by email score (highest first)
+            console.log('🔄 [AUTO-PROCESS] Re-ordering results by email score...');
+            reorderResultsByScore(results.emailMatches);
+
+            // PHASE 2: Smart Threshold Check - Should we auto-process PDFs?
+            const matchingEmails = results.emailMatches.filter(m =>
+                m.emailScore && m.emailScore.totalScore >= AUTO_PROCESS_SETTINGS.minEmailMatchThreshold
+            );
+
+            if (matchingEmails.length === 0) {
+                console.log('❌ [AUTO-PROCESS] No emails meet threshold. Stopping.');
+                showNoMatchesMessage();
+                return;
+            }
+
+            console.log(`✅ [AUTO-PROCESS] Found ${matchingEmails.length} emails above threshold (${AUTO_PROCESS_SETTINGS.minEmailMatchThreshold}%). Auto-processing PDFs...`);
+
+            // Show notification that auto-processing started
+            showSimpleToast(`🔄 Auto-processing ${matchingEmails.length} PDFs in background...`, 'info');
+
+            // PHASE 3: Build Priority Queue
+            const priorityQueue = buildPriorityQueue(matchingEmails);
+            const totalToProcess = priorityQueue.high.length + priorityQueue.medium.length + priorityQueue.low.length;
+
+            console.log('📊 [QUEUE] Priority breakdown:', {
+                high: priorityQueue.high.length,
+                medium: priorityQueue.medium.length,
+                low: priorityQueue.low.length,
+                total: totalToProcess
+            });
+
+            if (totalToProcess === 0) {
+                console.warn('⚠️ [AUTO-PROCESS] No emails with PDFs to process!');
+                showNoMatchesMessage();
+                return;
+            }
+
+            // Show progress indicator
+            showProgressIndicator(0, totalToProcess, `Starting PDF processing (${totalToProcess} PDFs)...`);
+
+            // PHASE 4: Process PDFs in batches (smart ordering)
+            await processQueueInBatches(priorityQueue, transaction, task.transactionIndex, results.emailMatches);
+        }
+
+        /**
+         * Build priority queue from matching emails
+         */
+        function buildPriorityQueue(emailMatches) {
+            // Sort by email score (highest first)
+            const sorted = emailMatches
+                .filter(m => m.pdfs && m.pdfs.length > 0) // Only emails with PDFs
+                .sort((a, b) => b.emailScore.totalScore - a.emailScore.totalScore);
+
+            return {
+                high: sorted.filter(m => m.emailScore.totalScore >= 70),
+                medium: sorted.filter(m => m.emailScore.totalScore >= 40 && m.emailScore.totalScore < 70),
+                low: sorted.filter(m => m.emailScore.totalScore > 0 && m.emailScore.totalScore < 40)
+            };
+        }
+
+        /**
+         * Process priority queue in batches
+         */
+        async function processQueueInBatches(queue, transaction, transactionIndex, emailMatches) {
+            const allToProcess = [...queue.high, ...queue.medium, ...queue.low];
+            const totalPDFs = allToProcess.reduce((sum, m) => sum + m.pdfs.length, 0);
+
+            console.log(`📦 [BATCH] Processing ${totalPDFs} PDFs from ${allToProcess.length} emails`);
+            console.log(`📦 [BATCH] Queue details:`, allToProcess.map(m => ({
+                subject: m.subject.substring(0, 40),
+                emailScore: m.emailScore.totalScore,
+                pdfCount: m.pdfs.length
+            })));
+
+            let processedCount = 0;
+            let bestMatchSoFar = 0;
+            let bestMatchEmail = null;
+            const results = [];
+
+            // Limit to maxPDFsToProcess
+            const limitedQueue = allToProcess.slice(0, AUTO_PROCESS_SETTINGS.maxPDFsToProcess);
+
+            console.log(`📦 [BATCH] Will process ${limitedQueue.length} emails (limited from ${allToProcess.length})`);
+
+            // Process in batches
+            for (let i = 0; i < limitedQueue.length; i += AUTO_PROCESS_SETTINGS.batchSize) {
+                const batch = limitedQueue.slice(i, i + AUTO_PROCESS_SETTINGS.batchSize);
+                const batchNum = Math.floor(i / AUTO_PROCESS_SETTINGS.batchSize) + 1;
+
+                console.log(`📦 [BATCH ${batchNum}] Starting batch with ${batch.length} emails:`);
+                batch.forEach(m => console.log(`  - ${m.subject.substring(0, 50)} (Email: ${m.emailScore.totalScore}%)`));
+
+                showProgressIndicator(processedCount, limitedQueue.length, `Processing batch ${batchNum} (${batch.length} PDFs)...`);
+
+                // Process batch in parallel
+                const batchPromises = [];
+                for (const match of batch) {
+                    if (match.pdfs && match.pdfs.length > 0) {
+                        // Only process first PDF per email for speed
+                        const pdf = match.pdfs[0];
+                        console.log(`📄 [BATCH ${batchNum}] Queuing PDF: ${pdf.filename}`);
+
+                        const promise = processPDFInParallel(match, pdf, i, transaction, transactionIndex)
+                            .then(result => {
+                                console.log(`✅ [BATCH ${batchNum}] PDF completed:`, {
+                                    filename: pdf.filename,
+                                    score: result ? result.totalScore : 'error',
+                                    result
+                                });
+
+                                if (result && result.totalScore !== undefined) {
+                                    // Store PDF score in match object for re-ordering
+                                    match.pdfScore = result.totalScore;
+
+                                    results.push({
+                                        email: match.subject,
+                                        emailScore: match.emailScore.totalScore,
+                                        pdfScore: result.totalScore,
+                                        ...result
+                                    });
+
+                                    if (result.totalScore > bestMatchSoFar) {
+                                        bestMatchSoFar = result.totalScore;
+                                        bestMatchEmail = match;
+                                        console.log(`🎯 [BEST] New best match: ${bestMatchSoFar}% from "${match.subject.substring(0, 40)}..."`);
+                                        showSimpleToast(`🎯 Best match so far: ${bestMatchSoFar}%`, 'success');
+                                    }
+                                }
+                                return result;
+                            })
+                            .catch(error => {
+                                console.error(`❌ [BATCH ${batchNum}] Error processing PDF ${pdf.filename}:`, error);
+                                return null;
+                            });
+
+                        batchPromises.push(promise);
+                    }
+                }
+
+                console.log(`⏳ [BATCH ${batchNum}] Waiting for ${batchPromises.length} PDFs to process...`);
+                const batchResults = await Promise.all(batchPromises);
+                console.log(`✅ [BATCH ${batchNum}] Batch complete. Results:`, batchResults.filter(r => r !== null));
+
+                processedCount += batch.length;
+
+                // Re-order results after each batch completes
+                console.log('🔄 [BATCH] Re-ordering results after batch completion...');
+                reorderResultsByScore(emailMatches);
+
+                // Update progress
+                showProgressIndicator(processedCount, limitedQueue.length, `Processed ${processedCount}/${limitedQueue.length} - Best: ${bestMatchSoFar}%`);
+
+                // Early exit check
+                if (bestMatchSoFar >= AUTO_PROCESS_SETTINGS.autoStopThreshold) {
+                    console.log(`🏁 [EARLY EXIT] Found ${bestMatchSoFar}% match! Stopping processing.`);
+                    showEarlyExitNotification(bestMatchSoFar, bestMatchEmail);
+                    showSimpleToast(`✅ Perfect match found! (${bestMatchSoFar}%)`, 'success');
+                    break;
+                }
+            }
+
+            // Complete
+            console.log(`✅ [COMPLETE] Processing finished!`);
+            console.log(`📊 [COMPLETE] Summary:`, {
+                processed: processedCount,
+                total: limitedQueue.length,
+                bestMatch: bestMatchSoFar,
+                results: results
+            });
+
+            if (bestMatchSoFar > 0) {
+                showProgressIndicator(processedCount, limitedQueue.length, `✅ Complete! Best match: ${bestMatchSoFar}%`);
+                showSimpleToast(`✅ Processing complete! Best match: ${bestMatchSoFar}%`, 'success');
+            } else {
+                showProgressIndicator(processedCount, limitedQueue.length, `⚠️ No valid matches found in PDFs`);
+                showSimpleToast(`⚠️ PDFs processed but no matches found`, 'warning');
+            }
+
+            setTimeout(() => {
+                hideProgressIndicator();
+            }, 5000);
+        }
+
+        /**
+         * Update email table row with analysis results
+         */
+        function updateEmailTableRow(cellId, emailScore, txAmount, txCompany, txDate) {
+            const row = document.getElementById(cellId);
+            if (!row) return;
+
+            const companyColor = emailScore.companyScore >= 25 ? '#059669' : (emailScore.companyScore >= 15 ? '#f59e0b' : '#dc2626');
+            const amountColor = emailScore.amountScore >= 25 ? '#059669' : (emailScore.amountScore >= 15 ? '#f59e0b' : '#dc2626');
+            const dateColor = emailScore.dateScore >= 25 ? '#059669' : (emailScore.dateScore >= 15 ? '#f59e0b' : '#dc2626');
+
+            let matchIcon, matchClass;
+            if (emailScore.totalScore >= 90) {
+                matchIcon = '🟢';
+                matchClass = 'match-perfect';
+            } else if (emailScore.totalScore >= 70) {
+                matchIcon = '🟡';
+                matchClass = 'match-good';
+            } else if (emailScore.totalScore >= 50) {
+                matchIcon = '🟠';
+                matchClass = 'match-possible';
+            } else {
+                matchIcon = '🔴';
+                matchClass = 'match-weak';
+            }
+
+            row.innerHTML = `
+                <td class="row-label">Email</td>
+                <td style="color: ${companyColor}; font-weight: 600;">
+                    ${emailScore.companyScore >= 15 ? '✓' : '✗'} ${escapeHtml(emailScore.companyText)}
+                    <div style="font-size: 9px; opacity: 0.8;">+${emailScore.companyScore.toFixed(1)}%</div>
+                </td>
+                <td style="color: ${amountColor}; font-weight: 600;">
+                    ${emailScore.amountScore >= 25 ? '✓' : '✗'} ${escapeHtml(emailScore.amountText)}
+                    <div style="font-size: 9px; opacity: 0.8;">+${emailScore.amountScore.toFixed(1)}%</div>
+                </td>
+                <td style="color: ${dateColor}; font-weight: 600;">
+                    ${emailScore.dateScore >= 15 ? '✓' : '✗'} ${escapeHtml(emailScore.dateText)}
+                    <div style="font-size: 9px; opacity: 0.8;">+${emailScore.dateScore.toFixed(1)}%</div>
+                </td>
+                <td class="match-icon ${matchClass}" title="${emailScore.totalScore.toFixed(1)}% match">
+                    ${matchIcon}<br>
+                    <strong style="font-size: 13px;">${emailScore.totalScore.toFixed(0)}%</strong>
+                </td>
+            `;
+
+            row.classList.add(matchClass);
+        }
+
+        /**
+         * PHASE 1: Analyze email content for matches
+         */
+        async function analyzeEmailContent(match, transaction, txCompany, txAmount, txDate) {
+            const subject = match.subject || '';
+            const from = match.from || '';
+            const snippet = match.snippet || '';
+            const emailDate = match.date || '';
+
+            // Combine email text for analysis
+            const emailText = `${subject} ${from} ${snippet}`.toLowerCase();
+
+            // Score company match
+            const companyScore = scoreCompanyMatch(txCompany, emailText, from);
+
+            // Score amount match
+            const amountScore = scoreAmountMatch(txAmount, emailText);
+
+            // Score date match
+            const dateScore = scoreDateMatch(txDate, emailDate);
+
+            // Overall email score
+            const totalScore = companyScore + amountScore + dateScore;
+
+            return {
+                companyScore,
+                companyText: getCompanyMatchText(companyScore),
+                amountScore,
+                amountText: getAmountMatchText(amountScore, txAmount, emailText),
+                dateScore,
+                dateText: getDateMatchText(dateScore, txDate, emailDate),
+                totalScore: Math.round(totalScore * 10) / 10
+            };
+        }
+
+        /**
+         * Process single PDF through all phases (2-5)
+         */
+        async function processPDFInParallel(match, pdf, pdfGlobalIndex, transaction, transactionIndex) {
+            const matchIndex = match.matchIndex || 0;
+            const pdfIndex = match.pdfs.indexOf(pdf);
+            const cellId = `pdf_${matchIndex}_${pdfIndex}_data`;
+
+            console.log(`📄 [PDF-PROCESS] Starting PDF processing:`, {
+                cellId,
+                matchIndex,
+                pdfIndex,
+                filename: pdf.filename,
+                messageId: match.messageId
+            });
+
+            try {
+                // Find the account
+                const account = gmailAccounts.find(acc => acc.email === match.accountEmail);
+                if (!account || !account.accessToken) {
+                    console.error(`❌ [PDF-PROCESS] No valid access token for ${match.accountEmail}`);
+                    updatePDFStatus(cellId, '❌ No access token', '❌');
+                    return;
+                }
+
+                // PHASE 2: Download PDF
+                console.log(`📥 [PDF-PROCESS] Downloading PDF: ${pdf.filename}`);
+                updatePDFStatus(cellId, '📥 Downloading...', '⏳');
+                gapi.client.setToken({ access_token: account.accessToken });
+
+                const attachResponse = await gapi.client.gmail.users.messages.attachments.get({
+                    userId: 'me',
+                    messageId: match.messageId,
+                    id: pdf.attachmentId
+                });
+
+                const data = attachResponse.result.data;
+                const pdfData = data.replace(/-/g, '+').replace(/_/g, '/');
+                const pdfBlob = base64ToBlob(pdfData, 'application/pdf');
+                console.log(`✅ [PDF-PROCESS] Downloaded PDF: ${pdf.filename} (${pdfBlob.size} bytes)`);
+
+                // PHASE 3: OCR Processing
+                console.log(`🔍 [PDF-PROCESS] Extracting text from PDF: ${pdf.filename}`);
+                updatePDFStatus(cellId, '🔍 Extracting text...', '⏳');
+                const ocrText = await extractTextFromPDF(pdfBlob);
+
+                console.log(`📝 [PDF-PROCESS] Extracted text length: ${ocrText ? ocrText.length : 0}`);
+
+                if (!ocrText || ocrText.trim().length < 20) {
+                    console.warn(`⚠️ [PDF-PROCESS] No text extracted from ${pdf.filename}`);
+                    updatePDFStatus(cellId, '⚠️ No text found', '❌');
+                    return;
+                }
+
+                // PHASE 4: AI Data Extraction
+                console.log(`🤖 [PDF-PROCESS] Sending to AI for extraction: ${pdf.filename}`);
+                updatePDFStatus(cellId, '🤖 Analyzing with AI...', '⏳');
+                const extractedData = await extractStructuredDataFromInvoice(ocrText, transaction);
+
+                console.log(`💡 [PDF-PROCESS] AI extraction result:`, extractedData);
+
+                if (!extractedData) {
+                    console.warn(`⚠️ [PDF-PROCESS] No data extracted from ${pdf.filename}`);
+                    updatePDFStatus(cellId, '⚠️ Could not extract data', '❌');
+                    return;
+                }
+
+                // PHASE 5: Validation & Scoring
+                console.log(`✓ [PDF-PROCESS] Validating data from ${pdf.filename}`);
+                updatePDFStatus(cellId, '✓ Validating...', '⏳');
+                const validation = await validateInvoiceData(extractedData, transaction);
+
+                // Calculate match score
+                const txAmount = parseFloat((transaction.spent || transaction.received || '0').toString().replace(/£/g, '').replace(/,/g, ''));
+                const txDate = parseTransactionDate(transaction.date);
+                const txCompany = transaction.fromTo || transaction.description || 'Unknown';
+
+                const pdfCompanyScore = scoreCompanyMatch(txCompany, extractedData.company, extractedData.company);
+                const pdfAmountScore = scoreAmountMatchPrecise(txAmount, parseFloat(extractedData.amount || 0));
+                const pdfDateScore = scoreDateMatchPrecise(txDate, parseTransactionDate(extractedData.date));
+
+                const totalPDFScore = pdfCompanyScore + pdfAmountScore + pdfDateScore;
+
+                console.log(`🎯 [PDF-PROCESS] Match scores for ${pdf.filename}:`, {
+                    company: pdfCompanyScore,
+                    amount: pdfAmountScore,
+                    date: pdfDateScore,
+                    total: totalPDFScore
+                });
+
+                // Update table with final results
+                console.log(`🔧 [PDF-PROCESS] Updating table cell: ${cellId}`);
+                updatePDFTableRow(cellId, {
+                    company: extractedData.company || 'Unknown',
+                    companyScore: pdfCompanyScore,
+                    amount: extractedData.amount || '0',
+                    amountScore: pdfAmountScore,
+                    date: extractedData.date || 'Unknown',
+                    dateScore: pdfDateScore,
+                    totalScore: Math.round(totalPDFScore * 10) / 10,
+                    validation
+                });
+
+                console.log(`✅ [PDF-PROCESS] Completed processing ${pdf.filename}`);
+
+                // Return score for batch tracking
+                return {
+                    totalScore: Math.round(totalPDFScore * 10) / 10,
+                    company: extractedData.company || 'Unknown',
+                    amount: extractedData.amount || '0',
+                    date: extractedData.date || 'Unknown'
+                };
+
+            } catch (error) {
+                console.error(`❌ [PDF-PROCESS] Error processing PDF ${pdf.filename}:`, error);
+                console.error(`❌ [PDF-PROCESS] Error stack:`, error.stack);
+                const errorMsg = error.message || error.toString() || 'Unknown error';
+                updatePDFStatus(cellId, `❌ Error: ${errorMsg}`, '❌');
+                return null;
+            }
+        }
+
+        /**
+         * Update PDF processing status in table
+         */
+        function updatePDFStatus(cellId, message, icon) {
+            const row = document.getElementById(cellId);
+            if (row) {
+                row.innerHTML = `
+                    <td class="row-label">PDF Invoice</td>
+                    <td class="pending-cell" colspan="3">${escapeHtml(message)}</td>
+                    <td class="match-icon">${icon}</td>
+                `;
+            }
+        }
+
+        /**
+         * Update PDF table row with final analysis
+         */
+        function updatePDFTableRow(cellId, data) {
+            const row = document.getElementById(cellId);
+            if (!row) return;
+
+            const companyColor = data.companyScore >= 25 ? '#059669' : (data.companyScore >= 15 ? '#f59e0b' : '#dc2626');
+            const amountColor = data.amountScore >= 25 ? '#059669' : (data.amountScore >= 15 ? '#f59e0b' : '#dc2626');
+            const dateColor = data.dateScore >= 25 ? '#059669' : (data.dateScore >= 15 ? '#f59e0b' : '#dc2626');
+
+            let matchIcon, matchClass;
+            if (data.totalScore >= 90) {
+                matchIcon = '🟢';
+                matchClass = 'match-perfect';
+            } else if (data.totalScore >= 70) {
+                matchIcon = '🟡';
+                matchClass = 'match-good';
+            } else if (data.totalScore >= 50) {
+                matchIcon = '🟠';
+                matchClass = 'match-possible';
+            } else {
+                matchIcon = '🔴';
+                matchClass = 'match-weak';
+            }
+
+            row.innerHTML = `
+                <td class="row-label">PDF Invoice</td>
+                <td style="color: ${companyColor}; font-weight: 600;">
+                    ${data.companyScore >= 25 ? '✓' : '✗'} ${escapeHtml(data.company)}
+                    <div style="font-size: 9px; opacity: 0.8;">+${data.companyScore.toFixed(1)}%</div>
+                </td>
+                <td style="color: ${amountColor}; font-weight: 600;">
+                    ${data.amountScore >= 25 ? '✓' : '✗'} £${data.amount}
+                    <div style="font-size: 9px; opacity: 0.8;">+${data.amountScore.toFixed(1)}%</div>
+                </td>
+                <td style="color: ${dateColor}; font-weight: 600;">
+                    ${data.dateScore >= 25 ? '✓' : '✗'} ${escapeHtml(data.date)}
+                    <div style="font-size: 9px; opacity: 0.8;">+${data.dateScore.toFixed(1)}%</div>
+                </td>
+                <td class="match-icon ${matchClass}" title="${data.totalScore.toFixed(1)}% match">
+                    ${matchIcon}<br>
+                    <strong style="font-size: 13px;">${data.totalScore.toFixed(0)}%</strong>
+                </td>
+            `;
+
+            // Add color classes
+            row.classList.add(matchClass);
+        }
+
+        // ========================================
+        // MATCH SCORING ALGORITHMS
+        // ========================================
+
+        /**
+         * Normalize company name by removing punctuation and spaces
+         * Examples: "car-y-mor" → "carymor", "ABC Ltd." → "abcltd"
+         */
+        function normalizeCompanyName(name) {
+            return name
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]/g, ''); // Remove all non-alphanumeric characters
+        }
+
+        /**
+         * Score company name match (33.3% max)
+         */
+        function scoreCompanyMatch(txCompany, emailText, extractedCompany) {
+            const tx = txCompany.toLowerCase().trim();
+            const text = emailText.toLowerCase();
+            const extracted = extractedCompany ? extractedCompany.toLowerCase().trim() : '';
+
+            // Perfect match (exact)
+            if (extracted && extracted === tx) return 33.3;
+
+            // ENHANCED: Normalized match (handles "carymor" vs "car-y-mor")
+            const txNormalized = normalizeCompanyName(tx);
+            const extractedNormalized = normalizeCompanyName(extracted);
+
+            if (extractedNormalized && txNormalized === extractedNormalized) {
+                console.log(`🎯 [MATCH] Normalized match: "${tx}" ≈ "${extracted}" → 95%`);
+                return 31.5; // 95% of 33.3 = ~31.5
+            }
+
+            // Check if normalized versions are very similar (one contains the other)
+            if (extractedNormalized && txNormalized.length >= 4 && extractedNormalized.length >= 4) {
+                if (extractedNormalized.includes(txNormalized) || txNormalized.includes(extractedNormalized)) {
+                    const lengthRatio = Math.min(txNormalized.length, extractedNormalized.length) /
+                                       Math.max(txNormalized.length, extractedNormalized.length);
+                    if (lengthRatio >= 0.8) {
+                        console.log(`🎯 [MATCH] Normalized substring: "${tx}" ≈ "${extracted}" → 90%`);
+                        return 30.0; // 90%
+                    }
+                }
+            }
+
+            // Calculate Levenshtein similarity on normalized strings
+            const normalizedSimilarity = calculateStringSimilarity(txNormalized, extractedNormalized || normalizeCompanyName(text));
+
+            if (normalizedSimilarity >= 0.95) return 33.3;
+            if (normalizedSimilarity >= 0.90) return 30.0;
+            if (normalizedSimilarity >= 0.80) return 25.0;
+
+            // Fallback to original Levenshtein similarity
+            const similarity = calculateStringSimilarity(tx, extracted || text);
+
+            if (similarity >= 0.90) return 30.0;
+            if (similarity >= 0.80) return 25.0;
+            if (similarity >= 0.60) return 18.0;
+            if (similarity >= 0.40) return 10.0;
+
+            // Domain match
+            if (text.includes(tx) || text.includes(txNormalized)) return 8.0;
+
+            return 0;
+        }
+
+        /**
+         * Score amount match from email text (33.3% max)
+         */
+        function scoreAmountMatch(txAmount, emailText) {
+            // Search for amount in various formats
+            const amountPatterns = [
+                new RegExp(`£${txAmount.toFixed(2)}`, 'i'),
+                new RegExp(`${txAmount.toFixed(2)}`, 'i'),
+                new RegExp(`£${Math.floor(txAmount)}`, 'i'),
+                new RegExp(`${Math.floor(txAmount)}`, 'i')
+            ];
+
+            for (const pattern of amountPatterns) {
+                if (pattern.test(emailText)) {
+                    return 33.3; // Found exact amount in email
+                }
+            }
+
+            return 0; // Amount not found in email
+        }
+
+        /**
+         * Score amount match with precise comparison (33.3% max)
+         */
+        function scoreAmountMatchPrecise(txAmount, invoiceAmount) {
+            if (!invoiceAmount || isNaN(invoiceAmount)) return 0;
+
+            const difference = Math.abs(txAmount - invoiceAmount);
+            const percentOff = (difference / txAmount) * 100;
+
+            if (difference === 0) return 33.3;
+            if (difference < 0.50) return 32.0;
+            if (percentOff < 1.0) return 30.0;
+            if (percentOff < 2.0) return 27.0;
+            if (percentOff < 5.0) return 22.0;
+            if (percentOff < 10.0) return 15.0;
+            if (percentOff < 20.0) return 8.0;
+
+            return 0;
+        }
+
+        /**
+         * Score date match (33.3% max)
+         */
+        function scoreDateMatch(txDate, emailDateStr) {
+            if (!emailDateStr) return 0;
+
+            try {
+                const emailDate = new Date(emailDateStr);
+                const daysDiff = Math.abs(Math.floor((emailDate - txDate) / (1000 * 60 * 60 * 24)));
+
+                return scoreDateMatchPrecise(txDate, emailDate);
+            } catch (error) {
+                return 0;
+            }
+        }
+
+        /**
+         * Score date match with precise comparison (33.3% max)
+         */
+        function scoreDateMatchPrecise(txDate, invoiceDate) {
+            if (!invoiceDate) return 0;
+
+            const daysDiff = Math.abs(Math.floor((invoiceDate - txDate) / (1000 * 60 * 60 * 24)));
+
+            if (daysDiff === 0) return 33.3;
+            if (daysDiff === 1) return 32.0;
+            if (daysDiff === 2) return 30.0;
+            if (daysDiff === 3) return 27.0;
+            if (daysDiff <= 5) return 22.0;
+            if (daysDiff <= 7) return 18.0;
+            if (daysDiff <= 10) return 13.0;
+            if (daysDiff <= 14) return 8.0;
+            if (daysDiff <= 21) return 4.0;
+
+            return 0;
+        }
+
+        /**
+         * Calculate string similarity (Levenshtein distance)
+         */
+        function calculateStringSimilarity(str1, str2) {
+            const s1 = str1.toLowerCase();
+            const s2 = str2.toLowerCase();
+
+            const costs = [];
+            for (let i = 0; i <= s1.length; i++) {
+                let lastValue = i;
+                for (let j = 0; j <= s2.length; j++) {
+                    if (i === 0) {
+                        costs[j] = j;
+                    } else if (j > 0) {
+                        let newValue = costs[j - 1];
+                        if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+                            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                        }
+                        costs[j - 1] = lastValue;
+                        lastValue = newValue;
+                    }
+                }
+                if (i > 0) costs[s2.length] = lastValue;
+            }
+
+            const maxLength = Math.max(s1.length, s2.length);
+            return maxLength === 0 ? 1.0 : (maxLength - costs[s2.length]) / maxLength;
+        }
+
+        /**
+         * Get human-readable company match text
+         */
+        function getCompanyMatchText(score) {
+            if (score >= 30) return '✓ Perfect match';
+            if (score >= 25) return '✓ High similarity';
+            if (score >= 18) return '~ Good similarity';
+            if (score >= 10) return '~ Partial match';
+            if (score >= 8) return '~ Domain match';
+            return '✗ No match';
+        }
+
+        /**
+         * Get human-readable amount match text
+         */
+        function getAmountMatchText(score, txAmount, emailText) {
+            if (score >= 30) return `✓ £${txAmount.toFixed(2)} found`;
+            return '✗ Not found in email';
+        }
+
+        /**
+         * Get human-readable date match text
+         */
+        function getDateMatchText(score, txDate, emailDateStr) {
+            if (!emailDateStr) return '? Date unknown';
+
+            try {
+                const emailDate = new Date(emailDateStr);
+                const daysDiff = Math.abs(Math.floor((emailDate - txDate) / (1000 * 60 * 60 * 24)));
+
+                if (daysDiff === 0) return '✓ Same day';
+                if (daysDiff === 1) return '✓ 1 day off';
+                if (daysDiff <= 3) return `✓ ${daysDiff} days off`;
+                if (daysDiff <= 7) return `~ ${daysDiff} days off`;
+                if (daysDiff <= 14) return `⚠ ${daysDiff} days off`;
+                return `✗ ${daysDiff} days off`;
+            } catch (error) {
+                return '? Date error';
+            }
+        }
+
+        // ========================================
+        // UI HELPER FUNCTIONS
+        // ========================================
+
+        /**
+         * Show progress indicator
+         */
+        function showProgressIndicator(current, total, message) {
+            let progressDiv = document.getElementById('pdfProcessingProgress');
+
+            if (!progressDiv) {
+                // Create progress div if doesn't exist
+                const resultsContainer = document.getElementById('searchResultsContainer');
+                if (resultsContainer) {
+                    progressDiv = document.createElement('div');
+                    progressDiv.id = 'pdfProcessingProgress';
+                    resultsContainer.insertBefore(progressDiv, resultsContainer.firstChild);
+                } else {
+                    return;
+                }
+            }
+
+            const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+
+            progressDiv.innerHTML = `
+                <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #0ea5e9;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 600; color: #0369a1; font-size: 13px;">🔄 ${escapeHtml(message)}</span>
+                        <span style="color: #0369a1; font-size: 12px; font-weight: 600;">${current}/${total}</span>
+                    </div>
+                    <div style="background: #e0f2fe; border-radius: 999px; height: 8px; overflow: hidden;">
+                        <div style="background: linear-gradient(90deg, #0ea5e9, #0369a1); height: 100%; width: ${percent}%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Hide progress indicator
+         */
+        function hideProgressIndicator() {
+            const progressDiv = document.getElementById('pdfProcessingProgress');
+            if (progressDiv) {
+                progressDiv.remove();
+            }
+        }
+
+        /**
+         * Show no matches message
+         */
+        function showNoMatchesMessage() {
+            const progressDiv = document.getElementById('pdfProcessingProgress');
+            if (progressDiv) {
+                progressDiv.innerHTML = `
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f59e0b;">
+                        <div style="font-weight: 600; color: #92400e; font-size: 13px;">ℹ️ No emails meet the match threshold</div>
+                        <div style="color: #78350f; font-size: 11px; margin-top: 4px;">All emails scored 0%. PDFs will not be processed automatically.</div>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Show early exit notification
+         */
+        function showEarlyExitNotification(score, email) {
+            const progressDiv = document.getElementById('pdfProcessingProgress');
+            if (progressDiv) {
+                const subject = email ? email.subject.substring(0, 50) : 'Unknown';
+                progressDiv.innerHTML = `
+                    <div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #059669;">
+                        <div style="font-weight: 600; color: #065f46; font-size: 13px;">🎯 Perfect match found! (${score}%)</div>
+                        <div style="color: #047857; font-size: 11px; margin-top: 4px;">Stopped processing remaining PDFs. Email: "${escapeHtml(subject)}..."</div>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    hideProgressIndicator();
+                }, 5000);
+            }
+        }
+
+        /**
+         * Re-order result cards by highest score (email or PDF)
+         * Moves best matches to the top of the list
+         */
+        function reorderResultsByScore(emailMatches) {
+            console.log('🔄 [REORDER] Starting result re-ordering...');
+
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            if (!resultsContainer) {
+                console.warn('⚠️ [REORDER] Results container not found');
+                return;
+            }
+
+            // Find all result cards
+            const cards = Array.from(resultsContainer.querySelectorAll('.invoice-result-card'));
+            if (cards.length === 0) {
+                console.warn('⚠️ [REORDER] No result cards found');
+                return;
+            }
+
+            // Build scoring data for each card
+            const cardScores = cards.map((card, cardIdx) => {
+                const match = emailMatches[cardIdx];
+                if (!match) return { card, score: 0, cardIdx };
+
+                // Get max score from email or PDFs
+                let maxScore = match.emailScore ? match.emailScore.totalScore : 0;
+
+                // Check if any PDF has been processed and has a higher score
+                if (match.pdfScore !== undefined && match.pdfScore > maxScore) {
+                    maxScore = match.pdfScore;
+                }
+
+                console.log(`📊 [REORDER] Card ${cardIdx}: "${match.subject.substring(0, 30)}..." → Score: ${maxScore.toFixed(1)}%`);
+                return { card, score: maxScore, cardIdx, match };
+            });
+
+            // Sort by score (highest first)
+            const sortedCards = cardScores.sort((a, b) => b.score - a.score);
+
+            // Check if order actually changed
+            const orderChanged = sortedCards.some((item, idx) => item.cardIdx !== idx);
+
+            if (!orderChanged) {
+                console.log('✅ [REORDER] Cards already in correct order');
+                return;
+            }
+
+            console.log('🔄 [REORDER] Re-ordering cards...');
+            console.log('📊 [REORDER] New order:', sortedCards.map(s => `${s.cardIdx}(${s.score.toFixed(0)}%)`).join(' → '));
+
+            // Find the header div (the "Found X email(s)" text)
+            const headerDiv = Array.from(resultsContainer.children).find(child =>
+                child.textContent && child.textContent.includes('Found')
+            );
+
+            // Re-append cards in new order (after the header)
+            sortedCards.forEach(({ card }) => {
+                resultsContainer.appendChild(card);
+            });
+
+            // Ensure header stays at top
+            if (headerDiv) {
+                resultsContainer.insertBefore(headerDiv, resultsContainer.firstChild);
+            }
+
+            // Add visual feedback for top result
+            if (sortedCards[0].score >= AUTO_PROCESS_SETTINGS.minEmailMatchThreshold) {
+                sortedCards[0].card.style.animation = 'pulse 1s ease-in-out';
+                sortedCards[0].card.style.border = '2px solid #10b981';
+                sortedCards[0].card.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+
+                setTimeout(() => {
+                    sortedCards[0].card.style.animation = '';
+                }, 1000);
+            }
+
+            console.log('✅ [REORDER] Re-ordering complete!');
         }
 
         /**
@@ -8321,10 +9520,17 @@ Return ONLY valid JSON.`;
         const SEARCH_STAGES = [
             {
                 stage: 1,
-                name: "Standard Search",
-                dateWindow: 15,
+                name: "Initial Search",
+                dateWindow: 5,
                 autoExecute: true,
-                description: "Searching ±15 days with merchant variants and AI keywords"
+                description: "Searching ±5 days from transaction date"
+            },
+            {
+                stage: 2,
+                name: "Extended Search",
+                dateWindow: 10,
+                autoExecute: true,
+                description: "Searching ±10 days from transaction date"
             }
         ];
 
@@ -9227,23 +10433,63 @@ Return ONLY valid JSON.`;
                 const formattedDate = formatCompactDate(date);
                 const fromName = from.includes('<') ? from.split('<')[0].trim() : from.substring(0, 30);
 
+                // Build email content summary details
+                let emailContentSummary = '';
+
+                // Company match details from email content
+                const companyMatchText = item.scoring.details.companyMatch || 'No company match';
+
+                // Amount match details from email content
+                const amountMatchText = item.scoring.details.amountMatch || 'No amount match';
+
+                // Date match details from email content
+                const dateMatchText = item.scoring.details.dateMatch || 'Date not found';
+
+                // Overall email score
+                const emailScore = item.scoring.total;
+                let scoreLabel = '';
+                if (emailScore >= 80) scoreLabel = 'Excellent Match';
+                else if (emailScore >= 60) scoreLabel = 'Good Match';
+                else if (emailScore >= 40) scoreLabel = 'Possible Match';
+                else scoreLabel = 'Weak Match';
+
                 html += `<div style="background: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${borderColor}; box-shadow: 0 1px 4px rgba(0,0,0,0.08); transition: all 0.2s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.08)'">
 
-                    <!-- Compact Scoring: Horizontal pills with validation status -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                            <span style="background: ${companyColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
-                                ${companyIcon} Company
-                            </span>
-                            <span style="background: ${amountColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
-                                ${amountIcon} Amount
-                            </span>
-                            <span style="background: ${dateColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
-                                ${dateIcon} Date
-                            </span>
-                        </div>`;
+                    <!-- Main content: Left side info, Right side button -->
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
 
-                // Add validation status badge on the right side (using best validation)
+                        <!-- Left side: Email info and scoring -->
+                        <div style="flex: 1; min-width: 0;">
+                            <!-- Email info -->
+                            <div style="font-size: 13px; color: #1e293b; margin-bottom: 4px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(subject)}">
+                                ${escapeHtml(subject)}
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
+                                ${escapeHtml(fromName)} • ${formattedDate}
+                            </div>
+
+                            <!-- Email Content Summary Table -->
+                            <div style="background: #f8fafc; border-radius: 6px; padding: 8px; margin-bottom: 8px; font-size: 10px;">
+                                <div style="font-weight: 600; color: #475569; margin-bottom: 6px; font-size: 11px;">📧 Email Content Analysis (Score: ${emailScore}% - ${scoreLabel})</div>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td style="padding: 4px 0; font-weight: 600; color: #64748b;">Company:</td>
+                                        <td style="padding: 4px 0; color: ${companyColor};">${companyMatchText}</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td style="padding: 4px 0; font-weight: 600; color: #64748b;">Amount:</td>
+                                        <td style="padding: 4px 0; color: ${amountColor};">${amountMatchText}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 4px 0; font-weight: 600; color: #64748b;">Date:</td>
+                                        <td style="padding: 4px 0; color: ${dateColor};">${dateMatchText}</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- PDF Validation Pills (if available) -->`;
+
+                // Add validation status badge if available
                 if (bestExtractedData && bestValidation) {
                     const allMatch = bestValidation.companyMatch && bestValidation.amountMatch && bestValidation.dateMatch;
                     const someMatch = bestValidation.companyMatch || bestValidation.amountMatch || bestValidation.dateMatch;
@@ -9251,44 +10497,43 @@ Return ONLY valid JSON.`;
                     let validationIcon, validationText, validationColor;
                     if (allMatch) {
                         validationIcon = '✅';
-                        validationText = 'All fields validated';
+                        validationText = 'PDF Validated: All fields match';
                         validationColor = '#22c55e';
                     } else if (someMatch) {
                         validationIcon = '⚠️';
-                        validationText = 'Partial match';
+                        validationText = 'PDF Validated: Partial match';
                         validationColor = '#f59e0b';
                     } else {
                         validationIcon = '❌';
-                        validationText = 'Validation mismatch';
+                        validationText = 'PDF Validated: Mismatch';
                         validationColor = '#ef4444';
                     }
 
                     html += `
-                        <div style="display: flex; align-items: center; gap: 4px; color: ${validationColor}; font-size: 10px; font-weight: 600; white-space: nowrap;">
-                            <span style="font-size: 12px;">${validationIcon}</span>
-                            <span>${validationText}</span>
-                        </div>`;
+                            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
+                                <span style="background: ${companyColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
+                                    ${companyIcon} Company
+                                </span>
+                                <span style="background: ${amountColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
+                                    ${amountIcon} Amount
+                                </span>
+                                <span style="background: ${dateColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
+                                    ${dateIcon} Date
+                                </span>
+                                <span style="background: ${validationColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">
+                                    ${validationIcon} ${validationText}
+                                </span>
+                            </div>`;
                 }
 
                 html += `
-                    </div>
+                        </div>
 
-                    <!-- Email info: Single line, truncated -->
-                    <div style="font-size: 13px; color: #1e293b; margin-bottom: 4px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(subject)}">
-                        ${escapeHtml(subject)}
-                    </div>
-                    <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
-                        ${escapeHtml(fromName)} • ${formattedDate}
-                    </div>
-
-                    <!-- Compact button -->`;
+                        <!-- Right side: Download & Process button -->
+                        <div style="display: flex; flex-direction: column; gap: 6px; min-width: 180px;">`;
 
                 if (item.processedAttachments && item.processedAttachments.length > 0) {
-                    // Layout: Attachment buttons on left, drag-drop zone on right, Gmail button below
-                    html += `<div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 6px;">`;
-
-                    // Left side: Show buttons for ALL attachments
-                    html += `<div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">`;
+                    // Show buttons for ALL attachments
 
                     for (let attIdx = 0; attIdx < item.processedAttachments.length; attIdx++) {
                         const processed = item.processedAttachments[attIdx];
@@ -9333,43 +10578,22 @@ Return ONLY valid JSON.`;
 
                         html += `
                             <button onclick="previewAndAttachInvoice(${transactionIndex}, '${messageId}', '${att.id}', '${escapeHtml(att.filename)}', '${escapeHtml(item.accountEmail)}')"
-                                style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s; text-align: left; display: flex; align-items: center; justify-content: space-between;"
-                                onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(58,175,169,0.3)'"
-                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
-                                title="${escapeHtml(att.filename)} (${sizeKB} KB)">
-                                <span>📄 ${escapeHtml(displayFilename)}</span>
-                                <span style="display: flex; align-items: center; gap: 4px;">
-                                    <span style="font-size: 9px; opacity: 0.8;">${sizeKB} KB</span>
-                                    ${validationBadge}
-                                </span>
+                                style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 10px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 700; width: 100%; transition: all 0.2s; text-align: center; box-shadow: 0 2px 4px rgba(34,197,94,0.2);"
+                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(34,197,94,0.4)'"
+                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(34,197,94,0.2)'"
+                                title="${escapeHtml(att.filename)} (${sizeKB} KB) - Click to download and process">
+                                <div style="font-size: 18px; margin-bottom: 4px;">📥</div>
+                                <div style="margin-bottom: 2px;">Download & Process</div>
+                                <div style="font-size: 8px; opacity: 0.9; font-weight: 500;">${escapeHtml(displayFilename)} ${validationBadge}</div>
                             </button>
                         `;
                     }
 
-                    html += `</div>`; // End left side buttons
-
-                    // Right side: Drag-and-drop zone
-                    html += `
-                        <div
-                            id="dropZone_${transactionIndex}"
-                            onclick="document.getElementById('fileInput_${transactionIndex}').click()"
-                            ondragover="event.preventDefault(); this.style.background='#e0f2f1'; this.style.borderColor='#3AAFA9';"
-                            ondragleave="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1';"
-                            ondrop="handleInvoiceDrop(event, ${transactionIndex})"
-                            style="flex: 0.6; border: 2px dashed #cbd5e1; border-radius: 6px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; cursor: pointer; transition: all 0.2s; min-height: 70px;"
-                            title="Drag and drop or click to browse">
-                            <div style="font-size: 20px; margin-bottom: 2px;">📎</div>
-                            <div style="font-size: 9px; font-weight: 600; color: #64748b; text-align: center; line-height: 1.3;">Drag invoice</div>
-                            <div style="font-size: 8px; color: #94a3b8; text-align: center; margin-top: 2px;">PDF/Image</div>
-                        </div>
-                        <input type="file" id="fileInput_${transactionIndex}" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,image/*" style="display: none;" onchange="handleFileSelect(event, ${transactionIndex})" />
-                    </div>`;
-
-                    // Gmail button below
+                    // Gmail button
                     html += `
                         <button
                             onclick="openEmailInGmail('${messageId}', '${escapeHtml(item.accountEmail)}')"
-                            style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                            style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 600; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;"
                             onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(234,67,53,0.3)'"
                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
                             title="Open this email in Gmail">
@@ -9378,44 +10602,30 @@ Return ONLY valid JSON.`;
                         </button>
                     `;
                 } else {
-                    // No PDF attachments - show Gmail button and drag-drop
+                    // No PDF attachments - show warning and Gmail button
                     html += `
-                        <div style="display: flex; gap: 8px; align-items: stretch;">
-                            <!-- Left side: Warning and Gmail button -->
-                            <div style="flex: 1; background: #fffbeb; border-radius: 6px; padding: 10px; border: 1px dashed #f59e0b; display: flex; flex-direction: column; justify-content: center;">
-                                <div style="color: #d97706; font-size: 10px; text-align: center; margin-bottom: 6px; font-weight: 600;">
-                                    ⚠️ No PDF found
-                                </div>
-                                <button
-                                    onclick="openEmailInGmail('${messageId}', '${escapeHtml(item.accountEmail)}')"
-                                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;"
-                                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(234,67,53,0.3)'"
-                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
-                                    title="Open this email in Gmail">
-                                    <span style="font-size: 12px;">📧</span>
-                                    <span>Gmail</span>
-                                </button>
+                        <div style="background: #fffbeb; border-radius: 6px; padding: 10px; border: 1px dashed #f59e0b; text-align: center; margin-bottom: 6px;">
+                            <div style="color: #d97706; font-size: 10px; font-weight: 600; margin-bottom: 6px;">
+                                ⚠️ No PDF found
                             </div>
-
-                            <!-- Right side: Drag-and-drop zone -->
-                            <div
-                                id="dropZone_${transactionIndex}"
-                                onclick="document.getElementById('fileInput_${transactionIndex}').click()"
-                                ondragover="event.preventDefault(); this.style.background='#e0f2f1'; this.style.borderColor='#3AAFA9';"
-                                ondragleave="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1';"
-                                ondrop="handleInvoiceDrop(event, ${transactionIndex})"
-                                style="flex: 1; border: 2px dashed #cbd5e1; border-radius: 6px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; cursor: pointer; transition: all 0.2s; min-height: 70px;"
-                                title="Drag and drop or click to browse">
-                                <div style="font-size: 20px; margin-bottom: 2px;">📎</div>
-                                <div style="font-size: 9px; font-weight: 600; color: #64748b; text-align: center; line-height: 1.3;">Drag invoice here</div>
-                                <div style="font-size: 8px; color: #94a3b8; text-align: center; margin-top: 2px;">PDF, JPG, PNG</div>
-                            </div>
-                            <input type="file" id="fileInput_${transactionIndex}" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp,image/*" style="display: none;" onchange="handleFileSelect(event, ${transactionIndex})" />
                         </div>
+                        <button
+                            onclick="openEmailInGmail('${messageId}', '${escapeHtml(item.accountEmail)}')"
+                            style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 600; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 3px 8px rgba(234,67,53,0.3)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                            title="Open this email in Gmail">
+                            <span style="font-size: 12px;">📧</span>
+                            <span>Open in Gmail</span>
+                        </button>
                     `;
                 }
 
-                html += `</div>`;
+                // Close right column and main flex container
+                html += `
+                        </div>
+                    </div>
+                </div>`;
             });
 
             // Render to invoiceResultsContainer (inside the main results container)
@@ -9636,7 +10846,7 @@ Return ONLY valid JSON.`;
                     <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
                     <h4 style="margin: 0 0 10px 0; color: #1e293b;">No Invoices Found</h4>
                     <p style="color: #64748b; margin: 0 0 15px 0;">
-                        Searched up to ±15 days for "${context.merchantName}"
+                        Searched up to ±10 days for "${context.merchantName}"
                     </p>
 
                     <div style="margin-bottom: 20px;">
@@ -9695,8 +10905,8 @@ Return ONLY valid JSON.`;
             try {
                 // Create extended search stage
                 const extendedStage = {
-                    stage: 2,
-                    name: "Extended Search",
+                    stage: 3,
+                    name: "Extended Search (±30 days)",
                     dateWindow: 30,
                     autoExecute: true,
                     description: "Searching ±30 days with merchant variants and AI keywords"
@@ -10308,17 +11518,29 @@ Return ONLY valid JSON.`;
                 // Generate AI description
                 const aiDescription = await generateDescriptionFromInvoice(extractedText, allTransactions[transactionIndex]);
 
-                // Store invoice ID in transaction for future access
+                // Initialize invoices array if it doesn't exist
+                if (!allTransactions[transactionIndex].invoices) {
+                    allTransactions[transactionIndex].invoices = [];
+                }
+
+                // Add invoice to array
+                allTransactions[transactionIndex].invoices.push({
+                    id: invoiceId,
+                    filename: filename,
+                    attachedAt: Date.now()
+                });
+
+                // Store invoice ID in transaction for backward compatibility
                 allTransactions[transactionIndex].invoiceId = invoiceId;
                 allTransactions[transactionIndex].invoiceFilename = filename;
 
-                // Update transaction detail with AI-generated 2-10 word description
-                if (aiDescription) {
+                // Update transaction detail with AI-generated 2-10 word description (only if empty)
+                if (aiDescription && !allTransactions[transactionIndex].detail) {
                     allTransactions[transactionIndex].detail = aiDescription;
                 }
 
-                // Update From/To (supplier) with extracted company name
-                if (extractedData && extractedData.company) {
+                // Update From/To (supplier) with extracted company name (only if empty)
+                if (extractedData && extractedData.company && !allTransactions[transactionIndex].fromTo) {
                     allTransactions[transactionIndex].fromTo = extractedData.company;
                 }
 
@@ -10581,6 +11803,291 @@ Return ONLY valid JSON.`;
             }
 
             currentAttachmentData = null;
+        }
+
+        // ========================================
+        // MULTI-INVOICE MANAGER
+        // ========================================
+
+        let currentInvoiceManagerTransactionIndex = null;
+
+        /**
+         * Migrate old invoice format to new array format
+         */
+        function migrateInvoiceFormat(transaction) {
+            // If transaction has old format (invoiceId) but no new format (invoices array)
+            if (transaction.invoiceId && (!transaction.invoices || transaction.invoices.length === 0)) {
+                transaction.invoices = [{
+                    id: transaction.invoiceId,
+                    filename: transaction.invoiceFilename || 'invoice.pdf',
+                    attachedAt: Date.now()
+                }];
+                console.log('📦 [MIGRATE] Migrated invoice to new format:', transaction.invoices[0]);
+            }
+            return transaction;
+        }
+
+        /**
+         * Open Invoice Manager Modal
+         */
+        async function openAttachedInvoiceManager(transactionIndex) {
+            console.log('📄 [INVOICE-MANAGER] Opening manager for transaction', transactionIndex);
+            currentInvoiceManagerTransactionIndex = transactionIndex;
+
+            const transaction = allTransactions[transactionIndex];
+
+            // Migrate old format if needed
+            migrateInvoiceFormat(transaction);
+
+            const modal = document.getElementById('invoiceManagerModal');
+            const titleEl = document.getElementById('invoiceManagerTitle');
+            const listContainer = document.getElementById('invoiceListContainer');
+
+            const invoices = transaction.invoices || [];
+            titleEl.textContent = `Attached Documents (${invoices.length})`;
+
+            // Build invoice list HTML
+            let html = '';
+
+            if (invoices.length === 0) {
+                html = `
+                    <div style="text-align: center; padding: 40px; color: #94a3b8;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
+                        <p style="margin: 0;">No documents attached yet</p>
+                        <p style="margin: 10px 0 0 0; font-size: 13px;">Click "Add Another Document" or "Search Gmail" to attach</p>
+                    </div>
+                `;
+            } else {
+                invoices.forEach((invoice, idx) => {
+                    const date = invoice.attachedAt ? new Date(invoice.attachedAt).toLocaleString() : 'Unknown';
+                    html += `
+                        <div style="display: flex; align-items: center; gap: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; margin-bottom: 12px; border: 2px solid #e5e7eb;">
+                            <div style="font-size: 36px; flex-shrink: 0;">📄</div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 600; color: #1e293b; font-size: 14px; margin-bottom: 4px;">
+                                    ${escapeHtml(invoice.filename)}
+                                </div>
+                                <div style="color: #64748b; font-size: 12px;">
+                                    Attached: ${escapeHtml(date)}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button onclick="viewInvoiceFromManager(${idx})" class="btn-secondary" style="padding: 8px 16px; font-size: 13px; white-space: nowrap;">
+                                    👁️ View
+                                </button>
+                                <button onclick="deleteInvoiceFromManager(${idx})" class="btn-secondary" style="padding: 8px 16px; font-size: 13px; background: #ef4444; color: white; border: none; white-space: nowrap;">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            listContainer.innerHTML = html;
+            modal.style.display = 'flex';
+        }
+
+        /**
+         * Close Invoice Manager Modal
+         */
+        function closeInvoiceManager() {
+            const modal = document.getElementById('invoiceManagerModal');
+            modal.style.display = 'none';
+            currentInvoiceManagerTransactionIndex = null;
+            renderTransactions(); // Refresh UI to show updated count
+        }
+
+        /**
+         * View specific invoice from manager
+         */
+        async function viewInvoiceFromManager(invoiceIndex) {
+            const transactionIndex = currentInvoiceManagerTransactionIndex;
+            if (transactionIndex === null) return;
+
+            const transaction = allTransactions[transactionIndex];
+            const invoice = transaction.invoices[invoiceIndex];
+
+            if (!invoice) {
+                showSimpleToast('❌ Invoice not found', 'error');
+                return;
+            }
+
+            console.log('📄 [VIEW] Opening invoice:', invoice.filename);
+
+            try {
+                // Load invoice from IndexedDB
+                const invoiceData = await getInvoiceFromDB(invoice.id);
+
+                if (!invoiceData || !invoiceData.pdfBlob) {
+                    showSimpleToast('❌ Invoice file not found in database', 'error');
+                    return;
+                }
+
+                // Show PDF preview modal
+                const modal = document.getElementById('pdfPreviewModal');
+                const iframe = document.getElementById('pdfViewerIframe');
+                document.getElementById('pdfPreviewTitle').textContent = `Invoice: ${invoice.filename}`;
+
+                modal.style.display = 'flex';
+
+                // Create blob URL and load in iframe
+                const blobUrl = URL.createObjectURL(invoiceData.pdfBlob);
+                iframe.src = blobUrl;
+
+                // Update footer buttons to show delete option
+                const footerButtons = document.getElementById('pdfPreviewButtons');
+                if (footerButtons) {
+                    footerButtons.innerHTML = `
+                        <button onclick="deleteInvoiceFromViewer(${invoiceIndex})" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #ef4444; color: white; border: none;">
+                            🗑️ Delete Invoice
+                        </button>
+                        <button onclick="closePDFPreview(); openAttachedInvoiceManager(${transactionIndex})" class="btn-secondary" style="width: 100%; padding: 10px; font-size: 14px;">
+                            Back to List
+                        </button>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error viewing invoice:', error);
+                showSimpleToast('❌ Failed to load invoice', 'error');
+            }
+        }
+
+        /**
+         * Delete invoice from manager
+         */
+        async function deleteInvoiceFromManager(invoiceIndex) {
+            const transactionIndex = currentInvoiceManagerTransactionIndex;
+            if (transactionIndex === null) return;
+
+            const transaction = allTransactions[transactionIndex];
+            const invoice = transaction.invoices[invoiceIndex];
+
+            if (!invoice) {
+                showSimpleToast('❌ Invoice not found', 'error');
+                return;
+            }
+
+            const confirmDelete = confirm(`Delete "${invoice.filename}"?\n\nThis will remove the invoice attachment from this transaction.`);
+            if (!confirmDelete) return;
+
+            console.log('🗑️ [DELETE] Deleting invoice:', invoice.filename);
+
+            try {
+                // Delete from IndexedDB
+                if (!db) await initIndexedDB();
+
+                await new Promise((resolve, reject) => {
+                    const txn = db.transaction([INVOICES_STORE_NAME], 'readwrite');
+                    const store = txn.objectStore(INVOICES_STORE_NAME);
+                    const request = store.delete(invoice.id);
+
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Remove from array
+                transaction.invoices.splice(invoiceIndex, 1);
+
+                // If no invoices left, clean up old format fields
+                if (transaction.invoices.length === 0) {
+                    delete transaction.invoiceId;
+                    delete transaction.invoiceFilename;
+                }
+
+                // Save transactions
+                await saveTransactionsToStorage();
+
+                // Refresh manager modal
+                await openAttachedInvoiceManager(transactionIndex);
+
+                showSimpleToast('✅ Invoice deleted successfully', 'success');
+                console.log('✅ [DELETE] Invoice deleted successfully');
+
+            } catch (error) {
+                console.error('Error deleting invoice:', error);
+                showSimpleToast('❌ Failed to delete invoice', 'error');
+            }
+        }
+
+        /**
+         * Delete invoice from PDF viewer
+         */
+        async function deleteInvoiceFromViewer(invoiceIndex) {
+            await deleteInvoiceFromManager(invoiceIndex);
+            closePDFPreview();
+            await openAttachedInvoiceManager(currentInvoiceManagerTransactionIndex);
+        }
+
+        /**
+         * Trigger file picker to add another invoice
+         */
+        function addAnotherInvoice() {
+            const input = document.getElementById('addInvoiceInput');
+            input.value = ''; // Reset
+            input.click();
+        }
+
+        /**
+         * Handle files selected from "Add Another Document"
+         */
+        async function handleAddInvoiceFiles(files) {
+            if (!files || files.length === 0) return;
+
+            const transactionIndex = currentInvoiceManagerTransactionIndex;
+            if (transactionIndex === null) {
+                showSimpleToast('❌ No transaction selected', 'error');
+                return;
+            }
+
+            console.log(`📤 [ADD-INVOICE] Adding ${files.length} file(s) to transaction ${transactionIndex}`);
+
+            const transaction = allTransactions[transactionIndex];
+            if (!transaction.invoices) {
+                transaction.invoices = [];
+            }
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                console.log(`📄 [ADD-INVOICE] Processing file ${i + 1}/${files.length}: ${file.name}`);
+
+                try {
+                    // Save to IndexedDB
+                    const invoiceId = await saveInvoiceToDB(file, transaction);
+
+                    // Add to invoices array
+                    transaction.invoices.push({
+                        id: invoiceId,
+                        filename: file.name,
+                        attachedAt: Date.now()
+                    });
+
+                    successCount++;
+                    console.log(`✅ [ADD-INVOICE] File ${i + 1} added successfully: ${file.name}`);
+
+                } catch (error) {
+                    console.error(`❌ [ADD-INVOICE] Error adding file ${file.name}:`, error);
+                    errorCount++;
+                }
+            }
+
+            // Save transactions
+            await saveTransactionsToStorage();
+
+            // Show result
+            if (successCount > 0) {
+                showSimpleToast(`✅ Added ${successCount} document(s)`, 'success');
+            }
+            if (errorCount > 0) {
+                showSimpleToast(`⚠️ Failed to add ${errorCount} document(s)`, 'error');
+            }
+
+            // Refresh manager modal
+            await openAttachedInvoiceManager(transactionIndex);
         }
 
         /**
@@ -12180,14 +13687,10 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
 
         async function handleManualInvoiceUpload() {
             const fileInput = document.getElementById('manualInvoiceUpload');
-            const file = fileInput.files[0];
+            const files = Array.from(fileInput.files);
 
-            // Accept PDFs and images
-            const isPDF = file && file.type === 'application/pdf';
-            const isImage = file && file.type.startsWith('image/');
-
-            if (!file || (!isPDF && !isImage)) {
-                showSimpleToast('❌ Please select a PDF or image file', 'error');
+            if (!files || files.length === 0) {
+                showSimpleToast('❌ Please select at least one file', 'error');
                 return;
             }
 
@@ -12196,60 +13699,86 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
                 return;
             }
 
+            const transaction = allTransactions[currentInvoiceSearchIndex];
+            if (!transaction.invoices) {
+                transaction.invoices = [];
+            }
+
+            console.log(`📎 [MANUAL UPLOAD] Starting upload of ${files.length} file(s)...`);
+
+            let successCount = 0;
+            let errorCount = 0;
+
             try {
-                showSimpleToast('⏳ Uploading invoice...', 'info');
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
 
-                console.log('📎 [MANUAL UPLOAD] Starting upload...', {
-                    transactionIndex: currentInvoiceSearchIndex,
-                    filename: file.name,
-                    fileType: file.type,
-                    isPDF,
-                    isImage,
-                    transactionBefore: allTransactions[currentInvoiceSearchIndex]
-                });
+                    // Accept PDFs and images
+                    const isPDF = file.type === 'application/pdf';
+                    const isImage = file.type.startsWith('image/');
 
-                // Preserve original file type in blob
-                const fileBlob = new Blob([await file.arrayBuffer()], { type: file.type });
-                const invoiceId = await saveInvoiceToDB(currentInvoiceSearchIndex, fileBlob, file.name, null);
-
-                console.log('📎 [MANUAL UPLOAD] Invoice saved, updating transaction...', {
-                    invoiceId,
-                    transactionIndex: currentInvoiceSearchIndex
-                });
-
-                // Update transaction object with invoice details so button changes to PDF view mode
-                allTransactions[currentInvoiceSearchIndex].invoiceId = invoiceId;
-                allTransactions[currentInvoiceSearchIndex].invoiceFilename = file.name;
-
-                console.log('📎 [MANUAL UPLOAD] Transaction updated:', {
-                    transactionAfter: allTransactions[currentInvoiceSearchIndex],
-                    hasInvoiceId: !!allTransactions[currentInvoiceSearchIndex].invoiceId,
-                    hasInvoiceFilename: !!allTransactions[currentInvoiceSearchIndex].invoiceFilename
-                });
-
-                // Extract and process (only for PDFs - images would need OCR)
-                if (isPDF) {
-                    showSimpleToast('📄 Extracting text from invoice...', 'info');
-                    const extractedText = await extractTextFromPDF(fileBlob);
-
-                    if (extractedText) {
-                        await updateInvoiceText(invoiceId, extractedText);
-
-                        showSimpleToast('🤖 Generating description...', 'info');
-                        const aiDescription = await generateDescriptionFromInvoice(
-                            extractedText,
-                            allTransactions[currentInvoiceSearchIndex]
-                        );
-
-                        if (aiDescription) {
-                            await updateInvoiceWithAIDescription(invoiceId, aiDescription);
-                            allTransactions[currentInvoiceSearchIndex].manualDescription = aiDescription;
-                        }
+                    if (!isPDF && !isImage) {
+                        console.warn(`⚠️ [MANUAL UPLOAD] Skipping non-PDF/image file: ${file.name}`);
+                        errorCount++;
+                        continue;
                     }
-                } else {
-                    // Image uploaded - skip text extraction (would need OCR)
-                    console.log('📎 [MANUAL UPLOAD] Image file uploaded, skipping text extraction');
-                    showSimpleToast('📸 Image uploaded (text extraction not available for images)', 'info');
+
+                    try {
+                        showSimpleToast(`⏳ Uploading ${i + 1}/${files.length}: ${file.name}...`, 'info');
+
+                        console.log(`📎 [MANUAL UPLOAD] Processing file ${i + 1}/${files.length}:`, {
+                            filename: file.name,
+                            fileType: file.type,
+                            isPDF,
+                            isImage
+                        });
+
+                        // Preserve original file type in blob
+                        const fileBlob = new Blob([await file.arrayBuffer()], { type: file.type });
+                        const invoiceId = await saveInvoiceToDB(currentInvoiceSearchIndex, fileBlob, file.name, null);
+
+                        // Add to invoices array
+                        transaction.invoices.push({
+                            id: invoiceId,
+                            filename: file.name,
+                            attachedAt: Date.now()
+                        });
+
+                        // Update backward compatibility fields (use first invoice)
+                        if (transaction.invoices.length === 1) {
+                            transaction.invoiceId = invoiceId;
+                            transaction.invoiceFilename = file.name;
+                        }
+
+                        // Extract and process (only for PDFs - images would need OCR)
+                        if (isPDF) {
+                            const extractedText = await extractTextFromPDF(fileBlob);
+
+                            if (extractedText) {
+                                await updateInvoiceText(invoiceId, extractedText);
+
+                                // Only generate description for first invoice if transaction has no detail
+                                if (i === 0 && !transaction.detail) {
+                                    const aiDescription = await generateDescriptionFromInvoice(
+                                        extractedText,
+                                        transaction
+                                    );
+
+                                    if (aiDescription) {
+                                        await updateInvoiceWithAIDescription(invoiceId, aiDescription);
+                                        transaction.manualDescription = aiDescription;
+                                    }
+                                }
+                            }
+                        }
+
+                        successCount++;
+                        console.log(`✅ [MANUAL UPLOAD] File ${i + 1}/${files.length} uploaded: ${file.name}`);
+
+                    } catch (error) {
+                        console.error(`❌ [MANUAL UPLOAD] Error uploading file ${file.name}:`, error);
+                        errorCount++;
+                    }
                 }
 
                 // Save updated transactions to IndexedDB for cross-page sync
@@ -12257,12 +13786,20 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
 
                 // Render to show PDF button instead of invoice search button
                 renderTransactions();
-                showSimpleToast('✅ Invoice uploaded successfully!', 'success');
+
+                // Show summary
+                if (successCount > 0) {
+                    showSimpleToast(`✅ Uploaded ${successCount} document(s) successfully!`, 'success');
+                }
+                if (errorCount > 0) {
+                    showSimpleToast(`⚠️ Failed to upload ${errorCount} file(s)`, 'error');
+                }
+
                 closeInvoiceSearchModal();
 
             } catch (error) {
                 console.error('Manual upload error:', error);
-                showSimpleToast('❌ Failed to upload invoice', 'error');
+                showSimpleToast('❌ Failed to upload invoices', 'error');
             } finally {
                 fileInput.value = ''; // Reset input
             }
