@@ -14,6 +14,7 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -91,18 +92,20 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
+            table-layout: auto;
         }
         #transactionsTable thead {
             background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%);
             color: white;
         }
         #transactionsTable th {
-            padding: 8px 6px;
+            padding: 6px;
             text-align: left;
             font-weight: 600;
             font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            box-sizing: border-box;
         }
         #transactionsTable tbody tr {
             border-bottom: 1px solid #e0e0e0;
@@ -115,16 +118,41 @@
             background-color: #e0f2fe !important;
             border-left: 4px solid #3b82f6;
         }
-        #transactionsTable tbody tr.row-flagged {
+        #transactionsTable tbody tr.row-flagged-red {
             background-color: #fee2e2 !important;
             border-left: 4px solid #ef4444;
         }
-        #transactionsTable tbody tr.row-flagged:hover {
+        #transactionsTable tbody tr.row-flagged-red:hover {
             background-color: #fecaca !important;
         }
+        #transactionsTable tbody tr.row-flagged-blue {
+            background-color: #dbeafe !important;
+            border-left: 4px solid #3b82f6;
+        }
+        #transactionsTable tbody tr.row-flagged-blue:hover {
+            background-color: #bfdbfe !important;
+        }
+
+        /* Highlight animation for transaction rows (from grants page navigation) */
+        @keyframes highlightGlow {
+            0% {
+                background: #dbeafe;
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+            50% {
+                background: #bfdbfe;
+                box-shadow: 0 0 20px 10px rgba(59, 130, 246, 0.4);
+            }
+            100% {
+                background: #dbeafe;
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+        }
+
         #transactionsTable td {
             padding: 6px;
             vertical-align: middle;
+            box-sizing: border-box;
         }
         #transactionsTable td.notes-cell {
             max-width: 200px;
@@ -133,12 +161,23 @@
             line-height: 1.4;
             font-size: 11px;
             color: #555;
+            display: none;
         }
         .empty-state td {
             text-align: center;
             padding: 40px;
             color: #999;
             font-style: italic;
+        }
+        .description-detail-cell {
+            padding: 6px;
+            vertical-align: middle;
+        }
+        .description-detail-cell > div {
+            margin-bottom: 2px;
+        }
+        .description-detail-cell > div:last-child {
+            margin-bottom: 0;
         }
         .description-cell {
             min-width: 200px;
@@ -940,217 +979,204 @@
 
     <div class="content-container">
 
-    <!-- Filters Card -->
-    <div class="table-container" style="margin-bottom: 20px;">
-        <div style="padding: 15px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                <span style="font-size: 20px;">🔍</span>
-                <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Filters</h4>
-                <button onclick="jumpToTopUnassigned()" style="margin-left: auto; padding: 4px 10px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">To Top Unassigned</button>
-                <button onclick="clearFilters()" style="padding: 4px 10px; font-size: 11px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Clear All</button>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div>
-                    <label style="display: block; font-size: 12px; font-weight: 500; color: #555; margin-bottom: 4px;">Project Budget</label>
-                    <select id="filterProject" onchange="handleProjectFilterChange()" style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white;">
-                        <option value="">All Projects</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="display: block; font-size: 12px; font-weight: 500; color: #555; margin-bottom: 4px;">Category</label>
-                    <select id="filterCategory" onchange="applyFilters()" style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white;" disabled>
-                        <option value="">All Categories</option>
-                    </select>
-                </div>
-            </div>
-            <div id="filterStatus" style="margin-top: 10px; font-size: 11px; color: #666; font-style: italic;">
-                <!-- Status message -->
-            </div>
-        </div>
-    </div>
-
     <!-- Compact Control Panel -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
 
-        <!-- API Config Card -->
+        <!-- Project Management Card -->
         <div class="table-container" style="margin: 0;">
-            <div style="padding: 15px;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <span style="font-size: 20px;">🔑</span>
-                    <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">API Config</h4>
-                </div>
-                <div id="apiKeyStatus" style="font-size: 12px; color: #666; margin-bottom: 10px; min-height: 18px;">
-                    <!-- Populated dynamically -->
-                </div>
-                <div style="display: flex; gap: 5px;">
-                    <button onclick="updateOpenAIKey()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 12px; flex: 1;">
-                        Set Key
-                    </button>
-                    <button onclick="clearOpenAIKey()" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 12px;">
-                        Clear
-                    </button>
-                </div>
-            </div>
-        </div>
+            <div style="padding: 12px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Project Management</h4>
 
-        <!-- Currency Exchange API Card -->
-        <div class="table-container" style="margin: 0;">
-            <div style="padding: 15px;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <span style="font-size: 20px;">💱</span>
-                    <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Currency Exchange</h4>
-                </div>
-                <div id="exchangeRateStatus" style="font-size: 12px; color: #666; margin-bottom: 10px; min-height: 18px;">
-                    <!-- Populated dynamically -->
-                </div>
-                <div style="display: flex; gap: 5px;">
-                    <button onclick="setExchangeRateKey()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 12px; flex: 1;">
-                        Set Key
-                    </button>
-                    <button onclick="clearExchangeRateKey()" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 12px;">
-                        Clear
-                    </button>
-                </div>
-                <div style="margin-top: 8px; font-size: 11px; color: #6b7280;">
-                    For USD invoices → GBP conversion<br>
-                    <a href="https://openexchangerates.org/signup/free" target="_blank" style="color: #3b82f6; text-decoration: none;">Get free App ID →</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Gmail Integration Card -->
-        <div class="table-container" style="margin: 0;">
-            <div style="padding: 15px;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <span style="font-size: 20px;">📧</span>
-                    <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Gmail</h4>
-                </div>
-                <div id="gmailConnectionStatus" style="font-size: 12px; color: #666; margin-bottom: 10px; min-height: 18px;">
-                    Not connected
-                </div>
-                <div id="gmailAccountsList" style="margin-bottom: 10px; max-height: 120px; overflow-y: auto;">
-                    <!-- Populated dynamically -->
-                </div>
-                <button id="gmailConnectBtn" onclick="signInToGmail()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 12px; width: 100%;">
-                    Connect
-                </button>
-            </div>
-        </div>
-
-        <!-- Project Budgets Card -->
-        <div class="table-container" style="margin: 0;">
-            <div style="padding: 15px;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <span style="font-size: 20px;">📊</span>
-                    <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #333;">Project Budgets</h4>
-                </div>
-                <div id="loadedBudgetsInfo" style="font-size: 12px; color: #666; margin-bottom: 10px; min-height: 18px;">
+                <div id="loadedBudgetsInfo" style="font-size: 9px; color: #666; margin-bottom: 6px; min-height: 12px;">
                     Loading...
                 </div>
-                <button onclick="loadProjectsFromDB()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 12px; width: 100%;">
-                    Refresh
-                </button>
+
+                <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px;">
+                    <select id="filterProject" onchange="handleProjectFilterChange()" style="width: 100%; padding: 4px 6px; font-size: 10px; border: 1px solid #d1d5db; border-radius: 3px; background: white;">
+                        <option value="">All Projects</option>
+                    </select>
+                    <select id="filterCategory" onchange="applyFilters()" style="width: 100%; padding: 4px 6px; font-size: 10px; border: 1px solid #d1d5db; border-radius: 3px; background: white;" disabled>
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-bottom: 4px;">
+                    <button onclick="loadProjectsFromDB()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 4px 6px; font-size: 9px;">Refresh</button>
+                    <button onclick="clearFilters()" style="padding: 4px 6px; font-size: 9px; background: #ef4444; color: white; border: none; border-radius: 3px; cursor: pointer;">Clear</button>
+                </div>
+
+                <button onclick="jumpToTopUnassigned()" style="padding: 4px 6px; font-size: 9px; background: #3b82f6; color: white; border: none; border-radius: 3px; cursor: pointer; width: 100%; margin-bottom: 3px;">Jump to Top Unassigned</button>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-bottom: 4px;">
+                    <button onclick="recalculateAllQuarters()" style="padding: 4px 6px; font-size: 9px; background: #10b981; color: white; border: none; border-radius: 3px; cursor: pointer;" title="Recalculate all transaction quarters based on current project start dates">🔄 Fix Quarters</button>
+                    <button onclick="restoreFromQuarterBackup()" style="padding: 4px 6px; font-size: 9px; background: #f59e0b; color: white; border: none; border-radius: 3px; cursor: pointer;" title="Restore from most recent backup">⏮️ Restore</button>
+                </div>
+
+                <div id="filterStatus" style="font-size: 9px; color: #666; font-style: italic; margin-top: 4px; min-height: 12px;">
+                    <!-- Status message -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Unified API Configuration Card -->
+        <div class="table-container" style="margin: 0;">
+            <div style="padding: 10px;">
+                <h4 style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">API Configuration</h4>
+
+                <!-- OpenAI API -->
+                <div style="margin-bottom: 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <label style="font-size: 10px; font-weight: 500; color: #555;">OpenAI</label>
+                        <div id="apiKeyStatus" style="font-size: 9px; color: #666;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 2px;">
+                        <button onclick="updateOpenAIKey()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 3px 6px; font-size: 9px; flex: 1;">
+                            Set Key
+                        </button>
+                        <button onclick="clearOpenAIKey()" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 3px 6px; font-size: 9px;">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Currency Exchange API -->
+                <div style="margin-bottom: 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <label style="font-size: 10px; font-weight: 500; color: #555;">Currency</label>
+                        <div id="exchangeRateStatus" style="font-size: 9px; color: #666;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 2px;">
+                        <button onclick="setExchangeRateKey()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 3px 6px; font-size: 9px; flex: 1;">
+                            Set Key
+                        </button>
+                        <button onclick="clearExchangeRateKey()" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 3px 6px; font-size: 9px;">
+                            Clear
+                        </button>
+                    </div>
+                    <div style="margin-top: 1px; font-size: 8px; color: #6b7280;">
+                        <a href="https://openexchangerates.org/signup/free" target="_blank" style="color: #3b82f6; text-decoration: none;">Get free App ID</a>
+                    </div>
+                </div>
+
+                <!-- Gmail API -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <label style="font-size: 10px; font-weight: 500; color: #555;">Gmail API</label>
+                        <div id="gmailConnectionStatus" style="font-size: 9px; color: #666;">
+                            Not connected
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 3px; align-items: stretch;">
+                        <button id="gmailConnectBtn" onclick="signInToGmail()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 3px 6px; font-size: 8px; white-space: nowrap; flex-shrink: 0; writing-mode: horizontal-tb;">
+                            + Add
+                        </button>
+                        <div id="gmailAccountsList" style="flex: 1; max-height: 60px; overflow-y: auto; font-size: 8px; border: 1px solid #e5e7eb; border-radius: 3px; padding: 2px;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Bank Feed Data Card -->
         <div class="table-container" id="bankFeedDropZone" style="margin: 0; transition: all 0.2s; overflow: visible;">
-            <div style="padding: 15px; position: relative;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <span style="font-size: 20px;">📁</span>
-                    <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #333; flex: 1;">Bank Feed</h4>
+            <div style="padding: 12px; position: relative;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 13px; font-weight: 600; color: #333;">Data Management</h4>
 
-                    <!-- Completion Mode Slider -->
-                    <div style="display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #d1d5db; border-radius: 20px; padding: 4px 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <span style="font-size: 14px;" id="incompleteModeIcon">⬜</span>
-                        <label class="switch" style="position: relative; display: inline-block; width: 36px; height: 20px; margin: 0;">
-                            <input type="checkbox" id="completionModeToggle" onchange="toggleCompletionMode()" style="opacity: 0; width: 0; height: 0;">
-                            <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: 0.3s; border-radius: 20px;">
-                                <span style="position: absolute; content: ''; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;"></span>
-                            </span>
-                        </label>
-                        <span style="font-size: 14px;" id="completeModeIcon">✅</span>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <!-- Completion Mode Slider -->
+                        <div style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #666;">
+                            <span id="incompleteModeIcon">Pending</span>
+                            <label class="switch" style="position: relative; display: inline-block; width: 32px; height: 18px; margin: 0;">
+                                <input type="checkbox" id="completionModeToggle" onchange="toggleCompletionMode()" style="opacity: 0; width: 0; height: 0;">
+                                <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: 0.3s; border-radius: 18px;">
+                                    <span style="position: absolute; content: ''; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;"></span>
+                                </span>
+                            </label>
+                            <span id="completeModeIcon">Done</span>
+                        </div>
+
+                        <!-- Table Settings Button -->
+                        <button onclick="toggleTableSettings()" id="tableSettingsBtn" style="background: white; border: 1px solid #d1d5db; border-radius: 4px; padding: 3px 6px; cursor: pointer; font-size: 11px; transition: all 0.2s;" title="Table Display Settings">
+                            Settings
+                        </button>
                     </div>
-
-                    <!-- Table Settings Button -->
-                    <button onclick="toggleTableSettings()" id="tableSettingsBtn" style="background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" title="Table Display Settings">
-                        ⚙️
-                    </button>
                 </div>
 
                 <!-- Settings Dropdown Menu -->
-                <div id="tableSettingsMenu" style="display: none; position: absolute; top: 50px; right: 15px; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 280px; padding: 12px; z-index: 1000;">
-                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Table Display Settings</div>
+                <div id="tableSettingsMenu" style="display: none; position: absolute; top: 45px; right: 12px; background: white; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 220px; padding: 10px; z-index: 1000;">
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 8px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Display Options</div>
 
                     <!-- Spent Section -->
-                    <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6;">
-                        <div style="font-size: 11px; font-weight: 600; color: #059669; margin-bottom: 4px;">💳 Spent (Expenses)</div>
-
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                    <div style="margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #f3f4f6;">
+                        <div style="font-size: 10px; font-weight: 600; color: #059669; margin-bottom: 3px;">Expenses</div>
+                        <label style="display: flex; align-items: center; gap: 6px; padding: 4px 6px; cursor: pointer; border-radius: 3px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
                             <input type="checkbox" id="showSpentColumnToggle" onchange="toggleSpentColumn()" style="cursor: pointer;" checked>
-                            <div>
-                                <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Spent Columns</div>
-                                <div style="font-size: 10px; color: #6b7280;">Display spent amount columns</div>
-                            </div>
+                            <div style="font-size: 11px; color: #1f2937;">Show Spent Columns</div>
                         </label>
                     </div>
 
                     <!-- Received Section -->
-                    <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6;">
-                        <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px;">💰 Received (Income)</div>
-
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                    <div style="margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #f3f4f6;">
+                        <div style="font-size: 10px; font-weight: 600; color: #3b82f6; margin-bottom: 3px;">Income</div>
+                        <label style="display: flex; align-items: center; gap: 6px; padding: 4px 6px; cursor: pointer; border-radius: 3px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
                             <input type="checkbox" id="showReceivedColumnToggle" onchange="toggleReceivedColumn()" style="cursor: pointer;">
-                            <div>
-                                <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Received Column</div>
-                                <div style="font-size: 10px; color: #6b7280;">Display received amount column</div>
-                            </div>
+                            <div style="font-size: 11px; color: #1f2937;">Show Received Column</div>
                         </label>
                     </div>
 
                     <!-- Filter Options Section -->
                     <div>
-                        <div style="font-size: 11px; font-weight: 600; color: #dc2626; margin-bottom: 4px;">🚩 Filter Options</div>
-
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
-                            <input type="checkbox" id="showOnlyFlaggedToggle" onchange="toggleFlaggedFilter()" style="cursor: pointer;">
-                            <div>
-                                <div style="font-size: 12px; font-weight: 500; color: #1f2937;">Show Only Flagged</div>
-                                <div style="font-size: 10px; color: #6b7280;">Display only flagged entries</div>
-                            </div>
+                        <div style="font-size: 10px; font-weight: 600; color: #dc2626; margin-bottom: 3px;">Filters</div>
+                        <label style="display: flex; align-items: center; gap: 6px; padding: 4px 6px; cursor: pointer; border-radius: 3px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                            <input type="checkbox" id="showOnlyRedFlagToggle" onchange="toggleRedFlagFilter()" style="cursor: pointer;">
+                            <div style="font-size: 11px; color: #1f2937;">Show only 🚩 red flag</div>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; padding: 4px 6px; cursor: pointer; border-radius: 3px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+                            <input type="checkbox" id="showOnlyBlueFlagToggle" onchange="toggleBlueFlagFilter()" style="cursor: pointer;">
+                            <div style="font-size: 11px; color: #1f2937;">Show only 🔵 blue flag</div>
                         </label>
                     </div>
                 </div>
 
-                <div id="csvSummaryContent" style="font-size: 12px; color: #666; margin-bottom: 8px; min-height: 18px;">
-                    No files loaded • Drop CSV files here
-                </div>
-                <button onclick="openCSVManager()" style="font-size: 11px; padding: 3px 8px; margin-bottom: 8px; background: #3AAFA9; color: white; border: none; border-radius: 3px; cursor: pointer;">
-                    Manage Files
-                </button>
-                <div style="font-size: 11px; color: #888; margin-bottom: 10px; line-height: 1.4;">
-                    <div><span id="totalTransactions">0</span> transactions</div>
-                    <div>Spent: £<span id="totalSpent">0.00</span> | Received: £<span id="totalReceived">0.00</span></div>
-                </div>
-                <div style="display: flex; gap: 5px; flex-direction: column;">
-                    <div style="display: flex; gap: 5px;">
-                        <label for="csvFileInput" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 12px; flex: 1; cursor: pointer; text-align: center;">
-                            Load CSV
-                        </label>
-                        <button onclick="clearAllTransactions(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 12px;">
-                            Clear View
-                        </button>
+                <!-- File Summary -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div id="csvSummaryContent" style="font-size: 10px; color: #666; flex: 1;">
+                        No files loaded • Drop CSV here
                     </div>
-                    <div style="display: flex; gap: 5px;">
-                        <button onclick="fixDuplicates(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 11px; flex: 1; background: #f59e0b; color: white;" title="Remove duplicate transactions from database">
-                            🔧 Fix Duplicates
-                        </button>
-                        <button onclick="clearAndRefreshDatabase(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 6px 12px; font-size: 11px; flex: 1; background: #dc2626; color: white;" title="Clear CSV files only (preserves project budgets)">
-                            🔄 Reset CSVs
-                        </button>
-                    </div>
-                    <button onclick="downloadCurrentTableAsCSV()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 6px 12px; font-size: 11px; width: 100%; background: #10b981; color: white;" title="Download currently displayed transactions as CSV">
-                        📥 Download Current Table
+                    <button onclick="openCSVManager()" style="font-size: 10px; padding: 2px 6px; background: #3AAFA9; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                        Manage
+                    </button>
+                </div>
+
+                <!-- Transaction Stats -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; font-size: 10px; color: #666;">
+                    <div><span style="font-weight: 500;" id="totalTransactions">0</span> items</div>
+                    <div>Spent: <span style="font-weight: 500; color: #dc2626;">£<span id="totalSpent">0.00</span></span></div>
+                    <div>In: <span style="font-weight: 500; color: #059669;">£<span id="totalReceived">0.00</span></span></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                    <label for="csvFileInput" class="modal-btn modal-btn-primary" style="margin: 0; padding: 5px 8px; font-size: 10px; cursor: pointer; text-align: center;">
+                        Load CSV
+                    </label>
+                    <button onclick="clearAllTransactions(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 5px 8px; font-size: 10px;">
+                        Clear View
+                    </button>
+                    <button onclick="fixDuplicates(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 5px 8px; font-size: 10px; background: #f59e0b; color: white;" title="Remove duplicate transactions">
+                        Fix Dupes
+                    </button>
+                    <button onclick="clearAndRefreshDatabase(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 5px 8px; font-size: 10px; background: #dc2626; color: white;" title="Clear CSV files">
+                        Reset CSVs
+                    </button>
+                    <button onclick="downloadCurrentTableAsCSV()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 5px 8px; font-size: 10px; grid-column: span 2; background: #10b981; color: white;" title="Download current view as CSV">
+                        Download Table
                     </button>
                 </div>
             </div>
@@ -1168,13 +1194,12 @@
                 <tr>
                     <th>Bank</th>
                     <th>Date</th>
-                    <th>Description</th>
-                    <th>Detail</th>
+                    <th colspan="2" style="text-align: left;">Description<br><span style="font-size: 10px; font-weight: 400; text-transform: none; opacity: 0.8;">(Detail)</span></th>
                     <th>From/To</th>
-                    <th>Spent</th>
-                    <th>Spent (ex. VAT)</th>
-                    <th>Received</th>
-                    <th>Notes</th>
+                    <th id="spentHeader">Spent</th>
+                    <th id="spentExVatHeader">Spent (ex. VAT)</th>
+                    <th id="receivedHeader" style="display: none;">Received</th>
+                    <th style="display: none;">Notes</th>
                     <th>Actions</th>
                     <th id="completeColumnHeader" style="text-align: center; width: 60px; min-width: 60px;">✓</th>
                 </tr>
@@ -1388,14 +1413,37 @@
                 </div>
 
                 <!-- Manual Upload Section (Always Visible) -->
-                <div style="margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; border: 2px dashed #3b82f6;">
+                <div id="manualUploadDropZone" style="margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; border: 2px dashed #3b82f6; transition: all 0.3s ease;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                         <span style="font-size: 20px;">📤</span>
                         <div style="flex: 1;">
                             <div style="font-weight: 600; color: #1e40af; font-size: 14px;">Manual Upload</div>
-                            <div style="font-size: 12px; color: #64748b;">Can't find the invoice? Upload it manually from your computer</div>
+                            <div style="font-size: 12px; color: #64748b;">
+                                Drag & drop files here, or click to browse
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Paste Area -->
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-size: 11px; color: #64748b; display: block; margin-bottom: 4px;">Or paste image from clipboard:</label>
+                        <input
+                            type="text"
+                            id="pasteImageInput"
+                            placeholder="Click here and press Ctrl+V to paste screenshot"
+                            readonly
+                            style="width: 100%; padding: 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; background: white; cursor: text; color: #64748b;"
+                            onfocus="this.style.borderColor='#3b82f6'; this.style.background='#f8fafc';"
+                            onblur="this.style.borderColor='#cbd5e1'; this.style.background='white';">
+                        <div id="pasteImagePreview" style="display: none; margin-top: 8px; padding: 10px; background: white; border: 1px solid #cbd5e1; border-radius: 4px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 11px; color: #059669; font-weight: 600;">✓ Image pasted</span>
+                                <button onclick="clearPastedImage()" style="background: #ef4444; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">Clear</button>
+                            </div>
+                            <img id="pasteImagePreviewImg" style="max-width: 100%; max-height: 200px; border-radius: 4px; border: 1px solid #e5e7eb;">
+                        </div>
+                    </div>
+
                     <button onclick="document.getElementById('manualInvoiceUpload').click()" class="modal-btn modal-btn-primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);">
                         <span style="font-size: 18px;">📎</span>
                         <span>Upload PDF or Image</span>
@@ -1808,7 +1856,8 @@
         // Table display settings
         let showSpentColumn = true; // Show spent column by default
         let showReceivedColumn = false; // Hide received column by default
-        let showOnlyFlagged = false; // Show all entries by default (false = show all, true = show only flagged)
+        let showOnlyRedFlag = false; // Show only red flagged entries (false = show all)
+        let showOnlyBlueFlag = false; // Show only blue flagged entries (false = show all)
 
         // Load settings from localStorage
         function loadDisplaySettings() {
@@ -1818,7 +1867,8 @@
                     const settings = JSON.parse(savedSettings);
                     showSpentColumn = settings.showSpentColumn ?? true;
                     showReceivedColumn = settings.showReceivedColumn ?? false;
-                    showOnlyFlagged = settings.showOnlyFlagged ?? false;
+                    showOnlyRedFlag = settings.showOnlyRedFlag ?? false;
+                    showOnlyBlueFlag = settings.showOnlyBlueFlag ?? false;
                     console.log('📋 [SETTINGS] Loaded saved settings from localStorage:', settings);
                 } catch (e) {
                     console.error('❌ [SETTINGS] Failed to load settings:', e);
@@ -1827,7 +1877,7 @@
                 console.log('📋 [SETTINGS] No saved settings found, using defaults');
             }
 
-            console.log(`📋 [SETTINGS] Active column settings: showSpentColumn=${showSpentColumn}, showReceivedColumn=${showReceivedColumn}, showOnlyFlagged=${showOnlyFlagged}`);
+            console.log(`📋 [SETTINGS] Active column settings: showSpentColumn=${showSpentColumn}, showReceivedColumn=${showReceivedColumn}, showOnlyRedFlag=${showOnlyRedFlag}, showOnlyBlueFlag=${showOnlyBlueFlag}`);
 
             // Sync checkbox states with loaded settings
             syncCheckboxStates();
@@ -1839,11 +1889,13 @@
         function syncCheckboxStates() {
             const spentColToggle = document.getElementById('showSpentColumnToggle');
             const receivedColToggle = document.getElementById('showReceivedColumnToggle');
-            const flaggedFilterToggle = document.getElementById('showOnlyFlaggedToggle');
+            const redFlagFilterToggle = document.getElementById('showOnlyRedFlagToggle');
+            const blueFlagFilterToggle = document.getElementById('showOnlyBlueFlagToggle');
 
             if (spentColToggle) spentColToggle.checked = showSpentColumn;
             if (receivedColToggle) receivedColToggle.checked = showReceivedColumn;
-            if (flaggedFilterToggle) flaggedFilterToggle.checked = showOnlyFlagged;
+            if (redFlagFilterToggle) redFlagFilterToggle.checked = showOnlyRedFlag;
+            if (blueFlagFilterToggle) blueFlagFilterToggle.checked = showOnlyBlueFlag;
 
             console.log('🔄 [SETTINGS] Synced checkbox states with settings');
         }
@@ -1854,10 +1906,12 @@
             localStorage.removeItem('spendTableSettings');
             showSpentColumn = true;
             showReceivedColumn = false;
-            showOnlyFlagged = false;
+            showOnlyRedFlag = false;
+            showOnlyBlueFlag = false;
             document.getElementById('showSpentColumnToggle').checked = true;
             document.getElementById('showReceivedColumnToggle').checked = false;
-            document.getElementById('showOnlyFlaggedToggle').checked = false;
+            document.getElementById('showOnlyRedFlagToggle').checked = false;
+            document.getElementById('showOnlyBlueFlagToggle').checked = false;
             saveDisplaySettings();
             applyColumnVisibility();
             renderTransactions();
@@ -1870,7 +1924,8 @@
             const settings = {
                 showSpentColumn,
                 showReceivedColumn,
-                showOnlyFlagged
+                showOnlyRedFlag,
+                showOnlyBlueFlag
             };
             localStorage.setItem('spendTableSettings', JSON.stringify(settings));
             console.log('💾 [SETTINGS] Saved display settings:', settings);
@@ -1878,19 +1933,20 @@
 
         // Apply column visibility based on settings
         function applyColumnVisibility() {
-            const headers = document.querySelectorAll('th');
+            // Use IDs for direct header access
+            const spentHeader = document.getElementById('spentHeader');
+            const spentExVatHeader = document.getElementById('spentExVatHeader');
+            const receivedHeader = document.getElementById('receivedHeader');
+
             const spentCells = document.querySelectorAll('.amount-spent');
             const receivedCells = document.querySelectorAll('.amount-received');
 
-            // Find and toggle the "Spent" and "Spent (Ex. VAT)" column headers
-            headers.forEach(header => {
-                const headerText = header.textContent.trim();
-                if (headerText === 'SPENT' || headerText === 'SPENT (EX. VAT)') {
-                    header.style.display = showSpentColumn ? '' : 'none';
-                } else if (headerText === 'RECEIVED') {
-                    header.style.display = showReceivedColumn ? '' : 'none';
-                }
-            });
+            // Toggle spent column headers
+            if (spentHeader) spentHeader.style.display = showSpentColumn ? '' : 'none';
+            if (spentExVatHeader) spentExVatHeader.style.display = showSpentColumn ? '' : 'none';
+
+            // Toggle received column header
+            if (receivedHeader) receivedHeader.style.display = showReceivedColumn ? '' : 'none';
 
             // Toggle all spent column cells
             spentCells.forEach(cell => {
@@ -1967,10 +2023,10 @@
             showToast(message, 'success', toastPosition);
         }
 
-        // Toggle flagged entries filter
-        function toggleFlaggedFilter() {
-            showOnlyFlagged = document.getElementById('showOnlyFlaggedToggle').checked;
-            console.log('🔄 [SETTINGS] Toggle flagged filter:', showOnlyFlagged);
+        // Toggle red flag filter
+        function toggleRedFlagFilter() {
+            showOnlyRedFlag = document.getElementById('showOnlyRedFlagToggle').checked;
+            console.log('🔄 [SETTINGS] Toggle red flag filter:', showOnlyRedFlag);
 
             // Get settings button position for toast
             const settingsBtn = document.getElementById('tableSettingsBtn');
@@ -1982,9 +2038,30 @@
             // Re-render transactions to apply filter
             renderTransactions();
 
-            const message = showOnlyFlagged ?
-                '🚩 Showing only flagged entries' :
-                '✅ Showing all entries';
+            const message = showOnlyRedFlag ?
+                '🚩 Showing only red flagged entries' :
+                '✅ Showing all entries (red filter off)';
+            showToast(message, 'success', toastPosition);
+        }
+
+        // Toggle blue flag filter
+        function toggleBlueFlagFilter() {
+            showOnlyBlueFlag = document.getElementById('showOnlyBlueFlagToggle').checked;
+            console.log('🔄 [SETTINGS] Toggle blue flag filter:', showOnlyBlueFlag);
+
+            // Get settings button position for toast
+            const settingsBtn = document.getElementById('tableSettingsBtn');
+            const btnRect = settingsBtn?.getBoundingClientRect();
+            const toastPosition = btnRect ? { x: btnRect.right, y: btnRect.top } : null;
+
+            saveDisplaySettings();
+
+            // Re-render transactions to apply filter
+            renderTransactions();
+
+            const message = showOnlyBlueFlag ?
+                '🔵 Showing only blue flagged entries' :
+                '✅ Showing all entries (blue filter off)';
             showToast(message, 'success', toastPosition);
         }
 
@@ -2072,13 +2149,10 @@
                 return null;
             }
 
-            if (monthsSinceStart >= 0 && monthsSinceStart < 3) return 1;
-            if (monthsSinceStart >= 3 && monthsSinceStart < 6) return 2;
-            if (monthsSinceStart >= 6 && monthsSinceStart < 9) return 3;
-            if (monthsSinceStart >= 9 && monthsSinceStart < 12) return 4;
-
-            console.warn('⚠️ [QUARTER CALC] Transaction beyond 12 months, defaulting to Q4');
-            return 4; // Default to Q4 if beyond 12 months
+            // Calculate quarter dynamically (supports Q1, Q2, Q3, Q4, Q5, Q6, etc.)
+            const quarter = Math.floor(monthsSinceStart / 3) + 1;
+            console.log(`📅 [QUARTER CALC] Calculated quarter: Q${quarter} (month ${monthsSinceStart} of project)`);
+            return quarter;
         }
 
         /**
@@ -2922,9 +2996,22 @@
             });
 
             // Filter by flagged status if enabled
-            if (showOnlyFlagged) {
+            if (showOnlyRedFlag || showOnlyBlueFlag) {
                 transactionsWithIndices = transactionsWithIndices.filter(item => {
-                    return item.transaction.flagged === true;
+                    const transaction = item.transaction;
+                    // If both filters are enabled, show both red and blue flagged items
+                    if (showOnlyRedFlag && showOnlyBlueFlag) {
+                        return transaction.flagged === 'red' || transaction.flagged === 'blue' || transaction.flagged === true; // Include legacy boolean true
+                    }
+                    // If only red flag filter is enabled
+                    if (showOnlyRedFlag) {
+                        return transaction.flagged === 'red' || transaction.flagged === true; // Include legacy boolean true
+                    }
+                    // If only blue flag filter is enabled
+                    if (showOnlyBlueFlag) {
+                        return transaction.flagged === 'blue';
+                    }
+                    return false;
                 });
             }
 
@@ -2998,7 +3085,16 @@
 
                 // Calculate VAT-exclusive amount
                 const spentAmount = parseFloat(t.spent?.replace(/[£,]/g, '') || 0);
-                const spentExVAT = spentAmount > 0 ? (spentAmount / 1.2).toFixed(2) : '';
+                let spentExVAT = '';
+
+                // Check if 0% VAT is applied or if spent_ex_vat is manually set
+                if (t.zeroVAT || t.spent_ex_vat) {
+                    const exVatAmount = parseFloat(t.spent_ex_vat?.toString().replace(/[£,]/g, '') || t.spent?.replace(/[£,]/g, '') || 0);
+                    spentExVAT = exVatAmount > 0 ? exVatAmount.toFixed(2) : '';
+                } else {
+                    // Default: calculate with 20% VAT
+                    spentExVAT = spentAmount > 0 ? (spentAmount / 1.2).toFixed(2) : '';
+                }
 
                 // Build assignment info (handle multiple assignments)
                 let assignedTo = '';
@@ -3652,9 +3748,22 @@
             });
 
             // Filter by flagged status if enabled
-            if (showOnlyFlagged) {
+            if (showOnlyRedFlag || showOnlyBlueFlag) {
                 transactionsWithIndices = transactionsWithIndices.filter(item => {
-                    return item.transaction.flagged === true;
+                    const transaction = item.transaction;
+                    // If both filters are enabled, show both red and blue flagged items
+                    if (showOnlyRedFlag && showOnlyBlueFlag) {
+                        return transaction.flagged === 'red' || transaction.flagged === 'blue' || transaction.flagged === true; // Include legacy boolean true
+                    }
+                    // If only red flag filter is enabled
+                    if (showOnlyRedFlag) {
+                        return transaction.flagged === 'red' || transaction.flagged === true; // Include legacy boolean true
+                    }
+                    // If only blue flag filter is enabled
+                    if (showOnlyBlueFlag) {
+                        return transaction.flagged === 'blue';
+                    }
+                    return false;
                 });
             }
 
@@ -3770,7 +3879,16 @@
 
                 // Calculate VAT-exclusive amount (divide by 1.2 for UK 20% VAT)
                 const spentAmount = parseAmount(transaction.spent);
-                const spentExVAT = spentAmount > 0 ? (spentAmount / 1.2).toFixed(2) : '';
+                let spentExVAT = '';
+
+                // Check if 0% VAT is applied or if spent_ex_vat is manually set
+                if (transaction.zeroVAT || transaction.spent_ex_vat) {
+                    const exVatAmount = parseAmount(transaction.spent_ex_vat || transaction.spent);
+                    spentExVAT = exVatAmount > 0 ? exVatAmount.toFixed(2) : '';
+                } else {
+                    // Default: calculate with 20% VAT
+                    spentExVAT = spentAmount > 0 ? (spentAmount / 1.2).toFixed(2) : '';
+                }
 
                 // Display converted currency amount if available
                 let spentDisplay = escapeHtml(transaction.spent);
@@ -3796,15 +3914,19 @@
                 // Add flagged class if transaction is flagged
                 const rowClasses = [];
                 if (selectedRowIndex === index) rowClasses.push('row-selected');
-                if (transaction.flagged) rowClasses.push('row-flagged');
+                if (transaction.flagged === 'red') rowClasses.push('row-flagged-red');
+                else if (transaction.flagged === 'blue') rowClasses.push('row-flagged-blue');
+                else if (transaction.flagged === true) rowClasses.push('row-flagged-red'); // Legacy support
                 const rowClass = rowClasses.join(' ');
 
                 return `
                 <tr class="${rowClass}" onclick="selectRow(${index}, event)" data-row-index="${index}" tabindex="0">
                     <td style="text-align: center; font-weight: 600; color: ${transaction.bank === 'R' ? '#3AAFA9' : '#2B7A78'};">${transaction.bank || '?'}</td>
                     <td>${escapeHtml(transaction.date)}</td>
-                    <td class="description-cell">${descriptionHtml}</td>
-                    <td class="detail-cell">${detailHtml}</td>
+                    <td class="description-detail-cell" colspan="2">
+                        <div class="description-cell">${descriptionHtml}</div>
+                        <div class="detail-cell">${detailHtml}</div>
+                    </td>
                     <td class="fromto-cell">${escapeHtml(transaction.fromTo || '')}</td>
                     <td class="amount-spent">${spentDisplay}</td>
                     <td class="amount-spent" style="color: #059669; font-weight: 500;">${spentExVAT}</td>
@@ -3831,12 +3953,15 @@
                                         ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #f59e0b; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">E</span>' : ''}
                                     </button>`
                                 }
-                                <button class="action-btn flag-btn" onclick="toggleFlag(${index}); event.stopPropagation();" title="Flag for Attention${selectedRowIndex === index ? ' (F)' : ''}" style="position: relative; background: ${transaction.flagged ? '#ef4444' : 'transparent'}; transition: all 0.2s;">
+                                <button class="action-btn flag-btn" onclick="toggleFlag(${index}); event.stopPropagation();" title="${transaction.flagged === 'red' ? 'Red Flag - Click for Blue' : transaction.flagged === 'blue' ? 'Blue Flag - Click to Remove' : 'Click to Flag'}${selectedRowIndex === index ? ' (F)' : ''}" style="position: relative; background: ${transaction.flagged === 'red' ? '#ef4444' : transaction.flagged === 'blue' ? '#3b82f6' : 'transparent'}; transition: all 0.2s;">
                                     🚩
                                     ${selectedRowIndex === index ? '<span style="position: absolute; top: -4px; right: -4px; background: #7c3aed; color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">F</span>' : ''}
                                 </button>
                                 <button class="action-btn currency-btn" id="currencyBtn${index}" onclick="convertTransactionCurrency(${index}); event.stopPropagation();" title="${transaction.convertedCurrency ? `Converted to ${transaction.convertedCurrency} ${transaction.convertedAmount.toFixed(2)} (Click to revert)` : 'Convert GBP to USD'}" style="position: relative; background: ${transaction.convertedCurrency ? '#10b981' : 'transparent'}; transition: all 0.2s;">
                                     💱
+                                </button>
+                                <button class="action-btn vat-btn" onclick="toggleZeroVAT(${index}); event.stopPropagation();" title="${transaction.zeroVAT ? 'Click to revert to original VAT calculation' : 'Set to 0% VAT (no tax)'}" style="position: relative; background: ${transaction.zeroVAT ? '#f59e0b' : 'transparent'}; transition: all 0.2s; font-size: 10px; font-weight: 600; color: ${transaction.zeroVAT ? 'white' : '#64748b'};">
+                                    0%
                                 </button>
                                 <button class="action-btn delete-btn ${hasAssignments ? 'has-assignment' : ''}" onclick="handleAssign(${index}); event.stopPropagation();" oncontextmenu="handleUnassign(${index}); return false;" title="${assignBtnTitle}${selectedRowIndex === index ? ' (1)' : ''}" id="assignBtn${index}" style="position: relative;">
                                     ${assignBtnIcon}
@@ -4099,25 +4224,30 @@
         async function toggleFlag(index) {
             const transaction = allTransactions[index];
 
-            // Toggle flagged state
-            transaction.flagged = !transaction.flagged;
-
-            // Save to storage
-            await saveTransactionsToStorage();
-
-            // Re-render to show flag state
-            renderTransactions();
-
-            // Show toast notification
-            if (transaction.flagged) {
+            // Cycle through three states: null → 'red' → 'blue' → null
+            if (!transaction.flagged || transaction.flagged === null) {
+                // No flag → Red flag
+                transaction.flagged = 'red';
                 showToast({
                     icon: '🚩',
-                    title: 'Flagged',
+                    title: 'Red Flag',
                     message: 'Transaction flagged for attention',
                     bgColor: '#ef4444'
                 });
-                console.log('🚩 [FLAG] Transaction flagged:', index);
-            } else {
+                console.log('🚩 [FLAG] Red flag added:', index);
+            } else if (transaction.flagged === 'red') {
+                // Red flag → Blue flag
+                transaction.flagged = 'blue';
+                showToast({
+                    icon: '🔵',
+                    title: 'Blue Flag',
+                    message: 'Transaction marked with blue flag',
+                    bgColor: '#3b82f6'
+                });
+                console.log('🔵 [FLAG] Blue flag added:', index);
+            } else if (transaction.flagged === 'blue') {
+                // Blue flag → No flag
+                transaction.flagged = null;
                 showToast({
                     icon: '✅',
                     title: 'Flag Removed',
@@ -4125,7 +4255,70 @@
                     bgColor: '#10b981'
                 });
                 console.log('✅ [FLAG] Flag removed:', index);
+            } else {
+                // Handle legacy boolean true values → convert to red
+                transaction.flagged = 'red';
+                showToast({
+                    icon: '🚩',
+                    title: 'Red Flag',
+                    message: 'Transaction flagged for attention',
+                    bgColor: '#ef4444'
+                });
+                console.log('🚩 [FLAG] Legacy flag converted to red:', index);
             }
+
+            // Save to storage
+            await saveTransactionsToStorage();
+
+            // Re-render to show flag state
+            renderTransactions();
+        }
+
+        // Toggle 0% VAT (set ex-VAT amount equal to with-VAT amount)
+        async function toggleZeroVAT(index) {
+            const transaction = allTransactions[index];
+
+            if (transaction.zeroVAT) {
+                // Revert to original VAT calculation
+                if (transaction.originalSpentExVAT !== undefined) {
+                    transaction.spent_ex_vat = transaction.originalSpentExVAT;
+                    delete transaction.originalSpentExVAT;
+                }
+                transaction.zeroVAT = false;
+
+                showToast({
+                    icon: '✅',
+                    title: 'VAT Restored',
+                    message: 'Reverted to original VAT calculation',
+                    bgColor: '#10b981'
+                });
+                console.log('✅ [VAT] Reverted to original VAT:', index);
+            } else {
+                // Store original ex-VAT value if we're modifying it
+                if (!transaction.originalSpentExVAT && transaction.spent_ex_vat) {
+                    transaction.originalSpentExVAT = transaction.spent_ex_vat;
+                }
+
+                // Set ex-VAT amount equal to with-VAT amount (0% VAT)
+                const spentAmount = transaction.spent || '0';
+                const spentStr = spentAmount.toString().replace(/£/g, '').replace(/,/g, '').trim();
+                transaction.spent_ex_vat = spentStr;
+                transaction.zeroVAT = true;
+
+                showToast({
+                    icon: '💰',
+                    title: '0% VAT Applied',
+                    message: 'Ex-VAT amount set to match with-VAT amount',
+                    bgColor: '#f59e0b'
+                });
+                console.log('💰 [VAT] Applied 0% VAT:', index, 'Amount:', transaction.spent_ex_vat);
+            }
+
+            // Save to storage
+            await saveTransactionsToStorage();
+
+            // Re-render to show updated amounts
+            renderTransactions();
         }
 
         // Convert transaction currency (GBP <-> USD)
@@ -4309,6 +4502,21 @@
                         ⌨️ Press 1-9 to select • ↑↓ Navigate • ← Back • Enter to confirm
                     </div>
                 </div>
+            `;
+
+            // Check if transaction has existing assignments - show "View Assignment" button
+            if (transaction.assignments && transaction.assignments.length > 0) {
+                content += `
+                    <div style="margin-bottom: 12px; padding: 10px; background: #dbeafe; border: 1px solid #3b82f6; border-radius: 4px;">
+                        <div style="font-size: 11px; color: #1e40af; margin-bottom: 6px; font-weight: 600;">This transaction is already assigned</div>
+                        <button onclick="viewAssignment(${currentEditingIndex})" style="width: 100%; background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;">
+                            View Assignment in Grants Page
+                        </button>
+                    </div>
+                `;
+            }
+
+            content += `
                 <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #333;">Step 1: Select Project</div>
                 <div style="max-height: 400px; overflow-y: auto;">
             `;
@@ -5008,6 +5216,37 @@
         }
 
         /**
+         * View assignment in grants page - navigates to grants.html and highlights the transaction
+         */
+        function viewAssignment(index) {
+            const transaction = allTransactions[index];
+
+            if (!transaction || !transaction.assignments || transaction.assignments.length === 0) {
+                alert('No assignments found for this transaction');
+                return;
+            }
+
+            // Get the first assignment (or you could let user choose if multiple)
+            const assignment = transaction.assignments[0];
+
+            // Create URL parameters to pass to grants.html
+            const params = new URLSearchParams({
+                projectId: assignment.projectId,
+                category: assignment.category,
+                itemKey: assignment.itemKey,
+                transactionDate: transaction.date,
+                transactionDescription: transaction.description,
+                highlightTransaction: 'true'
+            });
+
+            // Close the modal
+            closeAssignModal();
+
+            // Navigate to grants.html with parameters
+            window.location.href = `grants.html?${params.toString()}`;
+        }
+
+        /**
          * Save all transactions to IndexedDB
          */
         async function saveTransactionsToStorage() {
@@ -5217,6 +5456,386 @@
             }
 
             console.log('✅ [UPDATE COSTS] Project saved successfully');
+        }
+
+        // ========================================
+        // QUARTER RECALCULATION SYSTEM
+        // ========================================
+
+        /**
+         * Recalculate all transaction quarters based on current project start dates
+         * This comprehensive function:
+         * - Creates backup before making changes
+         * - Recalculates quarters for all assigned transactions
+         * - Rebuilds project quarterly costs from scratch
+         * - Provides detailed progress tracking and logging
+         * - Supports rollback if something goes wrong
+         */
+        async function recalculateAllQuarters() {
+            console.log('🔄 [RECALC] Starting comprehensive quarter recalculation...');
+
+            if (!confirm('🔄 Recalculate All Quarters\n\nThis will:\n1. Create a backup of your current data\n2. Recalculate quarters for ALL assigned transactions\n3. Rebuild project quarterly costs\n\nYour project start dates must be correctly set in grants.html.\n\nContinue?')) {
+                return;
+            }
+
+            const startTime = Date.now();
+            const changeLog = [];
+            let totalProcessed = 0;
+            let totalChanged = 0;
+            let errors = [];
+
+            try {
+                // Step 1: Create backup
+                console.log('💾 [RECALC] Creating backup...');
+                await createQuarterBackup();
+                showSimpleToast('💾 Backup created successfully', 'info');
+
+                // Step 2: Load all data
+                console.log('📂 [RECALC] Loading all transactions and projects...');
+                if (!db) await initIndexedDB();
+
+                const csvFiles = await loadAllCSVFilesFromDB();
+                const projects = await loadAllProjectsFromDB();
+
+                console.log(`📊 [RECALC] Loaded ${csvFiles.length} CSV files, ${projects.length} projects`);
+
+                // Step 3: Recalculate quarters for each transaction
+                console.log('🔢 [RECALC] Recalculating transaction quarters...');
+                let fileIndex = 0;
+
+                for (const csvFile of csvFiles) {
+                    fileIndex++;
+                    console.log(`📄 [RECALC] Processing file ${fileIndex}/${csvFiles.length}: ${csvFile.fileName}`);
+
+                    let fileChanged = false;
+
+                    for (const transaction of csvFile.transactions || []) {
+                        if (!transaction.assignments || transaction.assignments.length === 0) {
+                            continue;
+                        }
+
+                        totalProcessed++;
+
+                        for (const assignment of transaction.assignments) {
+                            const project = projects.find(p => p.projectId === assignment.projectId);
+
+                            if (!project) {
+                                errors.push(`Project ${assignment.projectId} not found for transaction "${transaction.description}"`);
+                                continue;
+                            }
+
+                            // Log project details for first few transactions
+                            if (totalProcessed === 1) {
+                                const startMonth = project.projectStartMonth || project.financeSummary?.projectStartMonth;
+                                const startYear = project.projectStartYear || project.financeSummary?.projectStartYear;
+                                console.log(`📊 [RECALC] Project: ${project.projectName || assignment.projectName}`);
+                                console.log(`   Start Date: ${startMonth}/${startYear}`);
+                                console.log(`   Transaction Date: ${transaction.date}`);
+                            }
+
+                            // Recalculate quarter
+                            const oldQuarter = assignment.quarter;
+                            const newQuarter = calculateTransactionQuarter(transaction.date, project);
+
+                            if (!newQuarter) {
+                                errors.push(`Cannot calculate quarter for transaction "${transaction.description}" in project "${project.projectName || project.projectId}"`);
+                                continue;
+                            }
+
+                            if (oldQuarter !== newQuarter) {
+                                console.log(`🔄 [RECALC] "${transaction.description.substring(0, 40)}..." (${transaction.date}): Q${oldQuarter} → Q${newQuarter}`);
+                                assignment.quarter = newQuarter;
+                                fileChanged = true;
+                                totalChanged++;
+
+                                changeLog.push({
+                                    date: transaction.date,
+                                    description: transaction.description.substring(0, 50),
+                                    project: project.projectName || `Project ${project.projectId}`,
+                                    oldQuarter: oldQuarter,
+                                    newQuarter: newQuarter,
+                                    amount: `£${assignment.amount.toFixed(2)}`
+                                });
+                            } else {
+                                // Log unchanged quarters for debugging
+                                if (totalProcessed <= 5) {
+                                    console.log(`✓ [RECALC] "${transaction.description.substring(0, 40)}..." (${transaction.date}): Q${oldQuarter} (no change)`);
+                                }
+                            }
+                        }
+                    }
+
+                    // Save updated CSV file if changed
+                    if (fileChanged) {
+                        await saveCSVFileToDB_Direct(csvFile);
+                        console.log(`✅ [RECALC] Saved ${csvFile.fileName} with updated quarters`);
+                    }
+
+                    // Update progress
+                    if (fileIndex % 5 === 0 || fileIndex === csvFiles.length) {
+                        showSimpleToast(`Processing... ${fileIndex}/${csvFiles.length} files`, 'info');
+                    }
+                }
+
+                // Step 4: Rebuild all project quarterly costs
+                console.log('📊 [RECALC] Rebuilding project quarterly costs...');
+                showSimpleToast('📊 Rebuilding project costs...', 'info');
+
+                for (const project of projects) {
+                    await rebuildProjectQuarterlyCosts(project);
+                }
+
+                // Step 5: Reload data to reflect changes
+                console.log('🔄 [RECALC] Reloading data...');
+                await loadSavedCSVFiles();
+                await loadProjectsFromDB();
+
+                // Show completion summary
+                const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+                const summary = `✅ Quarter Recalculation Complete!\n\n` +
+                    `📊 Processed: ${totalProcessed} transactions\n` +
+                    `🔄 Changed: ${totalChanged} quarters\n` +
+                    `⏱️ Time: ${duration}s\n` +
+                    `${errors.length > 0 ? `\n⚠️ Errors: ${errors.length} (see console)` : ''}`;
+
+                console.log('✅ [RECALC] COMPLETE!');
+                console.log(`   Processed: ${totalProcessed} transactions`);
+                console.log(`   Changed: ${totalChanged} quarters`);
+                console.log(`   Duration: ${duration}s`);
+
+                if (changeLog.length > 0) {
+                    console.log('\n📊 [RECALC] CHANGE LOG:');
+                    console.table(changeLog);
+                }
+
+                if (errors.length > 0) {
+                    console.error('⚠️ [RECALC] Errors encountered:', errors);
+                }
+
+                // Show detailed summary with next steps
+                const detailedSummary = summary +
+                    `\n\n💡 Next Steps:\n` +
+                    `1. Switch to grants.html tab\n` +
+                    `2. Click "🔄 Sync Spend Data" if needed\n` +
+                    `3. Check Q5 (2507-2509) for your transactions`;
+
+                alert(detailedSummary);
+                showSimpleToast('✅ Quarter recalculation complete! Check grants.html', 'success');
+
+            } catch (error) {
+                console.error('❌ [RECALC] Fatal error:', error);
+                alert(`❌ Recalculation Failed\n\n${error.message}\n\nYour data has been preserved. Check console for details.`);
+                showSimpleToast('❌ Recalculation failed', 'destructive');
+            }
+        }
+
+        /**
+         * Helper: Load all CSV files directly from IndexedDB
+         */
+        async function loadAllCSVFilesFromDB() {
+            if (!db) await initIndexedDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([CSV_STORE_NAME], 'readonly');
+                const store = transaction.objectStore(CSV_STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Helper: Load all projects directly from IndexedDB
+         */
+        async function loadAllProjectsFromDB() {
+            if (!db) await initIndexedDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Helper: Save CSV file directly to IndexedDB
+         */
+        async function saveCSVFileToDB_Direct(csvFile) {
+            if (!db) await initIndexedDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(CSV_STORE_NAME);
+                const request = store.put(csvFile);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Rebuild quarterly costs for a project from scratch
+         * This recalculates totals based on actual transaction assignments
+         */
+        async function rebuildProjectQuarterlyCosts(project) {
+            console.log(`📊 [REBUILD] Rebuilding costs for: ${project.projectName || project.projectId}`);
+
+            // Load fresh project from DB
+            if (!db) await initIndexedDB();
+            const freshProject = await new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(project.projectId);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+
+            if (!freshProject) {
+                console.error(`❌ [REBUILD] Project ${project.projectId} not found`);
+                return;
+            }
+
+            // Reset all quarterly costs to zero
+            const categories = ['labour', 'overheads', 'materials', 'capitalUsage', 'subcontracting', 'travel', 'otherCosts'];
+
+            for (const categoryName of categories) {
+                const category = getCategoryObject(freshProject, categoryName);
+                if (!category) continue;
+
+                const items = getAllItemsFromCategory(category, categoryName);
+                for (const item of items) {
+                    // Initialize with all possible quarters (Q1-Q12)
+                    item.quarterlyCosts = {q1: 0, q2: 0, q3: 0, q4: 0, q5: 0, q6: 0, q7: 0, q8: 0, q9: 0, q10: 0, q11: 0, q12: 0};
+                }
+            }
+
+            // Recalculate from transaction assignments
+            const csvFiles = await loadAllCSVFilesFromDB();
+
+            for (const csvFile of csvFiles) {
+                for (const transaction of csvFile.transactions || []) {
+                    if (!transaction.assignments) continue;
+
+                    for (const assignment of transaction.assignments) {
+                        if (assignment.projectId !== freshProject.projectId) continue;
+
+                        const category = getCategoryObject(freshProject, assignment.category);
+                        const item = findItemInCategory(category, assignment.itemKey);
+
+                        if (item && assignment.quarter) {
+                            const quarterKey = `q${assignment.quarter}`;
+                            if (!item.quarterlyCosts) {
+                                item.quarterlyCosts = {q1: 0, q2: 0, q3: 0, q4: 0, q5: 0, q6: 0, q7: 0, q8: 0, q9: 0, q10: 0, q11: 0, q12: 0};
+                            }
+                            item.quarterlyCosts[quarterKey] = (item.quarterlyCosts[quarterKey] || 0) + assignment.amount;
+                        }
+                    }
+                }
+            }
+
+            // Save updated project
+            freshProject.lastModified = new Date().toISOString();
+            await saveProjectToDB(freshProject);
+
+            console.log(`✅ [REBUILD] Completed: ${freshProject.projectName || freshProject.projectId}`);
+        }
+
+        /**
+         * Create backup of current transaction and project data
+         */
+        async function createQuarterBackup() {
+            if (!db) await initIndexedDB();
+
+            const csvFiles = await loadAllCSVFilesFromDB();
+            const projects = await loadAllProjectsFromDB();
+
+            const backup = {
+                timestamp: new Date().toISOString(),
+                csvFiles: csvFiles,
+                projects: projects
+            };
+
+            // Store backup in IndexedDB
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(CSV_STORE_NAME);
+
+                const backupEntry = {
+                    id: 'quarter_backup_' + Date.now(),
+                    fileName: '__QUARTER_BACKUP__',
+                    uploadDate: new Date().toISOString(),
+                    backup: backup,
+                    transactions: [],
+                    transactionCount: 0
+                };
+
+                const request = store.put(backupEntry);
+                request.onsuccess = () => {
+                    console.log('💾 [BACKUP] Created with ID:', backupEntry.id);
+                    resolve();
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Restore from most recent backup
+         */
+        async function restoreFromQuarterBackup() {
+            if (!confirm('⚠️ Restore from Backup\n\nThis will restore all transactions and projects to their state before the last recalculation.\n\nContinue?')) {
+                return;
+            }
+
+            try {
+                if (!db) await initIndexedDB();
+
+                // Find most recent backup
+                const allFiles = await loadAllCSVFilesFromDB();
+                const backups = allFiles.filter(f => f.fileName === '__QUARTER_BACKUP__').sort((a, b) =>
+                    new Date(b.uploadDate) - new Date(a.uploadDate)
+                );
+
+                if (backups.length === 0) {
+                    alert('❌ No backup found');
+                    return;
+                }
+
+                const backup = backups[0].backup;
+                console.log('📥 [RESTORE] Restoring backup from:', backup.timestamp);
+
+                // Restore CSV files
+                const csvTransaction = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const csvStore = csvTransaction.objectStore(CSV_STORE_NAME);
+
+                for (const csvFile of backup.csvFiles) {
+                    await new Promise((resolve, reject) => {
+                        const request = csvStore.put(csvFile);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+
+                // Restore projects
+                const projTransaction = db.transaction([STORE_NAME], 'readwrite');
+                const projStore = projTransaction.objectStore(STORE_NAME);
+
+                for (const project of backup.projects) {
+                    await new Promise((resolve, reject) => {
+                        const request = projStore.put(project);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+
+                // Reload data
+                await loadSavedCSVFiles();
+                await loadProjectsFromDB();
+
+                alert(`✅ Restore Complete!\n\nRestored from backup created at:\n${new Date(backup.timestamp).toLocaleString()}`);
+                showSimpleToast('✅ Backup restored successfully', 'success');
+
+            } catch (error) {
+                console.error('❌ [RESTORE] Error:', error);
+                alert(`❌ Restore Failed\n\n${error.message}`);
+            }
         }
 
         // Close modal when clicking outside
@@ -6313,7 +6932,7 @@
                         tokenExpiresAt: tokenExpiresAt,
                         selected: true
                     });
-                    showSimpleToast('✅ Connected to Gmail', 'success');
+                    // showSimpleToast('✅ Connected to Gmail', 'success'); // DISABLED (user preference)
                 }
             } catch (error) {
                 console.error('Error getting user info:', error);
@@ -6324,7 +6943,7 @@
                     tokenExpiresAt: tokenExpiresAt,
                     selected: true
                 });
-                showSimpleToast('✅ Connected to Gmail', 'success');
+                // showSimpleToast('✅ Connected to Gmail', 'success'); // DISABLED (user preference)
             }
 
             saveGmailAccountsToStorage(); // Persist to localStorage (including token and expiry)
@@ -6593,6 +7212,7 @@
 
                 const message = response.result;
                 const pdfs = [];
+                let emailHtmlBody = '';
 
                 // Parse email parts recursively
                 function extractAttachments(parts) {
@@ -6608,6 +7228,16 @@
                             });
                         }
 
+                        // Extract HTML body for link detection
+                        if (part.mimeType === 'text/html' && part.body.data) {
+                            try {
+                                const decodedHtml = atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+                                emailHtmlBody += decodedHtml;
+                            } catch (e) {
+                                console.warn('Could not decode HTML part:', e);
+                            }
+                        }
+
                         if (part.parts) {
                             extractAttachments(part.parts);
                         }
@@ -6615,11 +7245,71 @@
                 }
 
                 extractAttachments(message.payload.parts);
-                return pdfs;
+
+                // Return both PDFs and HTML body for link detection
+                return { pdfs, htmlBody: emailHtmlBody };
             } catch (error) {
                 console.error('Error extracting PDFs:', error);
-                return [];
+                return { pdfs: [], htmlBody: '' };
             }
+        }
+
+        function detectInvoiceLinks(htmlBody) {
+            if (!htmlBody) return null;
+
+            // Patterns to detect invoice-related links/buttons
+            const invoiceKeywords = [
+                'invoice', 'receipt', 'order', 'bill', 'statement',
+                'download', 'view', 'get', 'access', 'see'
+            ];
+
+            // Look for links with invoice-related text or URLs
+            const linkPattern = /<a[^>]*href=["']([^"']+)["'][^>]*>([^<]*)<\/a>/gi;
+            const buttonPattern = /<(?:button|div|span)[^>]*>([^<]*(?:invoice|receipt|order|bill)[^<]*)<\/(?:button|div|span)>/gi;
+
+            let foundInvoiceLink = false;
+            let linkText = '';
+
+            // Check for invoice-related links
+            let match;
+            while ((match = linkPattern.exec(htmlBody)) !== null) {
+                const url = match[1];
+                const text = match[2].toLowerCase();
+
+                // Check if link text contains invoice keywords
+                const hasInvoiceKeyword = invoiceKeywords.some(keyword => text.includes(keyword));
+
+                if (hasInvoiceKeyword) {
+                    foundInvoiceLink = true;
+                    linkText = match[2].trim();
+                    break;
+                }
+            }
+
+            // Check for invoice-related buttons if no link found
+            if (!foundInvoiceLink) {
+                while ((match = buttonPattern.exec(htmlBody)) !== null) {
+                    linkText = match[1].trim();
+                    foundInvoiceLink = true;
+                    break;
+                }
+            }
+
+            if (foundInvoiceLink) {
+                return {
+                    hasInvoiceLink: true,
+                    linkText: linkText || 'Download Invoice',
+                    message: 'This email contains an invoice that needs to be accessed via a link in the email.'
+                };
+            }
+
+            return null;
+        }
+
+        function openGmailEmail(messageId, accountEmail) {
+            // Create Gmail URL to open the email directly
+            const gmailUrl = `https://mail.google.com/mail/u/${accountEmail}/#all/${messageId}`;
+            window.open(gmailUrl, '_blank');
         }
 
         async function downloadPDFAttachment(messageId, attachmentId, accessToken) {
@@ -7571,8 +8261,16 @@ Return ONLY valid JSON.`;
             // Initialize logger
             searchLogger.init('searchLogContainer');
 
+            // Clear any previous pasted image
+            if (typeof clearPastedImage === 'function') {
+                clearPastedImage();
+            }
+
             // Show modal
             modal.style.display = 'flex';
+
+            // Initialize drag-and-drop and paste functionality
+            initManualUploadOnModalOpen();
 
             // Start search
             executeIntelligentSearch(transaction, transactionIndex);
@@ -7586,6 +8284,11 @@ Return ONLY valid JSON.`;
             if (logHeader) logHeader.style.display = 'flex';
 
             searchLogger.clear();
+
+            // Clear pasted image preview
+            if (typeof clearPastedImage === 'function') {
+                clearPastedImage();
+            }
         }
 
         // ============================================================
@@ -7692,7 +8395,7 @@ Return ONLY valid JSON.`;
                     console.log(`✅ [QUEUE] Task completed in ${duration}s:`, results);
 
                     // Show notification
-                    this.showCompletionNotification(task);
+                    // this.showCompletionNotification(task);  // DISABLED: User no longer wants popup notifications
 
                     // Update button state
                     this.updateTransactionButton(task.transactionIndex, 'completed', results);
@@ -7707,7 +8410,7 @@ Return ONLY valid JSON.`;
                     console.error(`❌ [QUEUE] Task failed:`, error);
 
                     // Show error notification
-                    this.showCompletionNotification(task);
+                    // this.showCompletionNotification(task);  // DISABLED: User no longer wants popup notifications
 
                     // Update button state
                     this.updateTransactionButton(task.transactionIndex, 'failed');
@@ -7825,11 +8528,12 @@ Return ONLY valid JSON.`;
                 const results = {
                     messagesFound: allMessages.length,
                     pdfsFound: 0,
+                    linkBasedInvoicesFound: 0,
                     emailMatches: []
                 };
 
                 if (allMessages.length > 0) {
-                    this.logToTask(task, '📎 Extracting PDF attachments...', 'info');
+                    this.logToTask(task, '📎 Extracting PDF attachments and analyzing emails...', 'info');
                 }
 
                 // Process each message and extract PDFs
@@ -7848,22 +8552,38 @@ Return ONLY valid JSON.`;
                         });
 
                         const headers = messageDetail.result.payload.headers;
-                        const pdfs = await extractPDFsFromEmail(msg.id, account.accessToken);
+                        const extractionResult = await extractPDFsFromEmail(msg.id, account.accessToken);
+                        const pdfs = extractionResult.pdfs || [];
+                        const htmlBody = extractionResult.htmlBody || '';
 
-                        results.emailMatches.push({
+                        // Check for invoice links if no PDFs found
+                        let invoiceLinkInfo = null;
+                        if (pdfs.length === 0 && htmlBody) {
+                            invoiceLinkInfo = detectInvoiceLinks(htmlBody);
+                            if (invoiceLinkInfo) {
+                                results.linkBasedInvoicesFound++;
+                            }
+                        }
+
+                        const emailMatch = {
                             messageId: msg.id,
                             accountEmail: msg.accountEmail,
                             subject: headers.find(h => h.name === 'Subject')?.value || 'No Subject',
                             from: headers.find(h => h.name === 'From')?.value || 'Unknown',
                             date: headers.find(h => h.name === 'Date')?.value || '',
-                            pdfs: pdfs
-                        });
+                            pdfs: pdfs,
+                            invoiceLinkInfo: invoiceLinkInfo
+                        };
 
+                        results.emailMatches.push(emailMatch);
                         results.pdfsFound += pdfs.length;
 
                         if (pdfs.length > 0) {
                             const subject = headers.find(h => h.name === 'Subject')?.value || 'No Subject';
                             this.logToTask(task, `📄 Found ${pdfs.length} PDF(s) in: "${subject.substring(0, 40)}..."`, 'success');
+                        } else if (invoiceLinkInfo) {
+                            const subject = headers.find(h => h.name === 'Subject')?.value || 'No Subject';
+                            this.logToTask(task, `🔗 Found invoice link in: "${subject.substring(0, 40)}..."`, 'success');
                         }
                     } catch (error) {
                         console.error('Error processing message:', error);
@@ -7871,7 +8591,12 @@ Return ONLY valid JSON.`;
                     }
                 }
 
-                this.logToTask(task, `✅ Search complete! Found ${results.pdfsFound} PDF invoice(s)`, results.pdfsFound > 0 ? 'success' : 'warning');
+                const totalInvoices = results.pdfsFound + results.linkBasedInvoicesFound;
+                if (totalInvoices > 0) {
+                    this.logToTask(task, `✅ Search complete! Found ${results.pdfsFound} PDF invoice(s) and ${results.linkBasedInvoicesFound} link-based invoice(s)`, 'success');
+                } else {
+                    this.logToTask(task, `ℹ️ Search complete. No invoices found.`, 'warning');
+                }
 
                 return results;
             }
@@ -7958,11 +8683,20 @@ Return ONLY valid JSON.`;
                 let icon, title, message, bgColor;
 
                 if (task.status === 'completed') {
-                    const pdfCount = task.results.pdfsFound;
-                    if (pdfCount > 0) {
+                    const pdfCount = task.results.pdfsFound || 0;
+                    const linkCount = task.results.linkBasedInvoicesFound || 0;
+                    const totalInvoices = pdfCount + linkCount;
+
+                    if (totalInvoices > 0) {
                         icon = '✅';
                         title = 'Invoice Search Complete';
-                        message = `Found ${pdfCount} invoice${pdfCount > 1 ? 's' : ''} for ${shortDesc}`;
+                        if (pdfCount > 0 && linkCount > 0) {
+                            message = `Found ${pdfCount} PDF invoice${pdfCount > 1 ? 's' : ''} and ${linkCount} email${linkCount > 1 ? 's' : ''} with invoice links for ${shortDesc}`;
+                        } else if (pdfCount > 0) {
+                            message = `Found ${pdfCount} PDF invoice${pdfCount > 1 ? 's' : ''} for ${shortDesc}`;
+                        } else {
+                            message = `Found ${linkCount} email${linkCount > 1 ? 's' : ''} with invoice links for ${shortDesc}. Click to open in Gmail.`;
+                        }
                         bgColor = '#10b981';
                     } else {
                         icon = 'ℹ️';
@@ -8036,12 +8770,29 @@ Return ONLY valid JSON.`;
                         break;
 
                     case 'completed':
-                        if (results && results.pdfsFound > 0) {
-                            btn.innerHTML = `🔔<span style="position: absolute; top: -4px; right: -4px; background: #10b981; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${results.pdfsFound}</span>`;
-                            btn.title = `${results.pdfsFound} invoice${results.pdfsFound > 1 ? 's' : ''} found - click to view`;
-                            btn.style.background = '#10b981';
-                            btn.classList.remove('searching-pulse');
-                            btn.classList.add('pulse-once');
+                        if (results) {
+                            const pdfCount = results.pdfsFound || 0;
+                            const linkCount = results.linkBasedInvoicesFound || 0;
+                            const totalInvoices = pdfCount + linkCount;
+
+                            if (totalInvoices > 0) {
+                                btn.innerHTML = `🔔<span style="position: absolute; top: -4px; right: -4px; background: #10b981; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${totalInvoices}</span>`;
+                                if (pdfCount > 0 && linkCount > 0) {
+                                    btn.title = `${pdfCount} PDF${pdfCount > 1 ? 's' : ''} and ${linkCount} email${linkCount > 1 ? 's' : ''} with invoice links - click to view`;
+                                } else if (linkCount > 0) {
+                                    btn.title = `${linkCount} email${linkCount > 1 ? 's' : ''} with invoice links - click to open in Gmail`;
+                                } else {
+                                    btn.title = `${pdfCount} invoice${pdfCount > 1 ? 's' : ''} found - click to view`;
+                                }
+                                btn.style.background = '#10b981';
+                                btn.classList.remove('searching-pulse');
+                                btn.classList.add('pulse-once');
+                            } else {
+                                btn.innerHTML = 'ℹ️';
+                                btn.title = 'No invoices found - click to search again';
+                                btn.style.background = '#94a3b8';
+                                btn.classList.remove('searching-pulse');
+                            }
                         } else {
                             btn.innerHTML = 'ℹ️';
                             btn.title = 'No invoices found - click to search again';
@@ -8626,7 +9377,7 @@ Return ONLY valid JSON.`;
             console.log(`✅ [AUTO-PROCESS] Found ${matchingEmails.length} emails above threshold (${AUTO_PROCESS_SETTINGS.minEmailMatchThreshold}%). Auto-processing PDFs...`);
 
             // Show notification that auto-processing started
-            showSimpleToast(`🔄 Auto-processing ${matchingEmails.length} PDFs in background...`, 'info');
+            // showSimpleToast(`🔄 Auto-processing ${matchingEmails.length} PDFs in background...`, 'info'); // DISABLED (user preference)
 
             // PHASE 3: Build Priority Queue
             const priorityQueue = buildPriorityQueue(matchingEmails);
@@ -8780,10 +9531,10 @@ Return ONLY valid JSON.`;
 
             if (bestMatchSoFar > 0) {
                 showProgressIndicator(processedCount, limitedQueue.length, `✅ Complete! Best match: ${bestMatchSoFar}%`);
-                showSimpleToast(`✅ Processing complete! Best match: ${bestMatchSoFar}%`, 'success');
+                // showSimpleToast(`✅ Processing complete! Best match: ${bestMatchSoFar}%`, 'success'); // DISABLED (user preference)
             } else {
                 showProgressIndicator(processedCount, limitedQueue.length, `⚠️ No valid matches found in PDFs`);
-                showSimpleToast(`⚠️ PDFs processed but no matches found`, 'warning');
+                // showSimpleToast(`⚠️ PDFs processed but no matches found`, 'warning'); // DISABLED (user preference)
             }
 
             setTimeout(() => {
@@ -9727,7 +10478,12 @@ Return ONLY valid JSON.`;
                         if (messages.length > 0) {
                             searchLogger.logProgress(`  ✅ Found ${messages.length} email(s) in Account ${accountNum}`, 'success');
                             console.log(`✅ [SEARCH LOOP] Account ${accountNum} returned ${messages.length} message(s)`);
-                            allResults.push(...messages.map(m => ({ ...m, accountEmail: account.email, accountAccessToken: account.accessToken })));
+                            allResults.push(...messages.map(m => ({
+                                ...m,
+                                accountEmail: account.email,
+                                accountAccessToken: account.accessToken,
+                                allowNonPDF: query.allowNonPDF || false
+                            })));
                         } else {
                             searchLogger.logProgress(`  No results in Account ${accountNum}`, 'info');
                             console.log(`⚠️ [SEARCH LOOP] Account ${accountNum} returned 0 messages`);
@@ -9798,6 +10554,83 @@ Return ONLY valid JSON.`;
                         query: `(${keywordOr}) (invoice OR receipt) has:attachment filename:pdf`,
                         description: `🤖 Searching with AI keywords`,
                         weight: 1.0
+                    });
+                }
+            }
+
+            // ========================================
+            // GOVERNMENT & SERVICE CONFIRMATION QUERIES (High Priority)
+            // ========================================
+
+            // Detect government services and similar providers that send confirmation emails
+            const merchantLower = context.merchantName.toLowerCase();
+            const isGovernmentService = merchantLower.includes('dvla') ||
+                                       merchantLower.includes('hmrc') ||
+                                       merchantLower.includes('gov.uk') ||
+                                       merchantLower.includes('council') ||
+                                       merchantLower.includes('passport');
+
+            if (isGovernmentService) {
+                // Query GOV-1: DVLA-specific search (highest priority for DVLA)
+                if (merchantLower.includes('dvla')) {
+                    queries.push({
+                        query: `DVLA (confirmation OR confirmed OR "vehicle tax" OR "payment received")`,
+                        description: `🏛️ Searching for DVLA confirmation emails`,
+                        weight: 1.4, // Higher than AI queries for DVLA
+                        allowNonPDF: true
+                    });
+
+                    // Query GOV-2: DVLA domain searches
+                    queries.push({
+                        query: `from:@dvla.gov.uk confirmation`,
+                        description: `🏛️ Searching emails from @dvla.gov.uk`,
+                        weight: 1.35,
+                        allowNonPDF: true
+                    });
+
+                    queries.push({
+                        query: `from:@notifications.service.gov.uk DVLA`,
+                        description: `🏛️ Searching UK Gov notifications (DVLA)`,
+                        weight: 1.3,
+                        allowNonPDF: true
+                    });
+                }
+
+                // Query GOV-3: HMRC-specific search
+                if (merchantLower.includes('hmrc')) {
+                    queries.push({
+                        query: `HMRC (confirmation OR payment OR "tax paid")`,
+                        description: `🏛️ Searching for HMRC confirmation emails`,
+                        weight: 1.4,
+                        allowNonPDF: true
+                    });
+
+                    queries.push({
+                        query: `from:@hmrc.gov.uk`,
+                        description: `🏛️ Searching emails from @hmrc.gov.uk`,
+                        weight: 1.35,
+                        allowNonPDF: true
+                    });
+                }
+
+                // Query GOV-4: Generic gov.uk search
+                if (merchantLower.includes('gov.uk') || merchantLower.includes('council')) {
+                    queries.push({
+                        query: `from:@gov.uk confirmation`,
+                        description: `🏛️ Searching government emails (.gov.uk)`,
+                        weight: 1.25,
+                        allowNonPDF: true
+                    });
+                }
+
+                // Query GOV-5: Broader government confirmation search with amount
+                if (context.amountFormats.length > 0) {
+                    const amountOr = context.amountFormats.slice(0, 2).map(a => `"${a}"`).join(' OR ');
+                    queries.push({
+                        query: `${merchantKeyword} confirmation (${amountOr})`,
+                        description: `🏛️ Searching "${merchantKeyword}" confirmation + amount`,
+                        weight: 1.2,
+                        allowNonPDF: true
                     });
                 }
             }
@@ -9995,6 +10828,297 @@ Return ONLY valid JSON.`;
 
             // Fallback: return cleaned merchant name
             return merchantName.toLowerCase();
+        }
+
+        /**
+         * Extract email body content from Gmail message structure
+         * Handles multipart messages and returns HTML or plain text
+         */
+        function extractEmailBody(emailMessage) {
+            if (!emailMessage || !emailMessage.payload) {
+                return '';
+            }
+
+            const payload = emailMessage.payload;
+
+            // Helper function to decode base64url
+            const decodeBase64 = (str) => {
+                if (!str) return '';
+                try {
+                    // Replace URL-safe chars and decode
+                    const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+                    return decodeURIComponent(escape(atob(base64)));
+                } catch (e) {
+                    console.error('Failed to decode base64:', e);
+                    return '';
+                }
+            };
+
+            // Check if body is directly in payload
+            if (payload.body && payload.body.data) {
+                return decodeBase64(payload.body.data);
+            }
+
+            // Check parts (multipart message)
+            if (payload.parts && payload.parts.length > 0) {
+                // Try to find HTML part first
+                let htmlPart = payload.parts.find(part => part.mimeType === 'text/html');
+                if (htmlPart && htmlPart.body && htmlPart.body.data) {
+                    return decodeBase64(htmlPart.body.data);
+                }
+
+                // Fall back to plain text
+                let textPart = payload.parts.find(part => part.mimeType === 'text/plain');
+                if (textPart && textPart.body && textPart.body.data) {
+                    return decodeBase64(textPart.body.data);
+                }
+
+                // Check nested parts (some emails have nested multipart structure)
+                for (const part of payload.parts) {
+                    if (part.parts && part.parts.length > 0) {
+                        let nestedHtml = part.parts.find(p => p.mimeType === 'text/html');
+                        if (nestedHtml && nestedHtml.body && nestedHtml.body.data) {
+                            return decodeBase64(nestedHtml.body.data);
+                        }
+
+                        let nestedText = part.parts.find(p => p.mimeType === 'text/plain');
+                        if (nestedText && nestedText.body && nestedText.body.data) {
+                            return decodeBase64(nestedText.body.data);
+                        }
+                    }
+                }
+            }
+
+            return '';
+        }
+
+        /**
+         * Strip HTML tags and convert to plain text
+         * Preserves line breaks and basic formatting
+         */
+        function stripHtmlTags(html) {
+            if (!html) return '';
+
+            // Create temporary div to parse HTML
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            // Replace <br> and <p> with line breaks before stripping
+            temp.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+            temp.querySelectorAll('p').forEach(p => {
+                const text = p.textContent;
+                p.replaceWith(text + '\n\n');
+            });
+
+            // Get text content
+            let text = temp.textContent || temp.innerText || '';
+
+            // Clean up excessive whitespace
+            text = text.replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
+            text = text.replace(/[ \t]+/g, ' '); // Replace multiple spaces with single space
+            text = text.trim();
+
+            return text;
+        }
+
+        /**
+         * Detect confirmation email type and return metadata for better formatting
+         */
+        function detectConfirmationEmailType(subject, body, fromAddress) {
+            const subjectLower = (subject || '').toLowerCase();
+            const bodyLower = (body || '').toLowerCase();
+            const fromLower = (fromAddress || '').toLowerCase();
+
+            const types = {
+                dvla: {
+                    name: 'DVLA Vehicle Tax',
+                    icon: '🚗',
+                    keywords: ['dvla', 'vehicle tax', 'vehicle licensing']
+                },
+                hmrc: {
+                    name: 'HMRC Tax Payment',
+                    icon: '💷',
+                    keywords: ['hmrc', 'tax', 'self assessment']
+                },
+                council: {
+                    name: 'Council Tax',
+                    icon: '🏛️',
+                    keywords: ['council tax', 'council payment']
+                },
+                passport: {
+                    name: 'Passport Service',
+                    icon: '🛂',
+                    keywords: ['passport', 'home office']
+                },
+                utility: {
+                    name: 'Utility Payment',
+                    icon: '⚡',
+                    keywords: ['energy', 'water', 'gas', 'electric']
+                },
+                generic: {
+                    name: 'Payment Confirmation',
+                    icon: '✉️',
+                    keywords: ['confirmation', 'payment', 'receipt']
+                }
+            };
+
+            // Check each type
+            for (const [key, type] of Object.entries(types)) {
+                if (key === 'generic') continue; // Check generic last
+
+                for (const keyword of type.keywords) {
+                    if (subjectLower.includes(keyword) || bodyLower.includes(keyword) || fromLower.includes(keyword)) {
+                        return type;
+                    }
+                }
+            }
+
+            return types.generic;
+        }
+
+        /**
+         * Convert email to PDF document
+         * Creates a formatted PDF from email content when no PDF attachment exists
+         */
+        async function convertEmailToPDF(emailMessage) {
+            try {
+                console.log('📄 [EMAIL-TO-PDF] Starting conversion...');
+
+                // Check if jsPDF is available
+                if (typeof window.jspdf === 'undefined') {
+                    console.error('❌ [EMAIL-TO-PDF] jsPDF library not loaded');
+                    throw new Error('jsPDF library not available');
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // Extract email headers
+                const headers = emailMessage.payload.headers;
+                const from = headers.find(h => h.name === 'From')?.value || 'Unknown Sender';
+                const to = headers.find(h => h.name === 'To')?.value || '';
+                const subject = headers.find(h => h.name === 'Subject')?.value || 'No Subject';
+                const date = headers.find(h => h.name === 'Date')?.value || '';
+
+                // Extract and process email body
+                const bodyHtml = extractEmailBody(emailMessage);
+                const bodyText = stripHtmlTags(bodyHtml);
+
+                // Detect email type for better formatting
+                const emailType = detectConfirmationEmailType(subject, bodyText, from);
+
+                // PDF Styling
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const margin = 20;
+                const contentWidth = pageWidth - (2 * margin);
+                let yPosition = 20;
+
+                // Header Section - Email Type Badge
+                doc.setFillColor(58, 175, 169); // PEBL brand color
+                doc.rect(0, 0, pageWidth, 15, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${emailType.icon} ${emailType.name}`, margin, 10);
+
+                // Reset text color
+                doc.setTextColor(0, 0, 0);
+                yPosition = 25;
+
+                // Email Metadata Section
+                doc.setFontSize(9);
+                doc.setTextColor(100, 100, 100);
+                doc.setFont('helvetica', 'normal');
+
+                // From
+                doc.text('From:', margin, yPosition);
+                doc.setFont('helvetica', 'bold');
+                const fromText = doc.splitTextToSize(from, contentWidth - 30);
+                doc.text(fromText, margin + 25, yPosition);
+                yPosition += (fromText.length * 4) + 3;
+
+                // To
+                if (to) {
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('To:', margin, yPosition);
+                    doc.setFont('helvetica', 'bold');
+                    const toText = doc.splitTextToSize(to, contentWidth - 30);
+                    doc.text(toText, margin + 25, yPosition);
+                    yPosition += (toText.length * 4) + 3;
+                }
+
+                // Date
+                doc.setFont('helvetica', 'normal');
+                doc.text('Date:', margin, yPosition);
+                doc.setFont('helvetica', 'bold');
+                doc.text(date, margin + 25, yPosition);
+                yPosition += 7;
+
+                // Subject
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Subject:', margin, yPosition);
+                doc.setFont('helvetica', 'bold');
+                const subjectLines = doc.splitTextToSize(subject, contentWidth - 30);
+                doc.text(subjectLines, margin + 25, yPosition);
+                yPosition += (subjectLines.length * 5) + 5;
+
+                // Separator line
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.5);
+                doc.line(margin, yPosition, pageWidth - margin, yPosition);
+                yPosition += 8;
+
+                // Email Body
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'normal');
+
+                // Split body text to fit page width
+                const bodyLines = doc.splitTextToSize(bodyText, contentWidth);
+
+                // Add body text with pagination
+                for (let i = 0; i < bodyLines.length; i++) {
+                    // Check if we need a new page
+                    if (yPosition > pageHeight - 30) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+
+                    doc.text(bodyLines[i], margin, yPosition);
+                    yPosition += 5;
+                }
+
+                // Footer on last page
+                const footerY = pageHeight - 15;
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.setFont('helvetica', 'italic');
+                const footerText = 'Generated from email by PEBLGen Invoice Search';
+                const footerWidth = doc.getTextWidth(footerText);
+                doc.text(footerText, (pageWidth - footerWidth) / 2, footerY);
+
+                const generatedDate = new Date().toLocaleString('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                doc.text(generatedDate, (pageWidth - doc.getTextWidth(generatedDate)) / 2, footerY + 4);
+
+                // Generate PDF blob
+                const pdfBlob = doc.output('blob');
+                console.log('✅ [EMAIL-TO-PDF] Conversion successful, size:', pdfBlob.size, 'bytes');
+
+                return pdfBlob;
+
+            } catch (error) {
+                console.error('❌ [EMAIL-TO-PDF] Conversion failed:', error);
+                throw error;
+            }
         }
 
         /**
@@ -10274,6 +11398,65 @@ Return ONLY valid JSON.`;
                                 ocrText
                             });
                         }
+                    } else if (msg.allowNonPDF) {
+                        // NO PDF ATTACHMENTS: Convert email to PDF
+                        searchLogger.logProgress(`  📧 No PDF attachment - converting email to PDF`, 'info');
+
+                        let pdfBlob = null;
+                        let extractedData = null;
+                        let validation = null;
+                        let ocrText = null;
+
+                        try {
+                            // Convert email content to PDF
+                            pdfBlob = await convertEmailToPDF(message);
+
+                            // Extract text from generated PDF for processing
+                            searchLogger.logProgress(`  🔍 Extracting text from converted email...`, 'info');
+                            ocrText = await extractTextFromPDF(pdfBlob);
+
+                            if (ocrText && ocrText.trim().length > 20) {
+                                // Extract structured data (company, amount, date)
+                                searchLogger.logProgress(`  🤖 Extracting data from email content...`, 'info');
+                                extractedData = await extractStructuredDataFromInvoice(ocrText, transaction);
+
+                                if (extractedData) {
+                                    // Validate against transaction
+                                    searchLogger.logProgress(`  ✓ Validating email data...`, 'info');
+                                    validation = await validateInvoiceData(extractedData, transaction);
+
+                                    if (validation.recommendation === 'attach') {
+                                        searchLogger.logProgress(`  ✅ Email content matches transaction!`, 'success');
+                                    } else if (validation.recommendation === 'review') {
+                                        searchLogger.logProgress(`  ⚠️ Email content partially matches - review recommended`, 'warning');
+                                    } else {
+                                        searchLogger.logProgress(`  ⚠️ Email content does not match transaction`, 'warning');
+                                    }
+                                }
+                            }
+                        } catch (emailConversionError) {
+                            console.error(`❌ [EMAIL-TO-PDF] Conversion error:`, emailConversionError);
+                            searchLogger.logProgress(`  ⚠️ Email conversion failed: ${emailConversionError.message}`, 'warning');
+                        }
+
+                        // Store converted email as a "virtual attachment"
+                        const headers = message.payload.headers;
+                        const subject = headers.find(h => h.name === 'Subject')?.value || 'Email Confirmation';
+                        const emailDate = headers.find(h => h.name === 'Date')?.value || '';
+
+                        processedAttachments.push({
+                            attachment: {
+                                filename: `${subject.substring(0, 50)}.pdf`,
+                                id: 'email-converted',
+                                mimeType: 'application/pdf',
+                                size: pdfBlob?.size || 0
+                            },
+                            pdfBlob,
+                            extractedData,
+                            validation,
+                            ocrText,
+                            isEmailConversion: true  // Flag to show special badge in UI
+                        });
                     }
 
                     scoredMessages.push({
@@ -10552,21 +11735,28 @@ Return ONLY valid JSON.`;
 
                         // Add validation badges next to filename
                         let validationBadge = '';
+
+                        // Email conversion badge (shown first if applicable)
+                        if (processed.isEmailConversion) {
+                            validationBadge = '<span style="background: #3AAFA9; color: white; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 700; margin-left: 4px;" title="Generated from email confirmation">📧 Email</span>';
+                        }
+
+                        // Add validation status badge
                         if (processed.validation) {
                             const matchCount = (processed.validation.companyMatch ? 1 : 0) +
                                              (processed.validation.amountMatch ? 1 : 0) +
                                              (processed.validation.dateMatch ? 1 : 0);
 
                             if (matchCount === 3) {
-                                validationBadge = '<span style="color: #22c55e; font-weight: bold; margin-left: 4px;">✅</span>';
+                                validationBadge += '<span style="color: #22c55e; font-weight: bold; margin-left: 4px;">✅</span>';
                             } else if (matchCount >= 1) {
-                                validationBadge = `<span style="color: #f59e0b; font-weight: bold; margin-left: 4px;">⚠️ ${matchCount}/3</span>`;
+                                validationBadge += `<span style="color: #f59e0b; font-weight: bold; margin-left: 4px;">⚠️ ${matchCount}/3</span>`;
                             } else {
-                                validationBadge = '<span style="color: #ef4444; font-weight: bold; margin-left: 4px;">❌</span>';
+                                validationBadge += '<span style="color: #ef4444; font-weight: bold; margin-left: 4px;">❌</span>';
                             }
-                        } else if (processed.ocrText === null) {
+                        } else if (processed.ocrText === null && !processed.isEmailConversion) {
                             // PDF couldn't be read (corrupt/invalid)
-                            validationBadge = '<span style="color: #94a3b8; font-size: 9px; font-weight: 600; margin-left: 4px;" title="Could not read PDF - file may be corrupt">🔒 Unreadable</span>';
+                            validationBadge += '<span style="color: #94a3b8; font-size: 9px; font-weight: 600; margin-left: 4px;" title="Could not read PDF - file may be corrupt">🔒 Unreadable</span>';
                         }
 
                         // Shorten filename if too long
@@ -11303,7 +12493,7 @@ Return ONLY valid JSON.`;
                     <div style="font-size: 9px; color: #64748b; text-align: center;">Processing...</div>
                 `;
 
-                showSimpleToast(`⏳ Processing ${fileName}...`, 'info');
+                // showSimpleToast(`⏳ Processing ${fileName}...`, 'info'); // DISABLED (user preference)
 
                 // Convert file to blob
                 const fileBlob = new Blob([await file.arrayBuffer()], { type: file.type });
@@ -11347,7 +12537,7 @@ Return ONLY valid JSON.`;
                     // Update UI
                     renderTransactions();
 
-                    showSimpleToast(`✅ Invoice attached: ${finalFilename}`, 'success');
+                    // showSimpleToast(`✅ Invoice attached: ${finalFilename}`, 'success'); // DISABLED (user preference)
 
                     // Close the search modal
                     closeIntelligentSearchModal();
@@ -11384,7 +12574,7 @@ Return ONLY valid JSON.`;
 
             const gmailUrl = `https://mail.google.com/mail/u/0/#all/${messageId}`;
             console.log(`📧 [GMAIL] Opening email in Gmail:`, { messageId, accountEmail, url: gmailUrl });
-            showSimpleToast('📧 Opening email in Gmail...', 'info');
+            // showSimpleToast('📧 Opening email in Gmail...', 'info'); // DISABLED (user preference)
             window.open(gmailUrl, '_blank');
         }
 
@@ -11569,16 +12759,16 @@ Return ONLY valid JSON.`;
                 closePDFPreview();
                 closeIntelligentSearchModal();
 
-                // Show success message with validation status
-                let successMessage = `✅ Invoice "${filename}" attached successfully!`;
-                if (validation) {
-                    if (validation.recommendation === 'attach') {
-                        successMessage += ' (AI validated ✓)';
-                    } else if (validation.recommendation === 'review') {
-                        successMessage += ' (Manual review recommended)';
-                    }
-                }
-                showToast(successMessage, 'success');
+                // Show success message with validation status - DISABLED (user preference)
+                // let successMessage = `✅ Invoice "${filename}" attached successfully!`;
+                // if (validation) {
+                //     if (validation.recommendation === 'attach') {
+                //         successMessage += ' (AI validated ✓)';
+                //     } else if (validation.recommendation === 'review') {
+                //         successMessage += ' (Manual review recommended)';
+                //     }
+                // }
+                // showToast(successMessage, 'success');
 
                 console.log('✅ [ATTACH] Invoice attached successfully, ID:', invoiceId);
 
@@ -11721,7 +12911,7 @@ Return ONLY valid JSON.`;
                 closePDFPreview();
                 renderTransactions();
 
-                showSimpleToast('✅ Invoice deleted successfully', 'success');
+                // showSimpleToast('✅ Invoice deleted successfully', 'success'); // DISABLED (user preference)
                 console.log('✅ [DELETE] Invoice deleted successfully');
 
             } catch (error) {
@@ -11839,11 +13029,20 @@ Return ONLY valid JSON.`;
             // Migrate old format if needed
             migrateInvoiceFormat(transaction);
 
+            const invoices = transaction.invoices || [];
+
+            // If there's exactly one invoice, open it directly in preview
+            if (invoices.length === 1) {
+                console.log('📄 [INVOICE-MANAGER] Only one invoice, opening directly');
+                await viewInvoiceFromManager(0);
+                return;
+            }
+
+            // Otherwise, show the list modal
             const modal = document.getElementById('invoiceManagerModal');
             const titleEl = document.getElementById('invoiceManagerTitle');
             const listContainer = document.getElementById('invoiceListContainer');
 
-            const invoices = transaction.invoices || [];
             titleEl.textContent = `Attached Documents (${invoices.length})`;
 
             // Build invoice list HTML
@@ -11935,15 +13134,29 @@ Return ONLY valid JSON.`;
                 const blobUrl = URL.createObjectURL(invoiceData.pdfBlob);
                 iframe.src = blobUrl;
 
-                // Update footer buttons to show delete option
+                // Update footer buttons to show all options
                 const footerButtons = document.getElementById('pdfPreviewButtons');
+                const transaction = allTransactions[transactionIndex];
+                const hasMultipleInvoices = transaction.invoices && transaction.invoices.length > 1;
+
                 if (footerButtons) {
                     footerButtons.innerHTML = `
-                        <button onclick="deleteInvoiceFromViewer(${invoiceIndex})" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #ef4444; color: white; border: none;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;">
+                            ${hasMultipleInvoices ? `
+                                <button onclick="closePDFPreview(); openAttachedInvoiceManager(${transactionIndex})" class="btn-secondary" style="padding: 10px; font-size: 13px;">
+                                    ← Back to List
+                                </button>
+                            ` : `
+                                <button onclick="closePDFPreview()" class="btn-secondary" style="padding: 10px; font-size: 13px;">
+                                    ← Close
+                                </button>
+                            `}
+                            <button onclick="closePDFPreview(); document.getElementById('addInvoiceInput').click();" class="modal-btn modal-btn-primary" style="padding: 10px; font-size: 13px; margin: 0;">
+                                + Add Another
+                            </button>
+                        </div>
+                        <button onclick="deleteInvoiceFromViewer(${invoiceIndex})" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #ef4444; color: white; border: none; margin-top: 10px;">
                             🗑️ Delete Invoice
-                        </button>
-                        <button onclick="closePDFPreview(); openAttachedInvoiceManager(${transactionIndex})" class="btn-secondary" style="width: 100%; padding: 10px; font-size: 14px;">
-                            Back to List
                         </button>
                     `;
                 }
@@ -12086,8 +13299,8 @@ Return ONLY valid JSON.`;
                 showSimpleToast(`⚠️ Failed to add ${errorCount} document(s)`, 'error');
             }
 
-            // Refresh manager modal
-            await openAttachedInvoiceManager(transactionIndex);
+            // Close the invoice manager and return to spend page
+            closeInvoiceManager();
         }
 
         /**
@@ -12227,7 +13440,7 @@ Return ONLY valid JSON.`;
 
                 // Render to show PDF button instead of invoice search button
                 renderTransactions();
-                showSimpleToast('✅ Invoice attached successfully!', 'success');
+                // showSimpleToast('✅ Invoice attached successfully!', 'success'); // DISABLED (user preference)
                 closeInvoiceSearchModal();
 
             } catch (error) {
@@ -13096,7 +14309,7 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
                     closeIntelligentSearchModal();
 
                     // Show success toast
-                    showSimpleToast('✅ Gmail connected! Starting invoice search...', 'success');
+                    // showSimpleToast('✅ Gmail connected! Starting invoice search...', 'success'); // DISABLED (user preference)
 
                     // Wait a moment then trigger the search
                     setTimeout(() => {
@@ -13805,6 +15018,122 @@ Return ONLY a comma-separated list of keywords, no explanation.`;
             }
         }
 
+        // Initialize drag-and-drop and clipboard paste for manual upload
+        function initializeManualUploadFeatures() {
+            const dropZone = document.getElementById('manualUploadDropZone');
+            if (!dropZone) return;
+
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Highlight drop zone when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
+                    dropZone.style.borderColor = '#2563eb';
+                    dropZone.style.borderWidth = '3px';
+                    dropZone.style.transform = 'scale(1.02)';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.style.background = 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)';
+                    dropZone.style.borderColor = '#3b82f6';
+                    dropZone.style.borderWidth = '2px';
+                    dropZone.style.transform = 'scale(1)';
+                }, false);
+            });
+
+            // Handle dropped files
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files && files.length > 0) {
+                    const fileInput = document.getElementById('manualInvoiceUpload');
+                    fileInput.files = files;
+                    handleManualInvoiceUpload();
+                }
+            }
+
+            // Handle clipboard paste (for screenshots and images) - FOCUSED ON INPUT
+            const pasteInput = document.getElementById('pasteImageInput');
+            let pastedImageFile = null;
+
+            document.addEventListener('paste', handlePaste);
+
+            function handlePaste(e) {
+                // Only handle paste when intelligent search modal is visible
+                const modal = document.getElementById('intelligentSearchModal');
+                if (!modal || modal.style.display === 'none') return;
+
+                const items = e.clipboardData?.items;
+                if (!items) return;
+
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const blob = items[i].getAsFile();
+                        if (blob) {
+                            e.preventDefault();
+
+                            // Create a File object with a name
+                            const file = new File([blob], `pasted-image-${Date.now()}.png`, { type: blob.type });
+                            pastedImageFile = file;
+
+                            // Show preview
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                const preview = document.getElementById('pasteImagePreview');
+                                const previewImg = document.getElementById('pasteImagePreviewImg');
+                                previewImg.src = event.target.result;
+                                preview.style.display = 'block';
+
+                                // Update input placeholder
+                                pasteInput.placeholder = 'Image ready to upload - click "Upload PDF or Image" button';
+                            };
+                            reader.readAsDataURL(blob);
+
+                            // Automatically upload the pasted image
+                            const fileInput = document.getElementById('manualInvoiceUpload');
+                            const dataTransfer = new DataTransfer();
+                            dataTransfer.items.add(file);
+                            fileInput.files = dataTransfer.files;
+                            handleManualInvoiceUpload();
+
+                            showSimpleToast('📋 Processing pasted image...', 'info');
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Clear pasted image preview
+        function clearPastedImage() {
+            document.getElementById('pasteImagePreview').style.display = 'none';
+            document.getElementById('pasteImagePreviewImg').src = '';
+            document.getElementById('pasteImageInput').placeholder = 'Click here and press Ctrl+V to paste screenshot';
+            pastedImageFile = null;
+        }
+
+        // Initialize when modal is opened (call this when opening the intelligent search modal)
+        function initManualUploadOnModalOpen() {
+            setTimeout(() => {
+                initializeManualUploadFeatures();
+            }, 100);
+        }
+
         function closeInvoiceSearchModal() {
             document.getElementById('invoiceSearchModal').classList.remove('active');
             currentInvoiceSearchIndex = null;
@@ -14339,7 +15668,93 @@ Extract the invoice data.`
         // Initialize Google Auth when page loads
         window.addEventListener('load', () => {
             initializeGoogleAuth();
+            checkForTransactionHighlightFromGrants();
         });
+
+        /**
+         * Check URL parameters and highlight transaction if coming from grants page
+         */
+        async function checkForTransactionHighlightFromGrants() {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            if (urlParams.get('highlightTransaction') !== 'true') {
+                return;
+            }
+
+            const transactionDate = urlParams.get('transactionDate');
+            const transactionDescription = urlParams.get('transactionDescription');
+
+            if (!transactionDate || !transactionDescription) {
+                console.log('❌ Missing transaction parameters for highlighting');
+                return;
+            }
+
+            console.log('🎬 Starting transaction highlight in spend page:', { transactionDate, transactionDescription });
+
+            // Helper function to wait
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+            // Helper function to scroll smoothly to element
+            const scrollToElement = (element) => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            };
+
+            try {
+                // Wait for page and table to render
+                console.log('⏳ Waiting for page to render...');
+                await wait(1000);
+
+                // Find the transaction row in the table
+                console.log('🔍 Searching for transaction in spend table...');
+                const allRows = document.querySelectorAll('#transactionsTable tbody tr');
+                console.log(`Found ${allRows.length} transaction rows to search`);
+
+                let foundRow = null;
+                for (const row of allRows) {
+                    // Get date and description from the row cells
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length < 2) continue;
+
+                    const rowDate = cells[0].textContent.trim();
+                    const rowDesc = cells[1].querySelector('.description-cell')?.textContent.trim() || cells[1].textContent.trim();
+
+                    if (rowDate === transactionDate && rowDesc === transactionDescription) {
+                        foundRow = row;
+                        break;
+                    }
+                }
+
+                if (foundRow) {
+                    console.log('✅ Transaction found! Scrolling and highlighting...');
+
+                    // Scroll to transaction
+                    await wait(200);
+                    scrollToElement(foundRow);
+                    await wait(300);
+
+                    // Add highlight animation (reuse same CSS class from grants)
+                    foundRow.style.animation = 'highlightGlow 2s ease-in-out 3';
+                    foundRow.style.background = '#dbeafe';
+
+                    // Remove highlight after animation completes
+                    setTimeout(() => {
+                        foundRow.style.animation = '';
+                        foundRow.style.background = '';
+                    }, 6500);
+
+                    console.log('🎉 Highlight complete!');
+                } else {
+                    console.log('❌ Transaction not found in spend table');
+                }
+
+                // Clean up URL parameters
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+
+            } catch (error) {
+                console.error('❌ Error during transaction highlight:', error);
+            }
+        }
     </script>
     </div>
 
