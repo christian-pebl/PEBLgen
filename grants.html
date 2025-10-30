@@ -4842,9 +4842,10 @@ Rules:
                                 ${sections.capital.nonStandard.map((item, index) => {
                                     if (!item.totalCost && item.maxGrantValue) item.totalCost = item.maxGrantValue;
                                     initializeQuarterlyCosts(item);
-                                    const costsClaimed = getTotalCostsClaimed(item);
-                                    const remaining = getRemainingBudget(item);
-                                    const difference = getDifferencePercentage(item);
+                                    const itemKey = `capitalNonStandard-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Capital Non-Standard', itemKey);
+                                    const remaining = item.maxGrantValue - costsClaimed;
+                                    const difference = item.maxGrantValue > 0 ? ((costsClaimed - item.maxGrantValue) / item.maxGrantValue) * 100 : 0;
                                     const isOverBudget = costsClaimed > item.maxGrantValue;
 
                                     return `
@@ -4926,7 +4927,7 @@ Rules:
                                 }).join('')}
 
                                 ${hasQuarters && sections.capital.nonStandard.length > 0 ? (() => {
-                                    const summary = getCategorySummary(sections.capital.nonStandard);
+                                    const summary = getCategorySummary(sections.capital.nonStandard, 'Capital Non-Standard', 'capitalNonStandard');
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     // Initialize category forecast if it doesn't exist
@@ -5029,9 +5030,10 @@ Rules:
                                 ${sections.revenue.nonStandard.map((item, index) => {
                                     if (!item.totalCost && item.maxGrantValue) item.totalCost = item.maxGrantValue;
                                     initializeQuarterlyCosts(item);
-                                    const costsClaimed = getTotalCostsClaimed(item);
-                                    const remaining = getRemainingBudget(item);
-                                    const difference = getDifferencePercentage(item);
+                                    const itemKey = `revenueNonStandard-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Revenue Non-Standard', itemKey);
+                                    const remaining = item.maxGrantValue - costsClaimed;
+                                    const difference = item.maxGrantValue > 0 ? ((costsClaimed - item.maxGrantValue) / item.maxGrantValue) * 100 : 0;
                                     const isOverBudget = costsClaimed > item.maxGrantValue;
 
                                     return `
@@ -5113,7 +5115,7 @@ Rules:
                                 }).join('')}
 
                                 ${hasQuarters && sections.revenue.nonStandard.length > 0 ? (() => {
-                                    const summary = getCategorySummary(sections.revenue.nonStandard);
+                                    const summary = getCategorySummary(sections.revenue.nonStandard, 'Revenue Non-Standard', 'revenueNonStandard');
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     // Initialize category forecast if it doesn't exist
@@ -6463,9 +6465,10 @@ ${inputText}`
 
                 projectBudget.labour.staff.forEach((staff, index) => {
                     initializeQuarterlyCosts(staff);
-                    const costsClaimed = getTotalCostsClaimed(staff);
-                    const remaining = getRemainingBudget(staff);
-                    const difference = getDifferencePercentage(staff);
+                    const itemKey = `labour-${index}`;
+                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Labour', itemKey);
+                    const remaining = staff.totalCost - costsClaimed;
+                    const difference = staff.totalCost > 0 ? ((costsClaimed - staff.totalCost) / staff.totalCost) * 100 : 0;
                     const isOverBudget = costsClaimed > staff.totalCost;
 
                     labourHTML += `
@@ -6531,7 +6534,7 @@ ${inputText}`
 
                 // Add category summary row (only if there are staff members with breakdown)
                 if (hasQuarters && projectBudget.labour.staff.length > 0) {
-                    const summary = getCategorySummary(projectBudget.labour.staff);
+                    const summary = getCategorySummary(projectBudget.labour.staff, 'Labour', 'labour');
                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                     // Initialize category forecast if it doesn't exist
@@ -6916,9 +6919,10 @@ ${inputText}`
                                         item.totalCost = item.netCost;
                                     }
                                     initializeQuarterlyCosts(item);
-                                    const costsClaimed = getTotalCostsClaimed(item);
-                                    const remaining = getRemainingBudget(item);
-                                    const difference = getDifferencePercentage(item);
+                                    const itemKey = `capitalUsage-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Capital Usage', itemKey);
+                                    const remaining = item.netCost - costsClaimed;
+                                    const difference = item.netCost > 0 ? ((costsClaimed - item.netCost) / item.netCost) * 100 : 0;
                                     const isOverBudget = costsClaimed > item.netCost;
 
                                     return `
@@ -6999,7 +7003,7 @@ ${inputText}`
                                 }).join('')}
 
                                 ${hasQuarters && projectBudget.capitalUsage.items.length > 0 ? (() => {
-                                    const summary = getCategorySummary(projectBudget.capitalUsage.items);
+                                    const summary = getCategorySummary(projectBudget.capitalUsage.items, 'Capital Usage', 'capitalUsage');
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     // Initialize category forecast if it doesn't exist
@@ -7105,9 +7109,10 @@ ${inputText}`
                                         contractor.totalCost = contractor.cost;
                                     }
                                     initializeQuarterlyCosts(contractor);
-                                    const costsClaimed = getTotalCostsClaimed(contractor);
-                                    const remaining = getRemainingBudget(contractor);
-                                    const difference = getDifferencePercentage(contractor);
+                                    const itemKey = `subcontracting-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Subcontracting', itemKey);
+                                    const remaining = contractor.cost - costsClaimed;
+                                    const difference = contractor.cost > 0 ? ((costsClaimed - contractor.cost) / contractor.cost) * 100 : 0;
                                     const isOverBudget = costsClaimed > contractor.cost;
 
                                     return `
@@ -7188,7 +7193,7 @@ ${inputText}`
                                 }).join('')}
 
                                 ${hasQuarters && projectBudget.subcontracting.contractors.length > 0 ? (() => {
-                                    const summary = getCategorySummary(projectBudget.subcontracting.contractors);
+                                    const summary = getCategorySummary(projectBudget.subcontracting.contractors, 'Subcontracting', 'subcontracting');
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     // Initialize category forecast if it doesn't exist
@@ -7512,10 +7517,12 @@ ${inputText}`
                                         item.totalCost = item.estimatedCost;
                                     }
                                     initializeQuarterlyCosts(item);
-                                    const costsClaimed = getTotalCostsClaimed(item);
-                                    const remaining = getRemainingBudget(item);
-                                    const difference = getDifferencePercentage(item);
-                                    const isOverBudget = costsClaimed > (item.estimatedCost || item.totalCost);
+                                    const itemKey = `otherCosts-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Other Costs', itemKey);
+                                    const budgetAmount = item.estimatedCost || item.totalCost;
+                                    const remaining = budgetAmount - costsClaimed;
+                                    const difference = budgetAmount > 0 ? ((costsClaimed - budgetAmount) / budgetAmount) * 100 : 0;
+                                    const isOverBudget = costsClaimed > budgetAmount;
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
