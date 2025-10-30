@@ -1625,7 +1625,8 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                     // Backwards compatible itemKey matching
                     let itemMatch = false;
-                    if (itemKey === null || itemKey === undefined) {
+                    if (itemKey === null || itemKey === undefined || itemKey.endsWith('-all')) {
+                        // Category-level view: match any assignment in this category
                         itemMatch = true;
                     } else {
                         if (a.itemKey === itemKey) {
