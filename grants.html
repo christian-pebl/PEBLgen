@@ -1642,9 +1642,8 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     return projectMatch && categoryMatch && itemMatch && quarterMatch;
                 });
 
-                // Amount should show the FULL ex VAT spend being reported to the funder
-                // NOT the split percentage amount (that determines what gets claimed, not what gets reported)
-                const assignedAmount = valueExTax;
+                // Amount shows the assigned portion based on split percentage
+                const assignedAmount = assignment && assignment.amount ? parseFloat(assignment.amount).toFixed(2) : '0.00';
                 const assignedQuarter = assignment ? assignment.quarter : '-';
                 const splitPercentage = assignment && assignment.percentage ? `${assignment.percentage}%` : '-';
 
