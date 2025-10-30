@@ -1642,8 +1642,10 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     return projectMatch && categoryMatch && itemMatch && quarterMatch;
                 });
 
-                // Amount shows the assigned portion based on split percentage
-                const assignedAmount = assignment && assignment.amount ? parseFloat(assignment.amount).toFixed(2) : '0.00';
+                // Calculate amount dynamically: ex VAT value × (split percentage / 100)
+                // This ensures accuracy regardless of what's stored in assignment.amount
+                const percentage = assignment && assignment.percentage ? parseFloat(assignment.percentage) : 0;
+                const assignedAmount = (parseFloat(valueExTax) * (percentage / 100)).toFixed(2);
                 const assignedQuarter = assignment ? assignment.quarter : '-';
                 const splitPercentage = assignment && assignment.percentage ? `${assignment.percentage}%` : '-';
 
@@ -4858,10 +4860,9 @@ Rules:
                                         ${hasQuarters ? `
                                         <tr id="wg-capital-ns-${index}-breakdown" style="display: none;">
                                             <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
-                                                <div style="padding: 15px;">
-                                                    <div id="quarterly-table-capitalNonStandard-${index}" style="display: none;">
-                                                        <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 0.95em;">Quarterly Breakdown - ${item.description}</h4>
-                                                        <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
+                                                <div class="quarterly-breakdown-container">
+                                                    <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
+                                                    <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                             <thead>
                                                                 <tr style="background: #e2e8f0;">
                                                                     <th style="width: 150px;">Metric</th>
@@ -4891,7 +4892,6 @@ Rules:
                                                                 </tr>
                                                             </tbody>
                                                         </table>
-                                                    </div>
                                                     ${(() => {
                                                         // Render transaction details for this Capital Non-Standard item
                                                         if (cachedTransactions && cachedTransactions.length > 0) {
@@ -4938,9 +4938,9 @@ Rules:
                                             <td ${summary.difference > 0 ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>${summary.difference.toFixed(1)}%</td>
                                         </tr>
                                         <tr id="wg-capital-ns-summary-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: #f1f5f9;">
-                                                <div style="padding: 15px;">
-                                                    <h4 style="margin: 0 0 10px 0; color: #3b82f6; font-size: 1em;">Capital Non-Standard - Quarterly Breakdown</h4>
+                                            <td colspan="8" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
+                                                    <h4 class="quarterly-breakdown-header">Capital Non-Standard - Quarterly Breakdown</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                         <thead>
                                                             <tr style="background: #bfdbfe;">
@@ -5046,10 +5046,9 @@ Rules:
                                         ${hasQuarters ? `
                                         <tr id="wg-revenue-ns-${index}-breakdown" style="display: none;">
                                             <td colspan="8" style="padding: 0; background: transparent;">
-                                                <div style="padding: 15px;">
-                                                    <div id="quarterly-table-revenueNonStandard-${index}" style="display: none;">
-                                                        <h4 style="margin: 0 0 10px 0; color: #64748b; font-size: 0.95em;">Quarterly Breakdown - ${item.description}</h4>
-                                                        <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
+                                                <div class="quarterly-breakdown-container">
+                                                    <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
+                                                    <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                             <thead>
                                                                 <tr style="background: #e2e8f0;">
                                                                     <th style="width: 150px;">Metric</th>
@@ -5079,7 +5078,6 @@ Rules:
                                                                 </tr>
                                                             </tbody>
                                                         </table>
-                                                    </div>
                                                     ${(() => {
                                                         // Render transaction details for this Revenue Non-Standard item
                                                         if (cachedTransactions && cachedTransactions.length > 0) {
@@ -5126,9 +5124,9 @@ Rules:
                                             <td ${summary.difference > 0 ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>${summary.difference.toFixed(1)}%</td>
                                         </tr>
                                         <tr id="wg-revenue-ns-summary-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: #f1f5f9;">
-                                                <div style="padding: 15px;">
-                                                    <h4 style="margin: 0 0 10px 0; color: #22c55e; font-size: 1em;">Revenue Non-Standard - Quarterly Breakdown</h4>
+                                            <td colspan="8" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
+                                                    <h4 class="quarterly-breakdown-header">Revenue Non-Standard - Quarterly Breakdown</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                         <thead>
                                                             <tr style="background: #bbf7d0;">
