@@ -1642,22 +1642,13 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     return projectMatch && categoryMatch && itemMatch && quarterMatch;
                 });
 
-                const assignedAmount = assignment ? assignment.amount.toFixed(2) : '0.00';
+                // Amount should show the FULL ex VAT spend being reported to the funder
+                // NOT the split percentage amount (that determines what gets claimed, not what gets reported)
+                const assignedAmount = valueExTax;
                 const assignedQuarter = assignment ? assignment.quarter : '-';
 
                 // Check for PDF attachment
                 const invoice = getInvoiceForTransaction(transaction, invoices);
-
-                // Debug logging for all transactions to help diagnose matching issues
-                console.log(`🔍 [PDF DEBUG] Transaction ${transactions.indexOf(transaction) + 1}/${transactions.length}:`, {
-                    date: transaction.date,
-                    description: transaction.description?.substring(0, 40),
-                    invoiceId: transaction.invoiceId,
-                    originalIndex: transaction.originalIndex,
-                    invoicesAvailable: invoices ? invoices.length : 0,
-                    matchFound: invoice ? `✓ ID:${invoice.id}` : '✗ No match',
-                    matchedFile: invoice ? invoice.filename : null
-                });
 
                 const pdfCell = invoice
                     ? `<button class="view-pdf-btn" data-invoice-id="${invoice.id}" onclick="viewInvoicePDF(${invoice.id})" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">📎 View PDF</button>`
