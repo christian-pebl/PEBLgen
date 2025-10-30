@@ -4020,6 +4020,27 @@
             return parseFloat(cleaned) || 0;
         }
 
+        /**
+         * Get the ex VAT amount for a transaction
+         * This calculates the amount excluding VAT for budget assignments
+         */
+        function getTransactionExVatAmount(transaction) {
+            // Handle received transactions (no VAT calculation needed)
+            if (transaction.received && !transaction.spent) {
+                return parseAmount(transaction.received);
+            }
+
+            const spentAmount = parseAmount(transaction.spent);
+
+            // If 0% VAT is applied or spent_ex_vat is manually set, use that value
+            if (transaction.zeroVAT || transaction.spent_ex_vat) {
+                return parseAmount(transaction.spent_ex_vat || transaction.spent);
+            }
+
+            // Default: calculate ex VAT by dividing by 1.2 (20% UK VAT)
+            return spentAmount / 1.2;
+        }
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;

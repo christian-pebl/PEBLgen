@@ -1478,35 +1478,28 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
         // Get transactions for a specific item and quarter
         function getTransactionsForItem(allTransactions, projectId, category, itemKey, quarter = null) {
-
             const filtered = allTransactions.filter(transaction => {
                 if (!transaction.assignments || !Array.isArray(transaction.assignments)) return false;
 
                 const matchingAssignment = transaction.assignments.find(assignment => {
-                    // Check if projectId and category match
                     const projectMatch = assignment.projectId === projectId || String(assignment.projectId) === String(projectId);
                     const categoryMatch = assignment.category === category;
 
-                    // Check itemKey: flexible matching to handle different naming conventions
-                    // Extract category prefix from itemKey (e.g., "otherCosts" from "otherCosts-0" or "otherCosts-general")
-                    const getCategoryPrefix = (key) => {
-                        if (!key) return null;
-                        const match = key.match(/^([a-zA-Z]+)/);
-                        return match ? match[1].toLowerCase() : key.toLowerCase();
-                    };
+                    // Check itemKey with backwards compatibility
+                    let itemMatch = false;
+                    if (itemKey === null || itemKey === undefined) {
+                        itemMatch = true;
+                    } else {
+                        if (assignment.itemKey === itemKey) {
+                            itemMatch = true;
+                        } else if (!assignment.itemKey || assignment.itemKey === null || assignment.itemKey === undefined) {
+                            itemMatch = true;
+                        } else {
+                            itemMatch = false;
+                        }
+                    }
 
-                    const expectedPrefix = getCategoryPrefix(itemKey);
-                    const actualPrefix = getCategoryPrefix(assignment.itemKey);
-
-                    const itemMatch = assignment.itemKey === itemKey ||  // Exact match
-                                     !assignment.itemKey ||               // No itemKey (category-level)
-                                     assignment.itemKey === '' ||         // Empty itemKey
-                                     assignment.itemKey === category ||   // ItemKey = category name
-                                     (expectedPrefix && actualPrefix && expectedPrefix === actualPrefix);  // Same category prefix
-
-                    // Check quarter (optional)
                     const quarterMatch = quarter === null || assignment.quarter === quarter;
-
                     return projectMatch && categoryMatch && itemMatch && quarterMatch;
                 });
 
@@ -1630,21 +1623,19 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     const projectMatch = a.projectId === projectId;
                     const categoryMatch = a.category === category;
 
-                    // Flexible itemKey matching (same logic as filter)
-                    const getCategoryPrefix = (key) => {
-                        if (!key) return null;
-                        const match = key.match(/^([a-zA-Z]+)/);
-                        return match ? match[1].toLowerCase() : key.toLowerCase();
-                    };
-
-                    const expectedPrefix = getCategoryPrefix(itemKey);
-                    const actualPrefix = getCategoryPrefix(a.itemKey);
-
-                    const itemMatch = a.itemKey === itemKey ||
-                                     !a.itemKey ||
-                                     a.itemKey === '' ||
-                                     a.itemKey === category ||
-                                     (expectedPrefix && actualPrefix && expectedPrefix === actualPrefix);
+                    // Backwards compatible itemKey matching
+                    let itemMatch = false;
+                    if (itemKey === null || itemKey === undefined) {
+                        itemMatch = true;
+                    } else {
+                        if (a.itemKey === itemKey) {
+                            itemMatch = true;
+                        } else if (!a.itemKey || a.itemKey === null || a.itemKey === undefined) {
+                            itemMatch = true;
+                        } else {
+                            itemMatch = false;
+                        }
+                    }
 
                     const quarterMatch = quarter === null || a.quarter === quarter;
                     return projectMatch && categoryMatch && itemMatch && quarterMatch;
@@ -6686,9 +6677,10 @@ ${inputText}`
                             <tbody>
                                 ${projectBudget.materials.items.map((item, index) => {
                                     initializeQuarterlyCosts(item);
-                                    const costsClaimed = getTotalCostsClaimed(item);
-                                    const remaining = getRemainingBudget(item);
-                                    const difference = getDifferencePercentage(item);
+                                    const itemKey = `materials-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Materials', itemKey);
+                                    const remaining = item.total - costsClaimed;
+                                    const difference = item.total > 0 ? ((costsClaimed - item.total) / item.total) * 100 : 0;
                                     const isOverBudget = costsClaimed > item.total;
 
                                     return `
@@ -6775,7 +6767,7 @@ ${inputText}`
                                 }).join('')}
 
                                 ${hasQuarters && projectBudget.materials.items.length > 0 ? (() => {
-                                    const summary = getCategorySummary(projectBudget.materials.items);
+                                    const summary = getCategorySummary(projectBudget.materials.items, 'Materials', 'materials');
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     // Initialize category forecast if it doesn't exist
@@ -8042,12 +8034,45 @@ ${inputText}`
 
         // Calculate total costs claimed across all quarters for an item
         function getTotalCostsClaimed(item) {
+            // DEPRECATED: Don't use item.quarterlyCosts - it contains stale data
+            // Instead, calculate from actual transaction assignments
+
+            // This function is called during rendering, and we don't have access to
+            // the actual item context (category, index) here, so we still use quarterlyCosts
+            // TODO: Replace this with proper calculation from assignments
+
             if (!item.quarterlyCosts) return 0;
 
             let total = 0;
             Object.values(item.quarterlyCosts).forEach(cost => {
                 total += parseFloat(cost) || 0;
             });
+            return total;
+        }
+
+        // NEW: Calculate costs claimed from actual transaction assignments
+        function getItemClaimedFromTransactions(projectId, category, itemKey) {
+            if (!cachedTransactions || cachedTransactions.length === 0) return 0;
+
+            let total = 0;
+            cachedTransactions.forEach(transaction => {
+                if (!transaction.assignments) return;
+
+                transaction.assignments.forEach(assignment => {
+                    // Match project, category, and itemKey
+                    const projectMatch = assignment.projectId === projectId || String(assignment.projectId) === String(projectId);
+                    const categoryMatch = assignment.category === category;
+
+                    // STRICT MATCH ONLY - no backwards compatibility for cost calculation
+                    // Only count assignments that are specifically assigned to this item
+                    const itemMatch = assignment.itemKey === itemKey;
+
+                    if (projectMatch && categoryMatch && itemMatch) {
+                        total += parseFloat(assignment.amount) || 0;
+                    }
+                });
+            });
+
             return total;
         }
 
@@ -8069,28 +8094,48 @@ ${inputText}`
         }
 
         // Calculate category-level summaries
-        function getCategorySummary(items) {
+        function getCategorySummary(items, category, itemKeyPrefix) {
             let totalCosts = 0;
             let totalClaimed = 0;
-            const quarterlyTotals = {};
+            const quarterlyTotals = {q1: 0, q2: 0, q3: 0, q4: 0};
 
-            items.forEach(item => {
+            items.forEach((item, index) => {
                 // Sum up total costs
                 totalCosts += parseFloat(item.totalCost || item.total || item.cost || 0);
 
-                // Initialize quarterly costs if needed
-                initializeQuarterlyCosts(item);
+                // Calculate claimed from actual assignments if we have category and prefix
+                let itemClaimed = 0;
+                if (category && itemKeyPrefix && cachedTransactions) {
+                    const itemKey = `${itemKeyPrefix}-${index}`;
+                    itemClaimed = getItemClaimedFromTransactions(projectBudget.projectId, category, itemKey);
 
-                // Sum up claimed costs per quarter
-                Object.keys(item.quarterlyCosts || {}).forEach(quarterKey => {
-                    if (!quarterlyTotals[quarterKey]) {
-                        quarterlyTotals[quarterKey] = 0;
-                    }
-                    quarterlyTotals[quarterKey] += parseFloat(item.quarterlyCosts[quarterKey]) || 0;
-                });
+                    // Also calculate quarterly totals from assignments
+                    cachedTransactions.forEach(transaction => {
+                        if (!transaction.assignments) return;
 
-                // Sum total claimed
-                totalClaimed += getTotalCostsClaimed(item);
+                        transaction.assignments.forEach(assignment => {
+                            const projectMatch = assignment.projectId === projectBudget.projectId;
+                            const categoryMatch = assignment.category === category;
+                            // STRICT MATCH - only count assignments specifically for this item
+                            const itemMatch = assignment.itemKey === itemKey;
+
+                            if (projectMatch && categoryMatch && itemMatch && assignment.quarter) {
+                                const qKey = `q${assignment.quarter}`;
+                                quarterlyTotals[qKey] = (quarterlyTotals[qKey] || 0) + (parseFloat(assignment.amount) || 0);
+                            }
+                        });
+                    });
+                } else {
+                    // Fallback to old method if no category/prefix provided
+                    initializeQuarterlyCosts(item);
+                    itemClaimed = getTotalCostsClaimed(item);
+
+                    Object.keys(item.quarterlyCosts || {}).forEach(quarterKey => {
+                        quarterlyTotals[quarterKey] = (quarterlyTotals[quarterKey] || 0) + (parseFloat(item.quarterlyCosts[quarterKey]) || 0);
+                    });
+                }
+
+                totalClaimed += itemClaimed;
             });
 
             const remaining = totalCosts - totalClaimed;
