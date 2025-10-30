@@ -1646,6 +1646,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 // NOT the split percentage amount (that determines what gets claimed, not what gets reported)
                 const assignedAmount = valueExTax;
                 const assignedQuarter = assignment ? assignment.quarter : '-';
+                const splitPercentage = assignment && assignment.percentage ? `${assignment.percentage}%` : '-';
 
                 // Check for PDF attachment
                 const invoice = getInvoiceForTransaction(transaction, invoices);
@@ -1669,6 +1670,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         <td style="padding: 6px 10px; max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(detail)}</td>
                         <td style="padding: 6px 10px; text-align: center;">${pdfCell}</td>
                         <td style="padding: 6px 10px; text-align: center;">Q${assignedQuarter}</td>
+                        <td style="padding: 6px 10px; text-align: center;">${splitPercentage}</td>
                         <td style="padding: 6px 10px; text-align: right; font-weight: 600;">£${assignedAmount}</td>
                         <td style="padding: 6px 10px; text-align: right;">${viewInSpendBtn}</td>
                     </tr>
@@ -1701,6 +1703,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                                 <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Detail</th>
                                 <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">PDF</th>
                                 <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Qtr</th>
+                                <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Split %</th>
                                 <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Amount</th>
                                 <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Action</th>
                             </tr>
@@ -6292,7 +6295,13 @@ ${inputText}`
 
                             <div style="background: #f8fafc; padding: 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
                                 <div style="font-size: 0.75em; color: #64748b; font-weight: 500; margin-bottom: 4px; text-transform: uppercase;">Funding Level</div>
-                                <div style="font-size: 1.1em; font-weight: 600; color: #1e293b;">${fs.fundingLevel || 0}%</div>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="fundingLevelInput" value="${fs.fundingLevel || 0}"
+                                           min="0" max="100" onchange="updateFundingLevel()"
+                                           style="width: 60px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 1em; font-weight: 600;"
+                                           placeholder="0">
+                                    <span style="font-size: 1.1em; font-weight: 600; color: #1e293b;">%</span>
+                                </div>
                             </div>
 
                             <div style="background: #f8fafc; padding: 12px; border-radius: 6px; border-left: 3px solid #8b5cf6;">
@@ -7876,6 +7885,32 @@ ${inputText}`
 
                     // Auto-save
                     saveToIndexedDB();
+                }
+            }
+        }
+
+        async function updateFundingLevel() {
+            const fundingInput = document.getElementById('fundingLevelInput');
+            if (fundingInput) {
+                const fundingLevel = parseFloat(fundingInput.value);
+                if (!isNaN(fundingLevel) && fundingLevel >= 0 && fundingLevel <= 100) {
+                    projectBudget.financeSummary.fundingLevel = fundingLevel;
+
+                    // Recalculate funding sought based on new funding level
+                    const totalCosts = projectBudget.financeSummary.totalCosts || 0;
+                    projectBudget.financeSummary.fundingSought = (totalCosts * fundingLevel) / 100;
+
+                    console.log('✏️ Funding level updated:', fundingLevel + '%');
+                    addLog(`✏️ Funding level set to: ${fundingLevel}% (£${projectBudget.financeSummary.fundingSought.toLocaleString()} sought)`);
+
+                    // Re-render to show updated funding amounts
+                    await displayDetailedBudget();
+
+                    // Auto-save
+                    saveToIndexedDB();
+                } else {
+                    showToast('Funding level must be between 0 and 100%', 'error');
+                    fundingInput.value = projectBudget.financeSummary.fundingLevel || 0;
                 }
             }
         }
