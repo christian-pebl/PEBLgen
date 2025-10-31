@@ -1800,12 +1800,19 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 const displayName = category === 'Travel' ? 'Travel and Subsistence' : category;
                 const categoryId = `q${quarterIndex}-category-${category.replace(/\s+/g, '-').toLowerCase()}`;
 
+                // Auto-expand categories with transactions
+                const defaultDisplay = items.length > 0 ? 'block' : 'none';
+                const defaultArrow = items.length > 0 ? '▼' : '▶';
+
                 html += `
                     <div style="margin-bottom: 20px;">
                         <div onclick="toggleQuarterlyBreakdown('${categoryId}')" style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;"
                              onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)'"
                              onmouseout="this.style.boxShadow='none'">
-                            <span style="font-weight: 600; font-size: 0.95em;">${displayName}</span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span id="${categoryId}-arrow" style="font-size: 0.8em; width: 14px;">${defaultArrow}</span>
+                                <span style="font-weight: 600; font-size: 0.95em;">${displayName}</span>
+                            </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 ${items.length > 0 ? `
                                     <button onclick="mergeCategoryPDFs('${category}', ${quarterIndex}); event.stopPropagation();"
@@ -1819,7 +1826,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                                 ` : ''}
                             </div>
                         </div>
-                        <div id="${categoryId}-breakdown" style="display: none;">
+                        <div id="${categoryId}-breakdown" style="display: ${defaultDisplay};">
                 `;
 
                 if (items.length === 0) {
@@ -8483,8 +8490,14 @@ ${inputText}`
         function toggleQuarterlyBreakdown(rowId) {
             const breakdownRow = document.getElementById(`${rowId}-breakdown`);
             if (breakdownRow) {
-                const isCurrentlyHidden = breakdownRow.style.display === 'none';
-                breakdownRow.style.display = isCurrentlyHidden ? 'table-row' : 'none';
+                const isCurrentlyHidden = breakdownRow.style.display === 'none' || breakdownRow.style.display === '';
+                breakdownRow.style.display = isCurrentlyHidden ? 'block' : 'none';
+
+                // Update arrow indicator
+                const arrow = document.getElementById(`${rowId}-arrow`);
+                if (arrow) {
+                    arrow.textContent = isCurrentlyHidden ? '▼' : '▶';
+                }
             }
         }
 
