@@ -16,6 +16,69 @@
         .nav-btn { background-color: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; display: inline-block; font-family: 'Roboto', sans-serif; }
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); }
         .nav-btn.active { background-color: rgba(255, 255, 255, 0.9); color: #2B7A78; border-color: rgba(255, 255, 255, 0.9); }
+
+        /* Project Selector */
+        .project-selector-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 20px;
+            padding-left: 20px;
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .project-selector {
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #2B7A78;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Roboto', sans-serif;
+            cursor: pointer;
+            min-width: 200px;
+            max-width: 300px;
+            transition: all 0.2s ease;
+        }
+
+        .project-selector:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background-color: white;
+        }
+
+        .project-selector:focus {
+            outline: none;
+            border-color: #3AAFA9;
+            box-shadow: 0 0 0 3px rgba(58, 175, 169, 0.2);
+        }
+
+        .project-action-btn {
+            background-color: rgba(76, 175, 80, 0.9);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Roboto', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .project-action-btn:hover {
+            background-color: rgba(76, 175, 80, 1);
+            transform: translateY(-1px);
+        }
+
+        .project-action-btn.delete {
+            background-color: rgba(244, 67, 54, 0.9);
+        }
+
+        .project-action-btn.delete:hover {
+            background-color: rgba(244, 67, 54, 1);
+        }
+
         .content-container { padding: 20px; max-width: 1400px; margin: 0 auto; padding-top: 90px; }
 
         body {
@@ -204,9 +267,9 @@
         .gantt-table td.month-cell {
             cursor: pointer;
             transition: background-color 0.2s ease;
-            min-width: 60px;
-            max-width: 80px;
-            width: 70px;
+            min-width: 39px;
+            max-width: 52px;
+            width: 45px;
             padding: 8px 4px;
             font-size: 14px;
             font-weight: 500;
@@ -236,12 +299,13 @@
 
         .gantt-table th.month-header {
             background-color: #2196F3 !important;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             text-align: center;
-            min-width: 60px;
-            max-width: 80px;
-            padding: 10px 4px;
+            min-width: 39px;
+            max-width: 52px;
+            padding: 6px 4px;
+            line-height: 1.3;
         }
 
         .resize-handle {
@@ -486,7 +550,75 @@
                 opacity: 1;
             }
         }
+
+        /* PDF Preview Modal */
+        .pdf-preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .pdf-preview-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1000px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .pdf-preview-header {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pdf-preview-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .pdf-preview-iframe {
+            flex: 1;
+            border: none;
+            width: 100%;
+            background: #525659;
+        }
+
+        .pdf-preview-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-export {
+            background-color: #FF5722;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background-color: #E64A19;
+        }
     </style>
+
+    <!-- PDF Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Automatic Cloud Backup System -->
     <script src="supabase-client.js"></script>
@@ -506,6 +638,18 @@
             <a href="gantt.html" class="nav-btn active">Gantt</a>
             <a href="timesheet.html" class="nav-btn">Timesheet</a>
             <a href="index.html" class="nav-btn">Sketcher</a>
+            <a href="exploit.html" class="nav-btn">Exploit</a>
+            <a href="risks.html" class="nav-btn">Risks</a>
+
+            <!-- Project Selector -->
+            <div class="project-selector-container">
+                <select id="projectSelector" class="project-selector" onchange="handleProjectSelect()">
+                    <option value="">-- New Project --</option>
+                </select>
+                <button class="project-action-btn" onclick="createNewProject()" title="Create New Project">✨ New</button>
+                <button class="project-action-btn delete" onclick="deleteCurrentProject()" title="Delete Current Project" id="deleteProjectBtn">🗑️</button>
+            </div>
+
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Scroll to top">↑ Top</button>
         </div>
     </div>
@@ -529,6 +673,9 @@
                 </div>
             </div>
             <button class="btn btn-primary" onclick="generateWeekGrid()">Generate Month Grid</button>
+            <div id="quarterDisplay" style="margin-top: 10px; padding: 8px; background-color: #e8f5e9; border-radius: 4px; display: none;">
+                <strong>Selected Quarter:</strong> <span id="quarterLabel"></span>
+            </div>
         </div>
 
         <!-- Task List Input -->
@@ -548,9 +695,10 @@
         <div class="button-container">
             <button class="btn btn-success" onclick="saveProject()">Save Project</button>
             <button class="btn btn-info" onclick="downloadJSON()">Download JSON</button>
+            <button class="btn btn-export" onclick="exportToPDF()">📄 Export PDF</button>
             <button class="btn btn-success" onclick="setupSaveFolder()">📁 Set Save Folder</button>
-            <button class="btn btn-warning" onclick="document.getElementById('uploadJSON').click()">📂 Load JSON</button>
-            <input type="file" id="uploadJSON" accept=".json" style="display: none;" onchange="uploadJSON(event)">
+            <button class="btn btn-warning" onclick="document.getElementById('uploadJSONInput').click()">📂 Load JSON</button>
+            <input type="file" id="uploadJSONInput" accept=".json" style="display: none;" onchange="uploadJSON(event)">
             <p style="margin-top: 10px; font-size: 13px; color: #666;">
                 💡 <strong>Recommended:</strong> Click "Set Save Folder" and choose <code>PEBLGen/GanttCharts</code> folder. Files will auto-save there!<br>
                 📂 Use "Load JSON" to open previously saved Gantt chart files<br>
@@ -763,7 +911,7 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
         let isResizing = false;
         let startX = 0;
         let startWidth = 0;
-        let taskColumnWidth = parseInt(localStorage.getItem('taskColumnWidth') || '250');
+        let taskColumnWidth = parseInt(localStorage.getItem('taskColumnWidth') || '500');
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -855,10 +1003,13 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
             const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
 
             while (current <= endMonth) {
-                const monthYear = current.toLocaleString('default', { month: 'short', year: 'numeric' });
+                const month = current.toLocaleString('default', { month: 'short' });
+                const year = current.getFullYear();
                 months.push({
                     date: new Date(current),
-                    label: monthYear
+                    month: month,
+                    year: year,
+                    label: `${month} ${year}`
                 });
 
                 // Move to next month
@@ -917,6 +1068,9 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
             const key = `${taskIndex}-${monthIndex}`;
             currentProject.ganttData[key] = !currentProject.ganttData[key];
             renderGanttGrid();
+            if (typeof triggerAutoSave === 'function') {
+                triggerAutoSave();
+            }
         }
 
         // Resize handlers
@@ -946,7 +1100,7 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
             html += `<th class="task-header" style="width: ${taskColumnWidth}px; min-width: ${taskColumnWidth}px;"><div style="position: relative;">Task<div class="resize-handle" onmousedown="startResize(event)"></div></div></th>`;
 
             months.forEach(month => {
-                html += `<th class="month-header">${month.label}</th>`;
+                html += `<th class="month-header">${month.month}<br>${month.year}</th>`;
             });
 
             html += '</tr></thead><tbody>';
@@ -972,7 +1126,7 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
                     const hasDeliverable = isLastActive && task.deliverableCode;
                     
                     // Show deliverable code in last active cell if task has deliverableCode
-                    const cellText = hasDeliverable ? task.deliverableCode : (isActive ? '✓' : '');
+                    const cellText = hasDeliverable ? task.deliverableCode : '';
                     const cellClass = hasDeliverable ? 'deliverable' : (isActive ? 'active' : '');
                     
                     html += `<td class="month-cell ${cellClass}" onclick="toggleMonthCell(${taskIndex}, ${monthIndex})">${cellText}</td>`;
@@ -1011,6 +1165,129 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
                 document.removeEventListener('mousemove', handleResize);
             }
         });
+
+        // Calculate quarters from project duration
+        function calculateProjectQuarters(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            // Calculate total months
+            const totalMonths = (end.getFullYear() - start.getFullYear()) * 12 +
+                                (end.getMonth() - start.getMonth()) + 1;
+
+            // Calculate number of quarters (round up)
+            const numQuarters = Math.ceil(totalMonths / 3);
+
+            const quarters = [];
+            let currentDate = new Date(start);
+
+            for (let q = 1; q <= numQuarters; q++) {
+                const quarterStart = new Date(currentDate);
+
+                // Calculate quarter end (3 months later or project end)
+                const quarterEnd = new Date(currentDate);
+                quarterEnd.setMonth(quarterEnd.getMonth() + 2); // +2 because we include the start month
+                quarterEnd.setMonth(quarterEnd.getMonth() + 1);
+                quarterEnd.setDate(0); // Last day of previous month
+
+                // Don't exceed project end date
+                if (quarterEnd > end) {
+                    quarterEnd.setTime(end.getTime());
+                }
+
+                // Format as YYMM
+                const startYYMM = String(quarterStart.getFullYear()).slice(2) +
+                                  String(quarterStart.getMonth() + 1).padStart(2, '0');
+                const endYYMM = String(quarterEnd.getFullYear()).slice(2) +
+                                String(quarterEnd.getMonth() + 1).padStart(2, '0');
+
+                quarters.push({
+                    number: q,
+                    label: `Q${q} (${startYYMM}-${endYYMM})`,
+                    startDate: quarterStart.toISOString().split('T')[0],
+                    endDate: quarterEnd.toISOString().split('T')[0]
+                });
+
+                // Move to next quarter
+                currentDate.setMonth(currentDate.getMonth() + 3);
+            }
+
+            return quarters;
+        }
+
+        // Update quarter display
+        function updateQuarterDisplay() {
+            const display = document.getElementById('quarterDisplay');
+            const label = document.getElementById('quarterLabel');
+
+            if (currentProject.selectedQuarter && currentProject.startDate && currentProject.endDate) {
+                const quarters = calculateProjectQuarters(currentProject.startDate, currentProject.endDate);
+                const quarter = quarters.find(q => q.number === currentProject.selectedQuarter);
+                if (quarter) {
+                    label.textContent = quarter.label;
+                    display.style.display = 'block';
+                    return;
+                }
+            }
+
+            display.style.display = 'none';
+        }
+
+        // Show quarter selection modal
+        function showQuarterSelector(onSelect) {
+            const quarters = calculateProjectQuarters(currentProject.startDate, currentProject.endDate);
+
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+
+            let optionsHtml = '';
+            quarters.forEach(q => {
+                optionsHtml += `
+                    <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;"
+                            onclick="selectQuarter(${q.number})">
+                        ${q.label}
+                    </button>
+                `;
+            });
+
+            overlay.innerHTML = `
+                <div class="modal">
+                    <div class="modal-title">Select Quarter for This Update</div>
+                    <div class="modal-message">
+                        Choose which quarter this Gantt chart update represents:
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        ${optionsHtml}
+                    </div>
+                    <div class="modal-buttons">
+                        <button class="btn" style="background: #999;" id="cancelQuarter">Cancel</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            // Store callback globally for button clicks
+            window.selectQuarter = (quarterNumber) => {
+                overlay.remove();
+                onSelect(quarterNumber);
+                delete window.selectQuarter;
+            };
+
+            const cancelBtn = overlay.querySelector('#cancelQuarter');
+            cancelBtn.onclick = () => {
+                overlay.remove();
+                delete window.selectQuarter;
+            };
+
+            // Click outside to cancel
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                    delete window.selectQuarter;
+                }
+            };
+        }
 
         // Save project to localStorage
         // Calculate start and end dates for each task based on active months
@@ -1073,46 +1350,60 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
                 return;
             }
 
-            // Enrich with calculated dates
-            enrichProjectWithDates();
+            // Show quarter selector
+            showQuarterSelector(async (selectedQuarter) => {
+                // Store selected quarter
+                currentProject.selectedQuarter = selectedQuarter;
 
-            // Save to localStorage
-            const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
-            savedProjects[currentProject.name] = currentProject;
-            localStorage.setItem('ganttProjects', JSON.stringify(savedProjects));
+                // Enrich with calculated dates
+                enrichProjectWithDates();
 
-            // Also save to folder if available
-            let folderSaved = false;
-            if (savedFolderHandle) {
-                try {
-                    const permission = await savedFolderHandle.queryPermission({ mode: 'readwrite' });
-                    if (permission !== 'granted') {
-                        await savedFolderHandle.requestPermission({ mode: 'readwrite' });
+                // Create composite key: projectName_Q1, projectName_Q2, etc.
+                const saveKey = `${currentProject.name}_Q${selectedQuarter}`;
+
+                // Save to localStorage with quarter-specific key
+                const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
+                savedProjects[saveKey] = currentProject;
+                localStorage.setItem('ganttProjects', JSON.stringify(savedProjects));
+
+                // Also save to folder if available
+                let folderSaved = false;
+                if (savedFolderHandle) {
+                    try {
+                        const permission = await savedFolderHandle.queryPermission({ mode: 'readwrite' });
+                        if (permission !== 'granted') {
+                            await savedFolderHandle.requestPermission({ mode: 'readwrite' });
+                        }
+
+                        const filename = `${currentProject.name}_Q${selectedQuarter}_gantt.json`;
+                        const fileHandle = await savedFolderHandle.getFileHandle(filename, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(JSON.stringify(currentProject, null, 2));
+                        await writable.close();
+
+                        folderSaved = true;
+                    } catch (error) {
+                        console.error('Error saving to folder:', error);
                     }
-
-                    const filename = `${currentProject.name}_gantt.json`;
-                    const fileHandle = await savedFolderHandle.getFileHandle(filename, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(JSON.stringify(currentProject, null, 2));
-                    await writable.close();
-                    
-                    folderSaved = true;
-                } catch (error) {
-                    console.error('Error saving to folder:', error);
                 }
-            }
 
-            if (folderSaved) {
-                showToast(`Project "${currentProject.name}" saved to:
+                const quarters = calculateProjectQuarters(currentProject.startDate, currentProject.endDate);
+                const quarterInfo = quarters.find(q => q.number === selectedQuarter);
+                const quarterLabel = quarterInfo ? quarterInfo.label : `Q${selectedQuarter}`;
+
+                if (folderSaved) {
+                    showToast(`Project "${currentProject.name}" saved for ${quarterLabel}:
 - localStorage
-- ${savedFolderHandle.name}/${currentProject.name}_gantt.json`, 'success', 'Project Saved', 5000);
-            } else {
-                showToast(`Project "${currentProject.name}" saved to localStorage.
+- ${savedFolderHandle.name}/${currentProject.name}_Q${selectedQuarter}_gantt.json`, 'success', 'Project Saved', 5000);
+                } else {
+                    showToast(`Project "${currentProject.name}" saved for ${quarterLabel} to localStorage.
 
 💡 Click "Set Save Folder" to also auto-save JSON files.`, 'success', 'Project Saved');
-            }
-            
-            loadSavedProjects();
+                }
+
+                loadSavedProjects();
+                updateQuarterDisplay();
+            });
         }
 
         // Load saved projects
@@ -1126,13 +1417,27 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
             }
 
             let html = '';
-            for (const [name, project] of Object.entries(savedProjects)) {
+            for (const [saveKey, project] of Object.entries(savedProjects)) {
+                // saveKey format: "ProjectName_Q1"
+                // Extract display name and quarter info
+                let displayName = saveKey;
+                let quarterBadge = '';
+
+                if (project.selectedQuarter && project.startDate && project.endDate) {
+                    const quarters = calculateProjectQuarters(project.startDate, project.endDate);
+                    const quarter = quarters.find(q => q.number === project.selectedQuarter);
+                    if (quarter) {
+                        displayName = project.name; // Use the original project name
+                        quarterBadge = ` <span style="background: #2196F3; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600;">${quarter.label}</span>`;
+                    }
+                }
+
                 html += `
                     <div class="project-item">
-                        <span class="project-item-name">${name}</span>
+                        <span class="project-item-name">${displayName}${quarterBadge}</span>
                         <div class="project-item-buttons">
-                            <button class="btn btn-primary btn-small" onclick="loadProject('${name}')">Load</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteProject('${name}')">Delete</button>
+                            <button class="btn btn-primary btn-small" onclick="loadProject('${saveKey}')">Load</button>
+                            <button class="btn btn-danger btn-small" onclick="deleteProject('${saveKey}')">Delete</button>
                         </div>
                     </div>
                 `;
@@ -1163,6 +1468,7 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
                 document.getElementById('taskListInput').value = taskListText;
 
                 generateWeekGrid();
+                updateQuarterDisplay();
                 showToast(`Project "${name}" loaded successfully!`, 'success', 'Project Loaded');
             }
         }
@@ -1218,9 +1524,7 @@ All Gantt charts will now auto-save to this folder!`, 'success', 'Folder Set', 5
                     return;
                 } catch (error) {
                     console.error('Error saving to folder:', error);
-                    showToast('Could not save to folder. Falling back to download.
-
-Error: ' + error.message, 'warning', 'Save Failed');
+                    showToast('Could not save to folder. Falling back to download.\n\nError: ' + error.message, 'warning', 'Save Failed');
                     savedFolderHandle = null;
                     updateFolderStatus('⚠ Auto-save failed. Click "Set Save Folder" to re-enable.');
                 }
@@ -1262,6 +1566,7 @@ Error: ' + error.message, 'warning', 'Save Failed');
                     document.getElementById('taskListInput').value = taskListText;
 
                     generateWeekGrid();
+                    updateQuarterDisplay();
                     showToast(`Project "${project.name}" loaded from JSON successfully!`, 'success', 'JSON Loaded');
                 } catch (error) {
                     showToast('Error loading JSON file: ' + error.message, 'error', 'Load Error');
@@ -1271,6 +1576,463 @@ Error: ' + error.message, 'warning', 'Save Failed');
 
             // Reset input
             event.target.value = '';
+        }
+
+        // ===== PROJECT SELECTOR FUNCTIONALITY =====
+
+        // Update project selector dropdown
+        function updateProjectSelector() {
+            const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
+            const selector = document.getElementById('projectSelector');
+            const currentValue = selector.value;
+
+            // Clear existing options except first
+            selector.innerHTML = '<option value="">-- New Project --</option>';
+
+            // Add all saved projects
+            Object.keys(savedProjects).sort().forEach(saveKey => {
+                const project = savedProjects[saveKey];
+                const option = document.createElement('option');
+                option.value = saveKey;
+
+                // Format display: "ProjectName [Q1 (2504-2506)]"
+                let displayText = saveKey;
+                if (project.selectedQuarter && project.startDate && project.endDate) {
+                    const quarters = calculateProjectQuarters(project.startDate, project.endDate);
+                    const quarter = quarters.find(q => q.number === project.selectedQuarter);
+                    if (quarter) {
+                        displayText = `${project.name} [${quarter.label}]`;
+                    }
+                }
+
+                option.textContent = displayText;
+                selector.appendChild(option);
+            });
+
+            // Restore selection if it still exists
+            // Try to find current project with quarter
+            const currentSaveKey = currentProject.selectedQuarter
+                ? `${currentProject.name}_Q${currentProject.selectedQuarter}`
+                : currentProject.name;
+
+            if (currentValue && savedProjects[currentValue]) {
+                selector.value = currentValue;
+            } else if (savedProjects[currentSaveKey]) {
+                selector.value = currentSaveKey;
+            }
+
+            // Update delete button state
+            const deleteBtn = document.getElementById('deleteProjectBtn');
+            if (deleteBtn) {
+                deleteBtn.disabled = !currentProject.name || !savedProjects[currentSaveKey];
+                deleteBtn.style.opacity = deleteBtn.disabled ? '0.5' : '1';
+                deleteBtn.style.cursor = deleteBtn.disabled ? 'not-allowed' : 'pointer';
+            }
+        }
+
+        // Handle project selection from dropdown
+        function handleProjectSelect() {
+            const selector = document.getElementById('projectSelector');
+            const selectedProject = selector.value;
+
+            if (selectedProject === '') {
+                // New project selected
+                createNewProject();
+            } else {
+                // Load existing project
+                loadProject(selectedProject);
+            }
+        }
+
+        // Create new project
+        function createNewProject() {
+            showConfirm(
+                'Create a new project? Any unsaved changes will be lost.',
+                'New Project',
+                () => {
+                    // Clear current project
+                    currentProject = {
+                        name: '',
+                        startDate: '',
+                        endDate: '',
+                        tasks: [],
+                        ganttData: {}
+                    };
+
+                    // Clear form
+                    document.getElementById('projectName').value = '';
+                    document.getElementById('startMonth').value = '';
+                    document.getElementById('endMonth').value = '';
+                    document.getElementById('taskListInput').value = '';
+
+                    // Clear Gantt display
+                    document.getElementById('ganttContainer').innerHTML =
+                        '<p class="empty-state">Configure project settings and click "Generate Month Grid" to create your Gantt chart.</p>';
+
+                    // Update selector
+                    document.getElementById('projectSelector').value = '';
+                    updateProjectSelector();
+
+                    showToast('Ready to create new project', 'info', 'New Project');
+                },
+                () => {
+                    // Cancelled - restore selector to current project
+                    if (currentProject.name) {
+                        document.getElementById('projectSelector').value = currentProject.name;
+                    }
+                }
+            );
+        }
+
+        // Delete current project
+        function deleteCurrentProject() {
+            if (!currentProject.name) {
+                showToast('No project selected to delete', 'warning', 'Cannot Delete');
+                return;
+            }
+
+            // Use composite key if quarter is selected
+            const saveKey = currentProject.selectedQuarter
+                ? `${currentProject.name}_Q${currentProject.selectedQuarter}`
+                : currentProject.name;
+            deleteProject(saveKey);
+        }
+
+        // Auto-save functionality - saves after any change
+        let autoSaveTimeout;
+        function triggerAutoSave() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                if (currentProject.name && currentProject.tasks && currentProject.tasks.length > 0) {
+                    autoSaveProject();
+                }
+            }, 2000); // Wait 2 seconds after last change
+        }
+
+        // Silent auto-save that doesn't show notifications
+        async function autoSaveProject() {
+            if (!currentProject.name) {
+                return;
+            }
+
+            enrichProjectWithDates();
+
+            // Create composite key if quarter is selected
+            const saveKey = currentProject.selectedQuarter
+                ? `${currentProject.name}_Q${currentProject.selectedQuarter}`
+                : currentProject.name;
+
+            // Save to localStorage
+            const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
+            savedProjects[saveKey] = currentProject;
+            localStorage.setItem('ganttProjects', JSON.stringify(savedProjects));
+
+            // Also save to folder if available (silent)
+            if (savedFolderHandle) {
+                try {
+                    const filename = currentProject.selectedQuarter
+                        ? `${currentProject.name}_Q${currentProject.selectedQuarter}_gantt.json`
+                        : `${currentProject.name}_gantt.json`;
+                    const fileHandle = await savedFolderHandle.getFileHandle(filename, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(JSON.stringify(currentProject, null, 2));
+                    await writable.close();
+                } catch (error) {
+                    console.error('Error auto-saving to folder:', error);
+                }
+            }
+
+            updateProjectSelector();
+            console.log('Project auto-saved:', currentProject.name);
+        }
+
+        // Override existing loadSavedProjects to update selector
+        const _originalLoadSavedProjects = loadSavedProjects;
+        loadSavedProjects = function() {
+            _originalLoadSavedProjects();
+            updateProjectSelector();
+        };
+
+        // Override existing loadProject to update selector
+        const _originalLoadProject = loadProject;
+        loadProject = function(name) {
+            _originalLoadProject(name);
+            updateProjectSelector();
+        };
+
+        // Override existing deleteProject to update selector
+        const _originalDeleteProject = deleteProject;
+        deleteProject = function(saveKey) {
+            const savedProjects = JSON.parse(localStorage.getItem('ganttProjects') || '{}');
+            const project = savedProjects[saveKey];
+
+            // Build display name with quarter
+            let displayName = saveKey;
+            if (project && project.selectedQuarter && project.startDate && project.endDate) {
+                const quarters = calculateProjectQuarters(project.startDate, project.endDate);
+                const quarter = quarters.find(q => q.number === project.selectedQuarter);
+                if (quarter) {
+                    displayName = `${project.name} [${quarter.label}]`;
+                }
+            }
+
+            showConfirm(
+                `Are you sure you want to delete "${displayName}"?`,
+                'Delete Project',
+                () => {
+                    delete savedProjects[saveKey];
+                    localStorage.setItem('ganttProjects', JSON.stringify(savedProjects));
+
+                    // If deleting current project, clear form
+                    const currentSaveKey = currentProject.selectedQuarter
+                        ? `${currentProject.name}_Q${currentProject.selectedQuarter}`
+                        : currentProject.name;
+
+                    if (currentSaveKey === saveKey) {
+                        currentProject = {
+                            name: '',
+                            startDate: '',
+                            endDate: '',
+                            tasks: [],
+                            ganttData: {}
+                        };
+                        document.getElementById('projectName').value = '';
+                        document.getElementById('startMonth').value = '';
+                        document.getElementById('endMonth').value = '';
+                        document.getElementById('taskListInput').value = '';
+                        document.getElementById('ganttContainer').innerHTML =
+                            '<p class="empty-state">Configure project settings and click "Generate Month Grid" to create your Gantt chart.</p>';
+                    }
+
+                    showToast(`"${displayName}" deleted and synced to cloud.`, 'success', 'Project Deleted');
+                    loadSavedProjects();
+                    updateProjectSelector();
+                }
+            );
+        };
+
+        // Initialize on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeProjectSelector);
+        } else {
+            initializeProjectSelector();
+        }
+
+        function initializeProjectSelector() {
+            loadSavedProjects();
+            updateProjectSelector();
+
+            // Auto-save on project name change
+            const projectNameInput = document.getElementById('projectName');
+            if (projectNameInput) {
+                projectNameInput.addEventListener('input', function() {
+                    currentProject.name = this.value;
+                    triggerAutoSave();
+                });
+            }
+
+            // Auto-save on date changes
+            const startMonthInput = document.getElementById('startMonth');
+            const endMonthInput = document.getElementById('endMonth');
+            if (startMonthInput) {
+                startMonthInput.addEventListener('change', triggerAutoSave);
+            }
+            if (endMonthInput) {
+                endMonthInput.addEventListener('change', triggerAutoSave);
+            }
+
+            // Auto-save on task list changes
+            const taskListInput = document.getElementById('taskListInput');
+            if (taskListInput) {
+                taskListInput.addEventListener('input', triggerAutoSave);
+            }
+        }
+
+        // ===== PDF EXPORT FUNCTIONALITY =====
+
+        let currentPDFBlob = null;
+
+        async function exportToPDF() {
+            // Check if Gantt chart exists
+            const ganttTable = document.querySelector('.gantt-table');
+            if (!ganttTable || !currentProject.name) {
+                showToast('Please generate a Gantt chart first.', 'warning', 'No Chart');
+                return;
+            }
+
+            showToast('Generating PDF preview...', 'info', 'Please Wait', 0);
+
+            try {
+                // Get quarter information
+                let quarterText = '';
+                if (currentProject.selectedQuarter && currentProject.startDate && currentProject.endDate) {
+                    const quarters = calculateProjectQuarters(currentProject.startDate, currentProject.endDate);
+                    const quarter = quarters.find(q => q.number === currentProject.selectedQuarter);
+                    if (quarter) {
+                        quarterText = quarter.label;
+                    }
+                }
+
+                // Create a temporary container for export
+                const exportContainer = document.createElement('div');
+                exportContainer.style.position = 'absolute';
+                exportContainer.style.left = '-9999px';
+                exportContainer.style.top = '0';
+                exportContainer.style.background = 'white';
+                exportContainer.style.padding = '40px';
+                exportContainer.style.width = 'fit-content';
+
+                // Add title
+                const title = document.createElement('div');
+                title.style.marginBottom = '30px';
+                title.style.textAlign = 'center';
+                title.innerHTML = `
+                    <h1 style="margin: 0 0 10px 0; font-size: 32px; color: #2B7A78; font-family: 'Roboto', sans-serif;">
+                        ${currentProject.name}
+                    </h1>
+                    ${quarterText ? `<h2 style="margin: 0; font-size: 20px; color: #666; font-family: 'Roboto', sans-serif;">${quarterText}</h2>` : ''}
+                `;
+
+                // Clone the Gantt table
+                const tableClone = ganttTable.cloneNode(true);
+                tableClone.style.margin = '0 auto';
+
+                exportContainer.appendChild(title);
+                exportContainer.appendChild(tableClone);
+                document.body.appendChild(exportContainer);
+
+                // Capture the container with html2canvas
+                const canvas = await html2canvas(exportContainer, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    useCORS: true
+                });
+
+                // Remove temporary container
+                document.body.removeChild(exportContainer);
+
+                // Create PDF
+                const { jsPDF } = window.jspdf;
+
+                // Calculate dimensions
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                const ratio = imgWidth / imgHeight;
+
+                // Use landscape A4 if chart is wide, portrait otherwise
+                const orientation = ratio > 1.4 ? 'landscape' : 'portrait';
+                const pdf = new jsPDF({
+                    orientation: orientation,
+                    unit: 'px',
+                    format: 'a4'
+                });
+
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+
+                // Calculate scaling to fit the page
+                let pdfWidth = pageWidth - 40; // 20px margin on each side
+                let pdfHeight = (imgHeight * pdfWidth) / imgWidth;
+
+                // If height exceeds page, scale down
+                if (pdfHeight > pageHeight - 40) {
+                    pdfHeight = pageHeight - 40;
+                    pdfWidth = (imgWidth * pdfHeight) / imgHeight;
+                }
+
+                const xOffset = (pageWidth - pdfWidth) / 2;
+                const yOffset = (pageHeight - pdfHeight) / 2;
+
+                // Add image to PDF
+                const imgData = canvas.toDataURL('image/png');
+                pdf.addImage(imgData, 'PNG', xOffset, yOffset, pdfWidth, pdfHeight);
+
+                // Generate blob for preview
+                currentPDFBlob = pdf.output('blob');
+
+                // Show preview modal
+                showPDFPreview(currentPDFBlob);
+
+                // Remove loading toast
+                document.querySelectorAll('.toast').forEach(toast => toast.remove());
+
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                document.querySelectorAll('.toast').forEach(toast => toast.remove());
+                showToast('Error generating PDF: ' + error.message, 'error', 'Export Error');
+            }
+        }
+
+        function showPDFPreview(blob) {
+            // Create preview modal
+            const modal = document.createElement('div');
+            modal.className = 'pdf-preview-modal';
+            modal.id = 'pdfPreviewModal';
+
+            const blobUrl = URL.createObjectURL(blob);
+
+            modal.innerHTML = `
+                <div class="pdf-preview-content">
+                    <div class="pdf-preview-header">
+                        <h2>📄 PDF Preview</h2>
+                        <button class="btn" style="background: #999; padding: 5px 12px;" onclick="closePDFPreview()">✕ Close</button>
+                    </div>
+                    <iframe class="pdf-preview-iframe" src="${blobUrl}"></iframe>
+                    <div class="pdf-preview-footer">
+                        <button class="btn" style="background: #999;" onclick="closePDFPreview()">Cancel</button>
+                        <button class="btn btn-export" onclick="downloadPDF()">💾 Download PDF</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Click outside to close
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closePDFPreview();
+                }
+            });
+        }
+
+        function closePDFPreview() {
+            const modal = document.getElementById('pdfPreviewModal');
+            if (modal) {
+                // Clean up blob URL
+                const iframe = modal.querySelector('iframe');
+                if (iframe) {
+                    URL.revokeObjectURL(iframe.src);
+                }
+                modal.remove();
+            }
+            currentPDFBlob = null;
+        }
+
+        function downloadPDF() {
+            if (!currentPDFBlob) {
+                showToast('No PDF available to download.', 'error', 'Download Error');
+                return;
+            }
+
+            // Get quarter information for filename
+            let quarterSuffix = '';
+            if (currentProject.selectedQuarter) {
+                quarterSuffix = `_Q${currentProject.selectedQuarter}`;
+            }
+
+            const filename = `${currentProject.name}${quarterSuffix}_gantt.pdf`;
+
+            // Create download link
+            const url = URL.createObjectURL(currentPDFBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showToast(`PDF downloaded: ${filename}`, 'success', 'Download Complete');
+            closePDFPreview();
         }
     </script>
 </body>

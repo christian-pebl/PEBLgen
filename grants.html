@@ -1798,22 +1798,28 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 // Map internal category names to display names
                 const displayName = category === 'Travel' ? 'Travel and Subsistence' : category;
+                const categoryId = `q${quarterIndex}-category-${category.replace(/\s+/g, '-').toLowerCase()}`;
 
                 html += `
                     <div style="margin-bottom: 20px;">
-                        <div style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div onclick="toggleQuarterlyBreakdown('${categoryId}')" style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;"
+                             onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)'"
+                             onmouseout="this.style.boxShadow='none'">
                             <span style="font-weight: 600; font-size: 0.95em;">${displayName}</span>
-                            ${items.length > 0 ? `
-                                <button onclick="mergeCategoryPDFs('${category}', ${quarterIndex}); event.stopPropagation();"
-                                        style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.4); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
-                                        onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'"
-                                        onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'"
-                                        title="Merge all PDFs/images in this category">
-                                    <span>📄</span>
-                                    <span>Merge PDFs</span>
-                                </button>
-                            ` : ''}
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                ${items.length > 0 ? `
+                                    <button onclick="mergeCategoryPDFs('${category}', ${quarterIndex}); event.stopPropagation();"
+                                            style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.4); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+                                            onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'"
+                                            onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'"
+                                            title="Merge all PDFs/images in this category">
+                                        <span>📄</span>
+                                        <span>Merge PDFs</span>
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
+                        <div id="${categoryId}-breakdown" style="display: none;">
                 `;
 
                 if (items.length === 0) {
@@ -1901,6 +1907,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 }
 
                 html += `
+                        </div>
                     </div>
                 `;
             });
@@ -4752,8 +4759,9 @@ Rules:
             if (hasQuarters) {
                 financeHTML += `
                     <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div onclick="toggleCategorySection('quarterly-tracking-content')" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; cursor: pointer; user-select: none;">
                             <h3 style="margin: 0; font-size: 1em; display: flex; align-items: center; gap: 8px; color: #333;">
+                                <span id="quarterly-tracking-arrow" style="display: inline-block; width: 20px;">▶</span>
                                 <span>📅</span>
                                 Quarterly Budget Tracking
                             </h3>
@@ -4764,6 +4772,7 @@ Rules:
                             ` : ''}
                         </div>
 
+                        <div id="quarterly-tracking-content" style="display: none;">
                         <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 6px;">
                             <span style="font-size: 0.85em; color: #475569; font-weight: 500;">Activate Quarter:</span>
                 `;
@@ -4806,6 +4815,7 @@ Rules:
                 }
 
                 financeHTML += `
+                        </div>
                     </div>
                 `;
             } else {
@@ -5196,28 +5206,110 @@ Rules:
                     <div class="card">
                         <h3>👥 Revenue - Standard Costs</h3>
                         <table>
-                            <tr>
-                                <th>Item Code</th>
-                                <th>Item Description</th>
-                                <th>Item Details</th>
-                                <th>Quantity</th>
-                                <th>Grant Rate</th>
-                                <th>Maximum Grant Value £</th>
-                            </tr>
-                            ${sections.revenue.standardCosts.map(item => `
+                            <thead>
                                 <tr>
-                                    <td>${item.itemCode}</td>
-                                    <td>${item.description}</td>
-                                    <td>${item.itemDetails}</td>
-                                    <td>${item.quantity} Hours</td>
-                                    <td>£${item.grantRate}/Hour</td>
-                                    <td>£${item.maxGrantValue.toLocaleString()}</td>
+                                    <th>Item Code</th>
+                                    <th>Item Description</th>
+                                    <th>Item Details</th>
+                                    <th>Quantity</th>
+                                    <th>Grant Rate</th>
+                                    <th>Maximum Grant Value £</th>
+                                    ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
                                 </tr>
-                            `).join('')}
-                            <tr style="background: #f1f5f9; font-weight: 600;">
-                                <td colspan="5" style="text-align: right;">Total Maximum Revenue Grant Value (Standard Costs)</td>
-                                <td>£${sections.totals.totalRevenueStandard.toLocaleString()}</td>
-                            </tr>
+                            </thead>
+                            <tbody>
+                                ${sections.revenue.standardCosts.map((item, index) => {
+                                    if (!item.maxGrantValue && item.grantRate && item.quantity) {
+                                        item.maxGrantValue = parseFloat(item.grantRate.replace(/[£,]/g, '')) * parseFloat(item.quantity);
+                                    }
+                                    initializeQuarterlyCosts(item);
+                                    const itemKey = `revenueStandard-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Revenue Standard', itemKey);
+                                    const remaining = item.maxGrantValue - costsClaimed;
+                                    const difference = item.maxGrantValue > 0 ? ((costsClaimed - item.maxGrantValue) / item.maxGrantValue) * 100 : 0;
+                                    const isOverBudget = costsClaimed > item.maxGrantValue;
+
+                                    return `
+                                        <tr onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td>${item.itemCode}</td>
+                                            <td>${item.description}</td>
+                                            <td>${item.itemDetails}</td>
+                                            <td>${item.quantity} Hours</td>
+                                            <td>£${item.grantRate}/Hour</td>
+                                            <td>£${item.maxGrantValue.toLocaleString()}</td>
+                                            ${hasQuarters ? `
+                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                            ` : ''}
+                                        </tr>
+                                        ${hasQuarters ? `
+                                        <tr id="wg-revenue-std-${index}-breakdown" style="display: none;">
+                                            <td colspan="9" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
+                                                    <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
+                                                    <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
+                                                        <thead>
+                                                            <tr style="background: #e2e8f0;">
+                                                                <th style="width: 150px;">Metric</th>
+                                                                ${quarters.map(q => `<th data-quarter="${q.index}">${q.label}</th>`).join('')}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td style="font-weight: 600;">Costs Claimed</td>
+                                                                ${quarters.map(q => `
+                                                                    <td data-quarter="${q.index}">
+                                                                        <input
+                                                                            type="number"
+                                                                            value="${item.quarterlyCosts['q' + q.index] || 0}"
+                                                                            onchange="updateQuarterlyCost(projectBudget.welshGovData.sections.revenue.standardCosts[${index}], ${q.index}, this.value); displayWelshGovBudget(projectBudget.welshGovData);"
+                                                                            onclick="event.stopPropagation()"
+                                                                            style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;"
+                                                                        />
+                                                                    </td>
+                                                                `).join('')}
+                                                            </tr>
+                                                            <tr style="background: #f1f5f9;">
+                                                                <td style="font-weight: 600;">Budget Remaining</td>
+                                                                <td colspan="${quarters.length}" style="font-weight: 600; color: ${remaining < 0 ? '#d32f2f' : '#2e7d32'};">
+                                                                    £${remaining.toLocaleString()}
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                    ${(() => {
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Revenue Standard',
+                                                                'revenueStandard-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Revenue Standard',
+                                                                'revenueStandard-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        ` : ''}
+                                    `;
+                                }).join('')}
+                                <tr style="background: #f1f5f9; font-weight: 600;">
+                                    <td colspan="${hasQuarters ? '6' : '5'}" style="text-align: right;">Total Maximum Revenue Grant Value (Standard Costs)</td>
+                                    <td>£${sections.totals.totalRevenueStandard.toLocaleString()}</td>
+                                    ${hasQuarters ? '<td colspan="2"></td>' : ''}
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 `;
@@ -5229,26 +5321,107 @@ Rules:
                     <div class="card">
                         <h3>📋 Item Breakdown - Capital</h3>
                         <table>
-                            <tr>
-                                <th>Item Code</th>
-                                <th>Item Description</th>
-                                <th>Item Details</th>
-                                <th>Total Cost</th>
-                                <th>Grant Rate</th>
-                                <th>Maximum Grant Approved £</th>
-                                <th>*Claimable</th>
-                            </tr>
-                            ${sections.itemBreakdown.capital.map(item => `
+                            <thead>
                                 <tr>
-                                    <td>${item.itemCode}</td>
-                                    <td>${item.description}</td>
-                                    <td>${item.itemDetails}</td>
-                                    <td>£${item.totalCost.toLocaleString()}</td>
-                                    <td>${item.grantRate}%</td>
-                                    <td>£${item.maxGrantApproved.toLocaleString()}</td>
-                                    <td>${item.claimable ? 'Yes' : 'No'}</td>
+                                    <th>Item Code</th>
+                                    <th>Item Description</th>
+                                    <th>Item Details</th>
+                                    <th>Total Cost</th>
+                                    <th>Grant Rate</th>
+                                    <th>Maximum Grant Approved £</th>
+                                    <th>*Claimable</th>
+                                    ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
                                 </tr>
-                            `).join('')}
+                            </thead>
+                            <tbody>
+                                ${sections.itemBreakdown.capital.map((item, index) => {
+                                    if (!item.maxGrantApproved && item.totalCost && item.grantRate) {
+                                        item.maxGrantApproved = (item.totalCost * item.grantRate) / 100;
+                                    }
+                                    initializeQuarterlyCosts(item);
+                                    const itemKey = `itemBreakdownCapital-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Item Breakdown Capital', itemKey);
+                                    const remaining = item.maxGrantApproved - costsClaimed;
+                                    const difference = item.maxGrantApproved > 0 ? ((costsClaimed - item.maxGrantApproved) / item.maxGrantApproved) * 100 : 0;
+                                    const isOverBudget = costsClaimed > item.maxGrantApproved;
+
+                                    return `
+                                        <tr onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td>${item.itemCode}</td>
+                                            <td>${item.description}</td>
+                                            <td>${item.itemDetails}</td>
+                                            <td>£${item.totalCost.toLocaleString()}</td>
+                                            <td>${item.grantRate}%</td>
+                                            <td>£${item.maxGrantApproved.toLocaleString()}</td>
+                                            <td>${item.claimable ? 'Yes' : 'No'}</td>
+                                            ${hasQuarters ? `
+                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                            ` : ''}
+                                        </tr>
+                                        ${hasQuarters ? `
+                                        <tr id="wg-item-cap-${index}-breakdown" style="display: none;">
+                                            <td colspan="10" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
+                                                    <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
+                                                    <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
+                                                        <thead>
+                                                            <tr style="background: #e2e8f0;">
+                                                                <th style="width: 150px;">Metric</th>
+                                                                ${quarters.map(q => `<th data-quarter="${q.index}">${q.label}</th>`).join('')}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td style="font-weight: 600;">Costs Claimed</td>
+                                                                ${quarters.map(q => `
+                                                                    <td data-quarter="${q.index}">
+                                                                        <input
+                                                                            type="number"
+                                                                            value="${item.quarterlyCosts['q' + q.index] || 0}"
+                                                                            onchange="updateQuarterlyCost(projectBudget.welshGovData.sections.itemBreakdown.capital[${index}], ${q.index}, this.value); displayWelshGovBudget(projectBudget.welshGovData);"
+                                                                            onclick="event.stopPropagation()"
+                                                                            style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;"
+                                                                        />
+                                                                    </td>
+                                                                `).join('')}
+                                                            </tr>
+                                                            <tr style="background: #f1f5f9;">
+                                                                <td style="font-weight: 600;">Budget Remaining</td>
+                                                                <td colspan="${quarters.length}" style="font-weight: 600; color: ${remaining < 0 ? '#d32f2f' : '#2e7d32'};">
+                                                                    £${remaining.toLocaleString()}
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                    ${(() => {
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Item Breakdown Capital',
+                                                                'itemBreakdownCapital-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Item Breakdown Capital',
+                                                                'itemBreakdownCapital-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        ` : ''}
+                                    `;
+                                }).join('')}
+                            </tbody>
                         </table>
                     </div>
                 `;
@@ -5260,26 +5433,107 @@ Rules:
                     <div class="card">
                         <h3>📋 Item Breakdown - Revenue</h3>
                         <table>
-                            <tr>
-                                <th>Item Code</th>
-                                <th>Item Description</th>
-                                <th>Item Details</th>
-                                <th>Total Cost</th>
-                                <th>Grant Rate</th>
-                                <th>Maximum Grant Approved £</th>
-                                <th>*Claimable</th>
-                            </tr>
-                            ${sections.itemBreakdown.revenue.map(item => `
+                            <thead>
                                 <tr>
-                                    <td>${item.itemCode}</td>
-                                    <td>${item.description}</td>
-                                    <td>${item.itemDetails}</td>
-                                    <td>£${item.totalCost.toLocaleString()}</td>
-                                    <td>${item.grantRate}%</td>
-                                    <td>£${item.maxGrantApproved.toLocaleString()}</td>
-                                    <td>${item.claimable ? 'Yes' : 'No'}</td>
+                                    <th>Item Code</th>
+                                    <th>Item Description</th>
+                                    <th>Item Details</th>
+                                    <th>Total Cost</th>
+                                    <th>Grant Rate</th>
+                                    <th>Maximum Grant Approved £</th>
+                                    <th>*Claimable</th>
+                                    ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
                                 </tr>
-                            `).join('')}
+                            </thead>
+                            <tbody>
+                                ${sections.itemBreakdown.revenue.map((item, index) => {
+                                    if (!item.maxGrantApproved && item.totalCost && item.grantRate) {
+                                        item.maxGrantApproved = (item.totalCost * item.grantRate) / 100;
+                                    }
+                                    initializeQuarterlyCosts(item);
+                                    const itemKey = `itemBreakdownRevenue-${index}`;
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Item Breakdown Revenue', itemKey);
+                                    const remaining = item.maxGrantApproved - costsClaimed;
+                                    const difference = item.maxGrantApproved > 0 ? ((costsClaimed - item.maxGrantApproved) / item.maxGrantApproved) * 100 : 0;
+                                    const isOverBudget = costsClaimed > item.maxGrantApproved;
+
+                                    return `
+                                        <tr onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td>${item.itemCode}</td>
+                                            <td>${item.description}</td>
+                                            <td>${item.itemDetails}</td>
+                                            <td>£${item.totalCost.toLocaleString()}</td>
+                                            <td>${item.grantRate}%</td>
+                                            <td>£${item.maxGrantApproved.toLocaleString()}</td>
+                                            <td>${item.claimable ? 'Yes' : 'No'}</td>
+                                            ${hasQuarters ? `
+                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                            ` : ''}
+                                        </tr>
+                                        ${hasQuarters ? `
+                                        <tr id="wg-item-rev-${index}-breakdown" style="display: none;">
+                                            <td colspan="10" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
+                                                    <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
+                                                    <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
+                                                        <thead>
+                                                            <tr style="background: #e2e8f0;">
+                                                                <th style="width: 150px;">Metric</th>
+                                                                ${quarters.map(q => `<th data-quarter="${q.index}">${q.label}</th>`).join('')}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td style="font-weight: 600;">Costs Claimed</td>
+                                                                ${quarters.map(q => `
+                                                                    <td data-quarter="${q.index}">
+                                                                        <input
+                                                                            type="number"
+                                                                            value="${item.quarterlyCosts['q' + q.index] || 0}"
+                                                                            onchange="updateQuarterlyCost(projectBudget.welshGovData.sections.itemBreakdown.revenue[${index}], ${q.index}, this.value); displayWelshGovBudget(projectBudget.welshGovData);"
+                                                                            onclick="event.stopPropagation()"
+                                                                            style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;"
+                                                                        />
+                                                                    </td>
+                                                                `).join('')}
+                                                            </tr>
+                                                            <tr style="background: #f1f5f9;">
+                                                                <td style="font-weight: 600;">Budget Remaining</td>
+                                                                <td colspan="${quarters.length}" style="font-weight: 600; color: ${remaining < 0 ? '#d32f2f' : '#2e7d32'};">
+                                                                    £${remaining.toLocaleString()}
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                    ${(() => {
+                                                        if (cachedTransactions && cachedTransactions.length > 0) {
+                                                            const itemTransactions = getTransactionsForItem(
+                                                                cachedTransactions,
+                                                                projectBudget.projectId,
+                                                                'Item Breakdown Revenue',
+                                                                'itemBreakdownRevenue-' + index,
+                                                                null
+                                                            );
+                                                            return renderTransactionDetails(
+                                                                itemTransactions,
+                                                                projectBudget.projectId,
+                                                                'Item Breakdown Revenue',
+                                                                'itemBreakdownRevenue-' + index,
+                                                                null,
+                                                                cachedInvoices || []
+                                                            );
+                                                        }
+                                                        return '';
+                                                    })()}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        ` : ''}
+                                    `;
+                                }).join('')}
+                            </tbody>
                         </table>
                         <p style="font-size: 0.85em; color: #64748b; margin-top: 10px; font-style: italic;">
                             * Claimable means quotes have been received and verified and/or field parcels have been provided, where applicable, for those items.

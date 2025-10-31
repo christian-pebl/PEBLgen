@@ -1841,6 +1841,7 @@
         let selectedCategory = null; // Currently selected category for assignment
         let currentAssignments = []; // For split allocations: [{projectId, category, itemKey, itemName, percentage, quarter}]
         let remainingAllocation = 100; // Percentage remaining to allocate
+        let newSplitPercentage = 100; // Percentage for the new split assignment being added
 
         // Multi-step assignment state
         let assignmentStep = 1; // 1=Project, 2=Category, 3=Item
@@ -3839,14 +3840,20 @@
                 if (transaction.assignments && transaction.assignments.length > 0) {
                     // New format: array of assignments - compact single-line badges with × button
                     categoryBadges = transaction.assignments.map((assignment, assignmentIndex) => {
-                        const percentage = assignment.percentage === 100 ? '' : ` ${assignment.percentage}%`;
                         const quarter = assignment.quarter ? ` Q${assignment.quarter}` : '';
                         const icon = assignment.icon ? `${assignment.icon} ` : '';
                         const isGeneral = assignment.projectId === 'GENERAL_EXPENSES';
                         const badgeStyle = isGeneral ? 'background-color: #fef3c7; border: 1px solid #fbbf24;' : '';
-                        const compactInfo = `${icon}${escapeHtml(assignment.itemName)}${percentage} • ${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}${quarter}`;
-                        return `<span class="assigned-category" title="${compactInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-block; margin: 2px 2px 2px 0; white-space: normal; word-wrap: break-word;">
-                            <span style="font-size: 10px; font-weight: 500; line-height: 1.3;">${compactInfo}</span>
+
+                        // Tooltip with full details
+                        const tooltipInfo = `${icon}${escapeHtml(assignment.itemName)} • ${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}${quarter}`;
+
+                        // Badge display: show full details with percentage tag
+                        const displayText = `${icon}${escapeHtml(assignment.itemName)} • ${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}${quarter}`;
+                        const percentageTag = `<span style="background-color: #3b82f6; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 4px; font-size: 9px; font-weight: 600;">${assignment.percentage}%</span>`;
+
+                        return `<span class="assigned-category" title="${tooltipInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-flex; align-items: center; margin: 2px 2px 2px 0; white-space: normal; word-wrap: break-word;">
+                            <span style="font-size: 10px; font-weight: 500; line-height: 1.3;">${displayText}${percentageTag}</span>
                             <button onclick="handleUnassign(${index}, ${assignmentIndex}); event.stopPropagation();"
                                     style="position: absolute; top: 2px; right: 2px; background: #dc2626; border: none; border-radius: 2px; width: 14px; height: 14px; cursor: pointer; font-size: 10px; line-height: 1; padding: 0; color: white; transition: all 0.15s; font-weight: bold;"
                                     onmouseover="this.style.background='#b91c1c'; this.style.transform='scale(1.1)';"
@@ -3858,9 +3865,11 @@
                     // Old format: single assignment (backward compatibility) - compact version with × button
                     const isGeneral = transaction.assignedProject === 'GENERAL_EXPENSES';
                     const badgeStyle = isGeneral ? 'background-color: #fef3c7; border: 1px solid #fbbf24;' : '';
-                    const compactInfo = `${escapeHtml(transaction.assignedItemName)} • ${escapeHtml(transaction.assignedCategory)}`;
-                    categoryBadges = `<span class="assigned-category" title="${compactInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-block; margin: 2px 2px 2px 0; white-space: normal; word-wrap: break-word;">
-                        <span style="font-size: 10px; font-weight: 500; line-height: 1.3;">${compactInfo}</span>
+                    const tooltipInfo = `${escapeHtml(transaction.assignedItemName)} • ${escapeHtml(transaction.assignedCategory)}`;
+                    const displayText = `${escapeHtml(transaction.assignedItemName)} • ${escapeHtml(transaction.assignedCategory)}`;
+                    const percentageTag = `<span style="background-color: #3b82f6; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 4px; font-size: 9px; font-weight: 600;">100%</span>`;
+                    categoryBadges = `<span class="assigned-category" title="${tooltipInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-flex; align-items: center; margin: 2px 2px 2px 0; white-space: normal; word-wrap: break-word;">
+                        <span style="font-size: 10px; font-weight: 500; line-height: 1.3;">${displayText}${percentageTag}</span>
                         <button onclick="handleUnassign(${index}); event.stopPropagation();"
                                 style="position: absolute; top: 2px; right: 2px; background: #dc2626; border: none; border-radius: 2px; width: 14px; height: 14px; cursor: pointer; font-size: 10px; line-height: 1; padding: 0; color: white; transition: all 0.15s; font-weight: bold;"
                                 onmouseover="this.style.background='#b91c1c'; this.style.transform='scale(1.1)';"
@@ -4512,6 +4521,15 @@
             const transaction = allTransactions[currentEditingIndex];
             console.log('📋 [MODAL DEBUG] Transaction:', transaction);
 
+            // Initialize newSplitPercentage based on remaining allocation
+            if (transaction.assignments && transaction.assignments.length > 0) {
+                const totalPercentage = transaction.assignments.reduce((sum, a) => sum + (a.percentage || 0), 0);
+                newSplitPercentage = Math.max(0, 100 - totalPercentage);
+            } else {
+                newSplitPercentage = 100;
+            }
+            console.log(`📊 [MODAL DEBUG] Initialized newSplitPercentage to ${newSplitPercentage}%`);
+
             let content = `
                 <div style="margin-bottom: 12px; padding: 8px; background: #f8f9fa; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -4525,14 +4543,84 @@
                 </div>
             `;
 
-            // Check if transaction has existing assignments - show "View Assignment" button
+            // Check if transaction has existing assignments - show split assignment editor
             if (transaction.assignments && transaction.assignments.length > 0) {
+                const totalPercentage = transaction.assignments.reduce((sum, a) => sum + (a.percentage || 0), 0);
+                const percentageColor = totalPercentage === 100 ? '#10b981' : totalPercentage > 100 ? '#ef4444' : '#f59e0b';
+
                 content += `
                     <div style="margin-bottom: 12px; padding: 10px; background: #dbeafe; border: 1px solid #3b82f6; border-radius: 4px;">
-                        <div style="font-size: 11px; color: #1e40af; margin-bottom: 6px; font-weight: 600;">This transaction is already assigned</div>
-                        <button onclick="viewAssignment(${currentEditingIndex})" style="width: 100%; background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;">
-                            View Assignment in Grants Page
+                        <div style="font-size: 12px; color: #1e40af; margin-bottom: 8px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Current Split Assignments</span>
+                            <span style="background: ${percentageColor}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Total: ${totalPercentage}%</span>
+                        </div>
+                `;
+
+                transaction.assignments.forEach((assignment, assignIdx) => {
+                    const projectName = assignment.projectName || 'Project';
+                    const quarter = assignment.quarter ? ` Q${assignment.quarter}` : '';
+                    const icon = assignment.icon || '📁';
+
+                    content += `
+                        <div style="margin-bottom: 6px; padding: 6px; background: white; border-radius: 4px; display: flex; align-items: center; gap: 8px; border: 1px solid #e5e7eb;">
+                            <span style="font-size: 14px;">${icon}</span>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 10px; font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${escapeHtml(assignment.itemName || assignment.category)}
+                                </div>
+                                <div style="font-size: 9px; color: #666;">
+                                    ${escapeHtml(projectName)}${quarter}
+                                </div>
+                            </div>
+                            <input type="number"
+                                   value="${assignment.percentage}"
+                                   min="0"
+                                   max="100"
+                                   style="width: 50px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 3px; text-align: center; font-size: 11px;"
+                                   onchange="updateAssignmentPercentage(${currentEditingIndex}, ${assignIdx}, this.value)">
+                            <span style="font-size: 10px; color: #666;">%</span>
+                            <button onclick="removeAssignment(${currentEditingIndex}, ${assignIdx}); event.stopPropagation();"
+                                    style="background: #dc2626; color: white; border: none; border-radius: 3px; width: 24px; height: 24px; cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.15s;"
+                                    onmouseover="this.style.background='#b91c1c'"
+                                    onmouseout="this.style.background='#dc2626'"
+                                    title="Remove assignment">×</button>
+                        </div>
+                    `;
+                });
+
+                content += `
+                        <button onclick="viewAssignment(${currentEditingIndex})" style="width: 100%; background: #6366f1; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; margin-top: 6px;">
+                            View in Grants Page
                         </button>
+                    </div>
+                    <div style="font-size: 11px; color: #666; margin-bottom: 8px; padding: 6px; background: #f1f5f9; border-radius: 4px;">
+                        💡 You can edit percentages above or add another split assignment below
+                    </div>
+                `;
+
+                // Add percentage input for new split assignment
+                const remainingPercentage = 100 - totalPercentage;
+                content += `
+                    <div style="margin-bottom: 12px; padding: 10px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px;">
+                        <div style="font-size: 12px; color: #166534; margin-bottom: 6px; font-weight: 600;">
+                            New Split Percentage
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number"
+                                   id="newSplitPercentageInput"
+                                   value="${remainingPercentage > 0 ? remainingPercentage : 0}"
+                                   min="0"
+                                   max="100"
+                                   style="flex: 1; padding: 6px 10px; border: 1px solid #86efac; border-radius: 4px; font-size: 12px; text-align: center;"
+                                   oninput="updateNewSplitPercentage(this.value)">
+                            <span style="font-size: 12px; color: #166534; font-weight: 600;">%</span>
+                            <span style="font-size: 10px; color: #15803d; background: white; padding: 4px 8px; border-radius: 3px; white-space: nowrap;">
+                                Remaining: ${remainingPercentage}%
+                            </span>
+                        </div>
+                        <div style="font-size: 10px; color: #15803d; margin-top: 4px;">
+                            Enter the percentage to allocate to the next project you select
+                        </div>
                     </div>
                 `;
             }
@@ -4619,6 +4707,11 @@
                 transaction.assignments = [];
             }
 
+            // Calculate amount using newSplitPercentage
+            const amountToAssign = (transAmount * newSplitPercentage) / 100;
+
+            console.log(`💰 [ASSIGN GENERAL] Using ${newSplitPercentage}% of £${transAmount} = £${amountToAssign}`);
+
             // Create new assignment object
             const newAssignment = {
                 projectId: 'GENERAL_EXPENSES',
@@ -4628,8 +4721,8 @@
                 itemName: 'PEBL General Expenses',
                 icon: '🏢',
                 quarter: null,
-                percentage: 100,
-                amount: transAmount,
+                percentage: newSplitPercentage,
+                amount: amountToAssign,
                 assignedDate: new Date().toISOString()
             };
 
@@ -5142,12 +5235,12 @@
 
             console.log(`📅 [ASSIGN] Calculated quarter: Q${quarter}`);
 
-            // Calculate amount to assign (default 100%)
-            const transAmount = parseAmount(transaction.spent || transaction.received);
-            const percentage = 100;
+            // Calculate amount to assign using newSplitPercentage - use ex-VAT amount
+            const transAmount = getTransactionExVatAmount(transaction);
+            const percentage = newSplitPercentage;
             const amountToAssign = (transAmount * percentage) / 100;
 
-            console.log(`💰 [ASSIGN] Amount to assign: £${amountToAssign} (${percentage}% of £${transAmount})`);
+            console.log(`💰 [ASSIGN] Amount to assign: £${amountToAssign} (${percentage}% of £${transAmount} ex-VAT)`);
 
             // Initialize assignments array if needed
             if (!transaction.assignments) {
@@ -5353,12 +5446,12 @@
 
             console.log(`📅 [ASSIGN] Calculated quarter: Q${quarter}`);
 
-            // Calculate amount to assign (default 100%)
-            const transAmount = parseAmount(transaction.spent || transaction.received);
+            // Calculate amount to assign (default 100%) - use ex-VAT amount
+            const transAmount = getTransactionExVatAmount(transaction);
             const percentage = 100; // TODO: Add split allocation UI
             const amountToAssign = (transAmount * percentage) / 100;
 
-            console.log(`💰 [ASSIGN] Amount to assign: £${amountToAssign} (${percentage}% of £${transAmount})`);
+            console.log(`💰 [ASSIGN] Amount to assign: £${amountToAssign} (${percentage}% of £${transAmount} ex-VAT)`);
 
             // Initialize assignments array if needed
             if (!transaction.assignments) {
@@ -6306,6 +6399,106 @@
         /**
          * Handle unassignment (right-click on assign button)
          */
+        /**
+         * Update the percentage of a specific assignment in a split transaction
+         */
+        async function updateAssignmentPercentage(transactionIndex, assignmentIndex, newPercentage) {
+            const transaction = allTransactions[transactionIndex];
+
+            if (!transaction.assignments || assignmentIndex >= transaction.assignments.length) {
+                showSimpleToast('⚠️ Assignment not found', 'error');
+                return;
+            }
+
+            const assignment = transaction.assignments[assignmentIndex];
+            const oldPercentage = assignment.percentage;
+            const newPercentageNum = parseFloat(newPercentage);
+
+            if (isNaN(newPercentageNum) || newPercentageNum < 0 || newPercentageNum > 100) {
+                showSimpleToast('⚠️ Percentage must be between 0 and 100', 'error');
+                // Re-render to reset the input
+                showProjectSelection();
+                return;
+            }
+
+            console.log(`📊 [UPDATE %] Changing assignment ${assignmentIndex} from ${oldPercentage}% to ${newPercentageNum}%`);
+
+            // Calculate old and new amounts - use ex-VAT amount
+            const transAmount = getTransactionExVatAmount(transaction);
+            const oldAmount = (transAmount * oldPercentage) / 100;
+            const newAmount = (transAmount * newPercentageNum) / 100;
+            const amountDiff = newAmount - oldAmount;
+
+            // Update the assignment
+            assignment.percentage = newPercentageNum;
+            assignment.amount = newAmount;
+
+            // Update project quarterly costs
+            try {
+                const project = activeProjects.find(p => p.projectId === assignment.projectId);
+                if (project) {
+                    // Adjust the project cost by the difference
+                    await updateProjectQuarterlyCosts(
+                        project,
+                        { category: assignment.category, itemKey: assignment.itemKey, itemName: assignment.itemName, projectId: assignment.projectId },
+                        assignment.quarter,
+                        amountDiff
+                    );
+                    console.log(`✅ [UPDATE %] Project costs adjusted by £${amountDiff.toFixed(2)}`);
+                }
+            } catch (error) {
+                console.error('❌ [UPDATE %] Failed to update project:', error);
+                showSimpleToast('⚠️ Percentage updated locally but failed to sync with project', 'warning');
+            }
+
+            // Save and re-render
+            await saveTransactionsToStorage();
+            showProjectSelection(); // Refresh the modal view
+            renderTransactions(); // Refresh the main table
+            showSimpleToast(`✅ Percentage updated to ${newPercentageNum}%`, 'success');
+        }
+
+        /**
+         * Update the percentage for the new split assignment being added
+         */
+        function updateNewSplitPercentage(value) {
+            const percentage = parseFloat(value);
+            if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+                newSplitPercentage = 0;
+            } else {
+                newSplitPercentage = percentage;
+            }
+            console.log(`📊 [NEW SPLIT %] Set to ${newSplitPercentage}%`);
+        }
+
+        /**
+         * Remove a specific assignment from a split transaction
+         */
+        async function removeAssignment(transactionIndex, assignmentIndex) {
+            const transaction = allTransactions[transactionIndex];
+
+            if (!transaction.assignments || assignmentIndex >= transaction.assignments.length) {
+                showSimpleToast('⚠️ Assignment not found', 'error');
+                return;
+            }
+
+            const assignment = transaction.assignments[assignmentIndex];
+
+            console.log(`🗑️ [REMOVE] Removing assignment ${assignmentIndex}:`, assignment);
+
+            // Remove from project costs
+            await removeAssignmentFromProject(transaction, assignment);
+
+            // Remove from array
+            transaction.assignments.splice(assignmentIndex, 1);
+
+            // Save and re-render
+            await saveTransactionsToStorage();
+            showProjectSelection(); // Refresh the modal view
+            renderTransactions(); // Refresh the main table
+            showSimpleToast('✅ Assignment removed', 'success');
+        }
+
         async function handleUnassign(transactionIndex, assignmentIndex = null) {
             const transaction = allTransactions[transactionIndex];
 
