@@ -6496,7 +6496,6 @@
             await saveTransactionsToStorage();
             showProjectSelection(); // Refresh the modal view
             renderTransactions(); // Refresh the main table
-            showSimpleToast('✅ Assignment removed', 'success');
         }
 
         async function handleUnassign(transactionIndex, assignmentIndex = null) {
@@ -6504,21 +6503,17 @@
 
             if (!transaction.assignments || transaction.assignments.length === 0) {
                 if (!transaction.assignedItemName) {
-                    showSimpleToast('⚠️ This transaction has no assignments to remove', 'info');
                     return;
                 }
 
-                // Old format - convert and remove
-                if (confirm('Remove assignment from this transaction?')) {
-                    delete transaction.assignedCategory;
-                    delete transaction.assignedItem;
-                    delete transaction.assignedItemName;
-                    delete transaction.assignedProject;
+                // Old format - remove directly without confirmation
+                delete transaction.assignedCategory;
+                delete transaction.assignedItem;
+                delete transaction.assignedItemName;
+                delete transaction.assignedProject;
 
-                    renderTransactions();
-                    await saveTransactionsToStorage();
-                    showSimpleToast('✅ Assignment removed and saved', 'success');
-                }
+                renderTransactions();
+                await saveTransactionsToStorage();
                 return;
             }
 
@@ -6529,46 +6524,22 @@
                 transaction.assignments.splice(assignmentIndex, 1);
                 renderTransactions();
                 await saveTransactionsToStorage();
-                showSimpleToast('✅ Assignment removed and saved', 'success');
                 return;
             }
 
             // Fallback for old behavior (no assignment index provided)
-            // New format - show list of assignments to remove
+            // New format - remove first assignment if only one exists
             if (transaction.assignments.length === 1) {
-                if (confirm(`Remove assignment: ${transaction.assignments[0].itemName}?`)) {
-                    await removeAssignmentFromProject(transaction, transaction.assignments[0]);
-                    transaction.assignments = [];
-                    renderTransactions();
-                    await saveTransactionsToStorage();
-                    showSimpleToast('✅ Assignment removed, project updated, and saved', 'success');
-                }
+                await removeAssignmentFromProject(transaction, transaction.assignments[0]);
+                transaction.assignments = [];
+                renderTransactions();
+                await saveTransactionsToStorage();
             } else {
-                // Multiple assignments - let user choose
-                const assignmentList = transaction.assignments.map((a, i) =>
-                    `${i + 1}. ${a.itemName} (${a.percentage}%) - ${getQuarterName(a.quarter)}`
-                ).join('\n');
-
-                const choice = prompt(`Multiple assignments found:\n\n${assignmentList}\n\nEnter number to remove (or 'all' to remove all):`);
-
-                if (choice === 'all') {
-                    for (const assignment of transaction.assignments) {
-                        await removeAssignmentFromProject(transaction, assignment);
-                    }
-                    transaction.assignments = [];
-                    renderTransactions();
-                    await saveTransactionsToStorage();
-                    showSimpleToast('✅ All assignments removed and saved', 'success');
-                } else {
-                    const index = parseInt(choice) - 1;
-                    if (index >= 0 && index < transaction.assignments.length) {
-                        await removeAssignmentFromProject(transaction, transaction.assignments[index]);
-                        transaction.assignments.splice(index, 1);
-                        renderTransactions();
-                        await saveTransactionsToStorage();
-                        showSimpleToast('✅ Assignment removed and saved', 'success');
-                    }
-                }
+                // Multiple assignments - remove the first one (fallback behavior)
+                await removeAssignmentFromProject(transaction, transaction.assignments[0]);
+                transaction.assignments.splice(0, 1);
+                renderTransactions();
+                await saveTransactionsToStorage();
             }
         }
 
