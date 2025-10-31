@@ -12,6 +12,9 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <!-- pdf-lib for PDF merging functionality -->
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -356,11 +359,16 @@
             padding: 20px;
             margin-bottom: 24px;
             border: 1px solid #f1f5f9;
+            max-width: 100%;
+            overflow-x: auto;
+            position: relative;
         }
 
         .item-table {
             margin-top: 0 !important;
             font-size: 0.95em;
+            width: 100%;
+            table-layout: fixed;
         }
 
         .item-table thead tr {
@@ -399,17 +407,29 @@
         }
 
         /* Quarterly Breakdown Table Styling */
+        .breakdown-row-cell {
+            padding: 0 !important;
+            background: transparent !important;
+            position: relative !important;
+        }
+
         .quarterly-breakdown-container {
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-radius: 10px;
-            padding: 20px;
-            margin: 16px 0;
-            border: 2px solid #e2e8f0;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+            border-radius: 0;
+            padding: 20px 0 0 0;
+            margin: 0 -20px;
+            border: none;
+            border-top: 2px solid #e2e8f0;
+            box-shadow: none;
+            width: calc(100% + 40px);
+            box-sizing: border-box;
+            overflow-x: visible;
+            position: relative;
+            left: 0;
         }
 
         .quarterly-breakdown-header {
-            margin: 0 0 16px 0;
+            margin: 0 20px 16px 20px;
             color: #475569;
             font-size: 0.95em;
             font-weight: 600;
@@ -425,7 +445,8 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            margin: 0 !important;
+            margin: 0 20px !important;
+            width: calc(100% - 40px);
         }
 
         .quarterly-breakdown-table thead tr {
@@ -1588,10 +1609,15 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             const rows = transactions.map(transaction => {
                 const date = transaction.date || '-';
                 const description = transaction.description || '-';
+
+                // Always show GBP amounts, with note if currency-converted
                 const spentAmount = parseAmount(transaction.spent);
+                let valueExTax = '0.00';
+                let valueIncTax = '0.00';
+                let currencySymbol = '£';
+                let currencyNote = '';
 
                 // Check if 0% VAT is applied or if spent_ex_vat is manually set
-                let valueExTax = '0.00';
                 if (transaction.zeroVAT || transaction.spent_ex_vat) {
                     const exVatAmount = parseAmount(transaction.spent_ex_vat || transaction.spent);
                     valueExTax = exVatAmount > 0 ? exVatAmount.toFixed(2) : '0.00';
@@ -1601,7 +1627,15 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 }
 
                 // Value Inc Tax (original amount including tax)
-                const valueIncTax = spentAmount > 0 ? spentAmount.toFixed(2) : '0.00';
+                valueIncTax = spentAmount > 0 ? spentAmount.toFixed(2) : '0.00';
+
+                // If transaction was currency-converted, add note showing USD amount
+                if (transaction.convertedCurrency && transaction.convertedAmount) {
+                    const usdAmount = transaction.convertedAmount;
+                    const rate = transaction.conversionRate || 1;
+                    currencyNote = `<div style="font-size: 0.75em; color: #10b981; margin-top: 3px;">💱 Converted from $${usdAmount.toFixed(2)} USD (rate: ${rate.toFixed(4)})</div>`;
+                    console.log(`💱 [RENDER] Displaying GBP £${spentAmount.toFixed(2)} (converted from $${usdAmount.toFixed(2)} @ ${rate.toFixed(4)})`);
+                }
 
                 // Detail column - prioritize detail field, then fall back to legacy fields
                 let detail = '-';
@@ -1664,25 +1698,30 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 return `
                     <tr id="${transactionId}" data-transaction-date="${escapeHtml(transaction.date)}" data-transaction-description="${escapeHtml(transaction.description)}">
-                        <td style="padding: 6px 10px;">${escapeHtml(date)}</td>
-                        <td style="padding: 6px 10px;">${escapeHtml(description)}</td>
-                        <td style="padding: 6px 10px; text-align: right;">£${valueExTax}</td>
-                        <td style="padding: 6px 10px; text-align: right;">£${valueIncTax}</td>
+                        <td style="padding: 6px 10px; white-space: nowrap;">${escapeHtml(date)}</td>
+                        <td style="padding: 6px 10px; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(description)}${currencyNote}</td>
+                        <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${currencySymbol}${valueExTax}</td>
+                        <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${currencySymbol}${valueIncTax}</td>
+                        <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">${(percentage / 100).toFixed(2)}</td>
                         <td style="padding: 6px 10px; max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(detail)}</td>
-                        <td style="padding: 6px 10px; text-align: center;">${pdfCell}</td>
-                        <td style="padding: 6px 10px; text-align: center;">Q${assignedQuarter}</td>
-                        <td style="padding: 6px 10px; text-align: center;">${splitPercentage}</td>
-                        <td style="padding: 6px 10px; text-align: right; font-weight: 600;">£${assignedAmount}</td>
-                        <td style="padding: 6px 10px; text-align: right;">${viewInSpendBtn}</td>
+                        <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">${pdfCell}</td>
+                        <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">Q${assignedQuarter}</td>
+                        <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">${splitPercentage}</td>
+                        <td style="padding: 6px 10px; text-align: right; font-weight: 600; white-space: nowrap;">${currencySymbol}${assignedAmount}</td>
+                        <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${viewInSpendBtn}</td>
                     </tr>
                 `;
             }).join('');
 
             const quarterlyTableId = `quarterly-table-${itemKey.replace(/[^a-zA-Z0-9]/g, '-')}`;
 
+            console.log('🔍 [ALIGNMENT] Rendering transaction details for:', itemKey, 'Transactions:', transactions.length);
+            console.log('📊 [WIDTH DEBUG] Category:', category, 'Item:', itemKey, 'Project:', projectId);
+            console.log('📏 [WIDTH DEBUG] Transaction table will span full width using width: 100% and min-width: 1000px');
+
             return `
-                <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <div style="margin: 20px 0 0 0; padding: 15px 0; background: white; border-radius: 0; border-top: 2px solid #e2e8f0; width: 100%; box-sizing: border-box;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 20px 15px 20px; flex-wrap: wrap; gap: 8px;">
                         <h5 style="margin: 0; color: #3b82f6; font-size: 0.95em;">💳 Assigned Transactions</h5>
                         <div style="display: flex; gap: 8px;">
                             <button onclick="toggleQuarterlyTable('${quarterlyTableId}'); event.stopPropagation();" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; font-weight: 600; box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(251, 191, 36, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(251, 191, 36, 0.3)';" title="Toggle quarterly breakdown table">
@@ -1694,25 +1733,28 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             </button>
                         </div>
                     </div>
-                    <table class="transaction-details-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-                        <thead>
-                            <tr style="background: #f1f5f9;">
-                                <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Date</th>
-                                <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Description</th>
-                                <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Value ex Tax</th>
-                                <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Value Inc Tax</th>
-                                <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Detail</th>
-                                <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">PDF</th>
-                                <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Qtr</th>
-                                <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Split %</th>
-                                <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Amount</th>
-                                <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rows}
-                        </tbody>
-                    </table>
+                    <div style="overflow-x: auto;">
+                        <table class="transaction-details-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em; min-width: 1000px;">
+                            <thead>
+                                <tr style="background: #f1f5f9;">
+                                    <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Date</th>
+                                    <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Description</th>
+                                    <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Value ex Tax</th>
+                                    <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Value Inc Tax</th>
+                                    <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">% Allocation</th>
+                                    <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Detail</th>
+                                    <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">PDF</th>
+                                    <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Qtr</th>
+                                    <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Split %</th>
+                                    <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Amount</th>
+                                    <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             `;
         }
@@ -1793,7 +1835,25 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             // Render each category in order
             categoryOrder.forEach(category => {
                 const items = categorizedTransactions[category] || [];
-                const categoryTotal = items.reduce((sum, item) => sum + item.assignment.amount, 0);
+                // FIX: Calculate total dynamically from transaction ex-VAT and percentage
+                const categoryTotal = items.reduce((sum, item) => {
+                    const transaction = item.transaction;
+                    const assignment = item.assignment;
+                    const spentAmount = parseAmount(transaction.spent);
+                    let valueExTax = 0;
+                    if (transaction.zeroVAT || transaction.spent_ex_vat) {
+                        valueExTax = parseAmount(transaction.spent_ex_vat || transaction.spent);
+                    } else {
+                        valueExTax = spentAmount / 1.2;
+                    }
+                    const percentage = parseFloat(assignment.percentage) || 0;
+                    const assignedAmount = (valueExTax * percentage) / 100;
+
+                    // CRITICAL FIX: Round to match display
+                    const roundedAmount = Math.round(assignedAmount * 100) / 100;
+
+                    return sum + roundedAmount;
+                }, 0);
                 grandTotal += categoryTotal;
 
                 // Map internal category names to display names
@@ -1815,6 +1875,22 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 ${items.length > 0 ? `
+                                    <button onclick="exportCategoryToExcel('${category}', ${quarterIndex}); event.stopPropagation();"
+                                            style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.4); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+                                            onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'"
+                                            onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'"
+                                            title="Export this category to Excel">
+                                        <span>📊</span>
+                                        <span>Export to Excel</span>
+                                    </button>
+                                    <button onclick="exportCategoryToPDF('${category}', ${quarterIndex}); event.stopPropagation();"
+                                            style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.4); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+                                            onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'"
+                                            onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'"
+                                            title="Export this category to PDF">
+                                        <span>📑</span>
+                                        <span>Export to PDF</span>
+                                    </button>
                                     <button onclick="mergeCategoryPDFs('${category}', ${quarterIndex}); event.stopPropagation();"
                                             style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.4); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
                                             onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'"
@@ -1844,6 +1920,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                                     <th style="padding: 6px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Description</th>
                                     <th style="padding: 6px 8px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Value ex Tax</th>
                                     <th style="padding: 6px 8px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Value Inc Tax</th>
+                                    <th style="padding: 6px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">% Allocation</th>
                                     <th style="padding: 6px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Detail</th>
                                     <th style="padding: 6px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">PDF</th>
                                     <th style="padding: 6px 8px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Amount</th>
@@ -1855,10 +1932,14 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     items.forEach(({transaction, assignment}) => {
                         const date = transaction.date || '-';
                         const description = transaction.description || '-';
+
+                        // Always show GBP amounts (even if currency-converted)
                         const spentAmount = parseAmount(transaction.spent);
+                        let valueExTax = '0.00';
+                        let valueIncTax = '0.00';
+                        let currencySymbol = '£';
 
                         // Calculate value ex tax
-                        let valueExTax = '0.00';
                         if (transaction.zeroVAT || transaction.spent_ex_vat) {
                             const exVatAmount = parseAmount(transaction.spent_ex_vat || transaction.spent);
                             valueExTax = exVatAmount > 0 ? exVatAmount.toFixed(2) : '0.00';
@@ -1866,7 +1947,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             valueExTax = spentAmount > 0 ? (spentAmount / 1.2).toFixed(2) : '0.00';
                         }
 
-                        const valueIncTax = spentAmount > 0 ? spentAmount.toFixed(2) : '0.00';
+                        valueIncTax = spentAmount > 0 ? spentAmount.toFixed(2) : '0.00';
 
                         // Detail column
                         let detail = '-';
@@ -1887,17 +1968,20 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             ? `<button class="view-pdf-btn" data-invoice-id="${invoice.id}" onclick="viewInvoicePDF(${invoice.id}); event.stopPropagation();" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">PDF</button>`
                             : '<span style="color: #94a3b8;">-</span>';
 
-                        const assignedAmount = assignment.amount.toFixed(2);
+                        // FIX: Calculate assigned amount dynamically (matches valueExTax already calculated above)
+                        const percentage = parseFloat(assignment.percentage) || 0;
+                        const assignedAmount = ((parseFloat(valueExTax) * percentage) / 100).toFixed(2);
 
                         html += `
                             <tr style="border-bottom: 1px solid #f1f5f9;">
                                 <td style="padding: 6px 8px;">${escapeHtml(date)}</td>
                                 <td style="padding: 6px 8px;">${escapeHtml(description)}</td>
-                                <td style="padding: 6px 8px; text-align: right;">£${valueExTax}</td>
-                                <td style="padding: 6px 8px; text-align: right;">£${valueIncTax}</td>
+                                <td style="padding: 6px 8px; text-align: right;">${currencySymbol}${valueExTax}</td>
+                                <td style="padding: 6px 8px; text-align: right;">${currencySymbol}${valueIncTax}</td>
+                                <td style="padding: 6px 8px; text-align: center;">${(percentage / 100).toFixed(2)}</td>
                                 <td style="padding: 6px 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(detail)}</td>
                                 <td style="padding: 6px 8px; text-align: center;">${pdfCell}</td>
-                                <td style="padding: 6px 8px; text-align: right;">£${assignedAmount}</td>
+                                <td style="padding: 6px 8px; text-align: right;">${currencySymbol}${assignedAmount}</td>
                             </tr>
                         `;
                     });
@@ -1905,7 +1989,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     // Category total row with accounting-style formatting
                     html += `
                                 <tr style="border-top: 2px solid #cbd5e1;">
-                                    <td colspan="6" style="padding: 8px; text-align: right; font-weight: 700;">Total ${displayName}:</td>
+                                    <td colspan="7" style="padding: 8px; text-align: right; font-weight: 700;">Total ${displayName}:</td>
                                     <td style="padding: 8px; text-align: right; font-weight: 700;">£${categoryTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 </tr>
                             </tbody>
@@ -2488,7 +2572,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             const info = [
                 { label: 'Date:', value: transaction.date || '-' },
                 { label: 'Description:', value: transaction.description || '-' },
-                { label: 'Amount:', value: transaction.spent || '-' },
+                { label: 'Amount (GBP):', value: transaction.spent || '-' },
                 { label: 'Detail:', value: transaction.detail || transaction.manualDescription || '-' },
                 { label: 'Attached File:', value: invoice.filename }
             ];
@@ -2514,6 +2598,84 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 yPos -= 25;
             });
+
+            // Add currency conversion section if transaction was converted
+            if (transaction.convertedCurrency && transaction.convertedAmount) {
+                yPos -= 15; // Add spacing
+
+                // Section header
+                page.drawText('Currency Conversion Details', {
+                    x: 50,
+                    y: yPos,
+                    size: 14,
+                    font: fontBold,
+                    color: rgb(0.09, 0.69, 0.57) // Green teal
+                });
+
+                yPos -= 30;
+
+                // Conversion details
+                const conversionInfo = [
+                    { label: 'Original Amount (USD):', value: `$${transaction.convertedAmount.toFixed(2)}` },
+                    { label: 'Exchange Rate:', value: transaction.conversionRate ? `${transaction.conversionRate.toFixed(4)} (GBP to USD)` : '-' },
+                    { label: 'Converted Amount (GBP):', value: transaction.spent || '-' },
+                    { label: 'Conversion Date:', value: transaction.conversionDate || transaction.date || '-' },
+                    { label: 'Rate Source:', value: 'OpenExchangeRates API (https://openexchangerates.org)' }
+                ];
+
+                conversionInfo.forEach(({ label, value }) => {
+                    page.drawText(label, {
+                        x: 50,
+                        y: yPos,
+                        size: 10,
+                        font: fontBold,
+                        color: rgb(0.2, 0.2, 0.2)
+                    });
+
+                    const valueText = value.length > 70 ? value.substring(0, 70) + '...' : value;
+                    page.drawText(valueText, {
+                        x: 230,
+                        y: yPos,
+                        size: 10,
+                        font: font,
+                        color: rgb(0.3, 0.3, 0.3)
+                    });
+
+                    yPos -= 20;
+                });
+
+                // Add calculation explanation
+                yPos -= 10;
+                page.drawText('Conversion Calculation:', {
+                    x: 50,
+                    y: yPos,
+                    size: 10,
+                    font: fontBold,
+                    color: rgb(0.2, 0.2, 0.2)
+                });
+
+                yPos -= 18;
+                const gbpAmount = parseFloat(transaction.spent.replace(/[£,]/g, ''));
+                const usdAmount = transaction.convertedAmount;
+                const rate = transaction.conversionRate || 1;
+
+                page.drawText(`${gbpAmount.toFixed(2)} GBP × ${rate.toFixed(4)} = ${usdAmount.toFixed(2)} USD`, {
+                    x: 50,
+                    y: yPos,
+                    size: 10,
+                    font: font,
+                    color: rgb(0.09, 0.69, 0.57)
+                });
+
+                yPos -= 18;
+                page.drawText('(The GBP amount shown is the original bank transaction amount)', {
+                    x: 50,
+                    y: yPos,
+                    size: 9,
+                    font: font,
+                    color: rgb(0.5, 0.5, 0.5)
+                });
+            }
 
             return page;
         }
@@ -2741,6 +2903,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         description: transaction.description || '',
                         valueExTax: valueExTax,
                         valueIncTax: spentAmount,
+                        allocationPercentage: assignment.percentage ? (assignment.percentage / 100) : 1,
                         detail: detail,
                         hasPDF: !!getInvoiceForTransaction(transaction, cachedInvoices),
                         amount: assignment.amount
@@ -2788,19 +2951,20 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         wsData.push([]);
                     } else {
                         // Column headers
-                        wsData.push(['Date', 'Description', 'Value ex Tax', 'Value Inc Tax', 'Detail', 'PDF', 'Amount']);
+                        wsData.push(['Date', 'Description', 'Value ex Tax', 'Value Inc Tax', '% Allocation', 'Detail', 'PDF', 'Amount']);
 
                         // Transaction rows
                         category.transactions.forEach(txn => {
                             wsData.push([
-                                txn.date,
-                                txn.description,
-                                txn.valueExTax,
-                                txn.valueIncTax,
-                                txn.detail,
-                                txn.hasPDF ? 'PDF' : '',
-                                txn.amount
-                            ]);
+                    txn.date,
+                    txn.description,
+                    txn.valueExTax,
+                    txn.valueIncTax,
+                    txn.allocationPercentage || 0,
+                    txn.detail,
+                    txn.hasPDF ? 'PDF' : '',
+                    txn.amount
+                ]);
                         });
 
                         // Category total
@@ -2820,6 +2984,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     {wch: 35},  // Description
                     {wch: 15},  // Value ex Tax
                     {wch: 15},  // Value Inc Tax
+                    {wch: 12},  // % Allocation
                     {wch: 40},  // Detail
                     {wch: 8},   // PDF
                     {wch: 15}   // Amount
@@ -2835,14 +3000,15 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 // Headers
                 wsData.push([
-                    'Date (mm/dd/yyyy)',
+                    'Date',
                     'Transaction Ref',
                     'Description of cost',
-                    'Total Amount',
-                    'VAT Amount (if applicable)',
+                    'Inc Vat',
+                    'VAT',
+                    'Ex Vat',
                     '%',
                     'Total Assigned (exc VAT)',
-                    'Supplier Name (if applicable)',
+                    'Supplier Name',
                     'Cost Heading'
                 ]);
 
@@ -2891,14 +3057,19 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         transactionRef = `${yymmdd}-${supplierPrefix}-${amount}`;
                     }
 
+                    // Calculate Total Assigned (exc VAT) = Ex Vat × %
+                    // Always calculate from Ex VAT to ensure accuracy
+                    const totalAssigned = txn.valueExTax * (txn.allocationPercentage || 1);
+
                     wsData.push([
                         txn.date, // Keep as date string for display
                         transactionRef,
                         txn.detail || txn.description,
-                        txn.valueIncTax,
-                        vatAmount,
-                        1,
-                        txn.valueExTax,
+                        txn.valueIncTax, // Inc Vat
+                        vatAmount, // VAT
+                        txn.valueExTax, // Ex Vat
+                        txn.allocationPercentage || 1, // %
+                        totalAssigned, // Total Assigned (exc VAT)
                         txn.description, // Supplier from description column
                         costHeading
                     ]);
@@ -2909,10 +3080,11 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     '',
                     '',
                     'Grand Total:',
+                    '',
+                    '',
+                    '',
+                    '',
                     data.grandTotal,
-                    '',
-                    '',
-                    '',
                     '',
                     ''
                 ]);
@@ -2929,14 +3101,21 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         ws[dateCell].z = 'mm/dd/yyyy'; // Display format
                     }
 
-                    // Format numeric columns with 2 decimal places
-                    [3, 4, 6].forEach(col => {
+                    // Format numeric columns with 2 decimal places (Inc Vat, VAT, Ex Vat, Total Assigned)
+                    [3, 4, 5, 7].forEach(col => {
                         const numCell = XLSX.utils.encode_cell({r: R, c: col});
                         if (ws[numCell] && typeof ws[numCell].v === 'number') {
                             ws[numCell].t = 'n';
                             ws[numCell].z = '0.00';
                         }
                     });
+
+                    // Format % column with 2 decimal places
+                    const pctCell = XLSX.utils.encode_cell({r: R, c: 6});
+                    if (ws[pctCell] && typeof ws[pctCell].v === 'number') {
+                        ws[pctCell].t = 'n';
+                        ws[pctCell].z = '0.00';
+                    }
                 }
 
                 // Set column widths
@@ -2944,12 +3123,13 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     {wch: 12},  // Date
                     {wch: 30},  // Transaction Ref
                     {wch: 45},  // Description of cost
-                    {wch: 13},  // Total Amount
-                    {wch: 13},  // VAT Amount
-                    {wch: 6},   // %
-                    {wch: 18},  // Total Assigned (exc VAT)
+                    {wch: 12},  // Inc Vat
+                    {wch: 12},  // VAT
+                    {wch: 12},  // Ex Vat
+                    {wch: 8},   // %
+                    {wch: 20},  // Total Assigned (exc VAT)
                     {wch: 30},  // Supplier Name
-                    {wch: 13}   // Cost Heading
+                    {wch: 15}   // Cost Heading
                 ];
 
                 XLSX.utils.book_append_sheet(wb, ws, `Q${data.quarterIndex} Alt Format`);
@@ -3118,10 +3298,11 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                                 <th style="padding: 8px; text-align: left; font-weight: 600;">Date</th>
                                 <th style="padding: 8px; text-align: left; font-weight: 600;">Transaction Ref</th>
                                 <th style="padding: 8px; text-align: left; font-weight: 600;">Description</th>
-                                <th style="padding: 8px; text-align: right; font-weight: 600;">Total Amount</th>
+                                <th style="padding: 8px; text-align: right; font-weight: 600;">Inc Vat</th>
                                 <th style="padding: 8px; text-align: right; font-weight: 600;">VAT</th>
+                                <th style="padding: 8px; text-align: right; font-weight: 600;">Ex Vat</th>
                                 <th style="padding: 8px; text-align: center; font-weight: 600;">%</th>
-                                <th style="padding: 8px; text-align: right; font-weight: 600;">Exc VAT</th>
+                                <th style="padding: 8px; text-align: right; font-weight: 600;">Total Assigned (exc VAT)</th>
                                 <th style="padding: 8px; text-align: left; font-weight: 600;">Supplier</th>
                                 <th style="padding: 8px; text-align: left; font-weight: 600;">Heading</th>
                             </tr>
@@ -3148,6 +3329,11 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         transactionRef = `${yymmdd}-${supplierPrefix}-${amount}`;
                     }
 
+                    // Calculate Total Assigned (exc VAT) = Ex Vat × %
+                    // Always calculate from Ex VAT to ensure accuracy
+                    const allocationPct = txn.allocationPercentage || 1;
+                    const totalAssigned = txn.valueExTax * allocationPct;
+
                     html += `
                         <tr style="border-bottom: 1px solid #e2e8f0;">
                             <td style="padding: 6px 8px;">${txn.date || '-'}</td>
@@ -3155,8 +3341,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             <td style="padding: 6px 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${txn.detail || txn.description || '-'}</td>
                             <td style="padding: 6px 8px; text-align: right;">£${txn.valueIncTax.toFixed(2)}</td>
                             <td style="padding: 6px 8px; text-align: right;">£${vatAmount.toFixed(2)}</td>
-                            <td style="padding: 6px 8px; text-align: center;">1.0</td>
                             <td style="padding: 6px 8px; text-align: right;">£${txn.valueExTax.toFixed(2)}</td>
+                            <td style="padding: 6px 8px; text-align: center;">${allocationPct.toFixed(2)}</td>
+                            <td style="padding: 6px 8px; text-align: right;">£${totalAssigned.toFixed(2)}</td>
                             <td style="padding: 6px 8px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${txn.description || '-'}</td>
                             <td style="padding: 6px 8px;">${txn.costHeading}</td>
                         </tr>
@@ -3165,9 +3352,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 html += `
                             <tr style="border-top: 2px solid #cbd5e1; background: #f8fafc;">
-                                <td colspan="3" style="padding: 10px; text-align: right; font-weight: 700;">Grand Total:</td>
+                                <td colspan="7" style="padding: 10px; text-align: right; font-weight: 700;">Grand Total:</td>
                                 <td style="padding: 10px; text-align: right; font-weight: 700;">£${quarterlyExportData.grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                <td colspan="5"></td>
+                                <td colspan="2"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -3280,6 +3467,431 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             xlsPreviewWorkbook = null;
             currentExportFormat = 'default';
         }
+
+        // ========== CATEGORY-SPECIFIC EXCEL EXPORT ==========
+
+        // Export a single category to Excel (no preview modal)
+        function exportCategoryToExcel(categoryName, quarterIndex) {
+            console.log(`[Category Export] Exporting ${categoryName} for Q${quarterIndex}`);
+
+            // Gather data for this specific category and quarter
+            const categoryData = gatherCategoryExportData(categoryName, quarterIndex);
+
+            if (!categoryData || !categoryData.transactions || categoryData.transactions.length === 0) {
+                alert(`No transactions found for ${categoryName} in Q${quarterIndex}`);
+                return;
+            }
+
+            try {
+                // Generate XLS workbook
+                const wb = generateCategoryXLS(categoryData);
+
+                // Generate filename
+                const projectName = (projectBudget.projectName || 'Project').replace(/[^a-z0-9]/gi, '_');
+                const categoryNameSafe = categoryName.replace(/[^a-z0-9]/gi, '_');
+                const filename = `Q${quarterIndex}_${projectName}_${categoryNameSafe}.xlsx`;
+
+                // Write workbook to binary string
+                const wbout = XLSX.write(wb, {bookType: 'xlsx', type: 'binary'});
+
+                // Convert to blob
+                function s2ab(s) {
+                    const buf = new ArrayBuffer(s.length);
+                    const view = new Uint8Array(buf);
+                    for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                    return buf;
+                }
+
+                const blob = new Blob([s2ab(wbout)], {type: 'application/octet-stream'});
+
+                // Create download link
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Cleanup
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+
+                console.log(`[Category Export] Downloaded: ${filename}`);
+
+                // Optional: Show toast instead of alert
+                // For now, using subtle console confirmation
+            } catch (error) {
+                console.error('[Category Export] Export failed:', error);
+                alert('Failed to export category to Excel. See console for details.');
+            }
+        }
+
+        // Gather data for a specific category and quarter
+        function gatherCategoryExportData(categoryName, quarterIndex) {
+            console.log(`[Category Export] Gathering data for ${categoryName} in Q${quarterIndex}`);
+
+            if (!quarterIndex || !cachedTransactions || cachedTransactions.length === 0) {
+                return null;
+            }
+
+            // Filter transactions for this quarter and category
+            const categoryTransactions = cachedTransactions.filter(transaction => {
+                if (!transaction.assignments || transaction.assignments.length === 0) return false;
+                return transaction.assignments.some(assignment =>
+                    assignment.projectId === projectBudget.projectId &&
+                    assignment.quarter === quarterIndex &&
+                    (assignment.category || 'Other Costs') === categoryName
+                );
+            });
+
+            // Build transaction data
+            const transactions = [];
+            let categoryTotal = 0;
+
+            categoryTransactions.forEach(transaction => {
+                const assignment = transaction.assignments.find(a =>
+                    a.projectId === projectBudget.projectId &&
+                    a.quarter === quarterIndex &&
+                    (a.category || 'Other Costs') === categoryName
+                );
+
+                if (!assignment) return;
+
+                const spentAmount = parseAmount(transaction.spent);
+
+                // Calculate value ex tax
+                let valueExTax = 0;
+                if (transaction.zeroVAT || transaction.spent_ex_vat) {
+                    valueExTax = parseAmount(transaction.spent_ex_vat || transaction.spent);
+                } else {
+                    valueExTax = spentAmount / 1.2;
+                }
+
+                // Detail column
+                let detail = '';
+                if (transaction.detail) {
+                    detail = transaction.detail;
+                } else {
+                    const detailParts = [];
+                    if (transaction.manualDescription) detailParts.push(transaction.manualDescription);
+                    if (transaction.voiceNotes) detailParts.push(transaction.voiceNotes);
+                    detail = detailParts.join(' | ');
+                }
+
+                categoryTotal += assignment.amount;
+
+                transactions.push({
+                    date: transaction.date || '',
+                    description: transaction.description || '',
+                    valueExTax: valueExTax,
+                    valueIncTax: spentAmount,
+                    allocationPercentage: assignment.percentage ? (assignment.percentage / 100) : 0,
+                    detail: detail,
+                    hasPDF: !!getInvoiceForTransaction(transaction, cachedInvoices),
+                    amount: assignment.amount
+                });
+            });
+
+            const displayName = categoryName === 'Travel' ? 'Travel and Subsistence' : categoryName;
+
+            return {
+                quarterIndex: quarterIndex,
+                projectName: projectBudget.projectName || 'Project',
+                projectNumber: projectBudget.projectNumber || '',
+                categoryName: displayName,
+                transactions: transactions,
+                total: categoryTotal
+            };
+        }
+
+        // Generate XLS workbook for a single category
+        function generateCategoryXLS(data) {
+            console.log(`[Category Export] Generating workbook for ${data.categoryName}`);
+
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+
+            // Title rows
+            wsData.push([`Q${data.quarterIndex} - ${data.categoryName} Transactions`]);
+            wsData.push([`Project: ${data.projectName}`]);
+            if (data.projectNumber) {
+                wsData.push([`Project Number: ${data.projectNumber}`]);
+            }
+            wsData.push([]);
+
+            // Column headers
+            wsData.push(['Date', 'Description', 'Value ex Tax', 'Value Inc Tax', '% Allocation', 'Detail', 'PDF', 'Amount']);
+
+            // Transaction rows
+            data.transactions.forEach(txn => {
+                wsData.push([
+                    txn.date,
+                    txn.description,
+                    txn.valueExTax,
+                    txn.valueIncTax,
+                    txn.allocationPercentage || 0,
+                    txn.detail,
+                    txn.hasPDF ? 'PDF' : '',
+                    txn.amount
+                ]);
+            });
+
+            // Category total
+            wsData.push(['', '', '', '', '', 'Total:', data.total]);
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // Set column widths
+            ws['!cols'] = [
+                    {wch: 12},  // Date
+                    {wch: 35},  // Description
+                    {wch: 15},  // Value ex Tax
+                    {wch: 15},  // Value Inc Tax
+                    {wch: 12},  // % Allocation
+                    {wch: 40},  // Detail
+                    {wch: 8},   // PDF
+                    {wch: 15}   // Amount
+                ];
+
+            XLSX.utils.book_append_sheet(wb, ws, data.categoryName.substring(0, 31)); // Excel sheet name limit
+
+            return wb;
+        }
+
+        // ========== CATEGORY-SPECIFIC PDF EXPORT ==========
+
+        // Global variables for PDF preview
+        let currentPDFPreviewData = null;
+        let currentPDFBlob = null;
+
+        // Export a single category to PDF (with preview modal)
+        function exportCategoryToPDF(categoryName, quarterIndex) {
+            console.log(`[Category PDF Export] Exporting ${categoryName} for Q${quarterIndex}`);
+
+            // Gather data for this specific category and quarter
+            const categoryData = gatherCategoryExportData(categoryName, quarterIndex);
+
+            if (!categoryData || !categoryData.transactions || categoryData.transactions.length === 0) {
+                alert(`No transactions found for ${categoryName} in Q${quarterIndex}`);
+                return;
+            }
+
+            try {
+                // Generate the PDF
+                const pdfBlob = generateCategoryPDF(categoryData);
+
+                // Store for later download
+                currentPDFPreviewData = categoryData;
+                currentPDFBlob = pdfBlob;
+
+                // Show preview modal
+                showPDFPreviewModal(categoryData);
+
+            } catch (error) {
+                console.error('[Category PDF Export] Export failed:', error);
+                alert('Failed to export category to PDF. See console for details.');
+            }
+        }
+
+        // Generate PDF and return as Blob
+        function generateCategoryPDF(categoryData) {
+            // Initialize jsPDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4'); // landscape orientation
+
+            // PEBL brand colors
+            const peblTeal = [58, 175, 169];
+            const peblDarkTeal = [43, 122, 120];
+
+            // Title section
+            doc.setFillColor(...peblTeal);
+            doc.rect(0, 0, 297, 30, 'F');
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Q${categoryData.quarterIndex} - ${categoryData.categoryName} Transactions`, 14, 12);
+
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Project: ${categoryData.projectName}`, 14, 20);
+            if (categoryData.projectNumber) {
+                doc.text(`Project Number: ${categoryData.projectNumber}`, 14, 26);
+            }
+
+            // Prepare table data
+            const tableData = categoryData.transactions.map(txn => [
+                txn.date || '-',
+                txn.description || '-',
+                `£${txn.valueExTax.toFixed(2)}`,
+                `£${txn.valueIncTax.toFixed(2)}`,
+                (txn.allocationPercentage || 0).toFixed(2),
+                txn.detail || '-',
+                txn.hasPDF ? 'Yes' : 'No',
+                `£${txn.amount.toFixed(2)}`
+            ]);
+            // Generate table
+            doc.autoTable({
+                startY: 35,
+                head: [['Date', 'Description', 'Value ex Tax', 'Value Inc Tax', '% Allocation', 'Detail', 'PDF', 'Amount']],
+                body: tableData,
+                foot: [['', '', '', '', '', '', 'Total:', `£${categoryData.total.toFixed(2)}`]],
+                theme: 'grid',
+                headStyles: {
+                    fillColor: peblTeal,
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    fontSize: 9,
+                    halign: 'center'
+                },
+                footStyles: {
+                    fillColor: [240, 240, 240],
+                    textColor: [0, 0, 0],
+                    fontStyle: 'bold',
+                    fontSize: 10,
+                    halign: 'right'
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { cellWidth: 25, halign: 'left' },    // Date
+                    1: { cellWidth: 50, halign: 'left' },    // Description
+                    2: { cellWidth: 26, halign: 'right' },   // Value ex Tax
+                    3: { cellWidth: 26, halign: 'right' },   // Value Inc Tax
+                    4: { cellWidth: 18, halign: 'center' },  // % Allocation
+                    5: { cellWidth: 60, halign: 'left' },    // Detail
+                    6: { cellWidth: 15, halign: 'center' },  // PDF
+                    7: { cellWidth: 26, halign: 'right' }    // Amount
+                },
+                alternateRowStyles: {
+                    fillColor: [248, 249, 250]
+                },
+                margin: { left: 14, right: 14 }
+            });
+
+            // Add footer with generation timestamp
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(128, 128, 128);
+                doc.text(
+                    `Generated: ${new Date().toLocaleString()} | Page ${i} of ${pageCount}`,
+                    14,
+                    doc.internal.pageSize.height - 10
+                );
+            }
+
+            // Return as Blob
+            return doc.output('blob');
+        }
+
+        // Show PDF preview modal
+        function showPDFPreviewModal(categoryData) {
+            const pdfUrl = URL.createObjectURL(currentPDFBlob);
+
+            const modalHtml = `
+                <div id="pdfPreviewModal" class="modal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1002; align-items: center; justify-content: center; padding: 20px 0;">
+                    <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; max-width: 1400px; width: 95%; height: 95vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column;">
+                        <div class="modal-header" style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                            <h3 style="margin: 0;">📑 PDF Preview - Q${categoryData.quarterIndex} ${categoryData.categoryName}</h3>
+                            <button onclick="closePDFPreviewModal()" style="background: transparent; border: none; color: white; font-size: 1.5em; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='transparent'">✕</button>
+                        </div>
+
+                        <div style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                            <div style="color: #475569; font-size: 0.9em;">
+                                <span>📦 Transactions: <strong style="color: #3AAFA9;">${categoryData.transactions.length}</strong></span>
+                                <span style="margin-left: 15px;">💰 Total: <strong style="color: #3AAFA9;">£${categoryData.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                            </div>
+                        </div>
+
+                        <div class="modal-body" style="flex: 1; min-height: 0; padding: 0; overflow: hidden; background: #f8fafc; display: flex; justify-content: center; align-items: center;">
+                            <iframe src="${pdfUrl}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>
+                        </div>
+
+                        <div class="modal-footer" style="padding: 15px 20px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; flex-shrink: 0;">
+                            <button class="btn-secondary" onclick="closePDFPreviewModal()" style="padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95em; font-weight: 600; cursor: pointer; background: #f1f5f9; color: #475569;">Cancel</button>
+                            <button class="btn-primary" onclick="downloadCategoryPDF()" style="padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95em; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; display: flex; align-items: center; gap: 8px;">
+                                <span>💾</span>
+                                <span>Download PDF</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('pdfPreviewModal');
+            if (existingModal) existingModal.remove();
+
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        // Download the previewed PDF
+        function downloadCategoryPDF() {
+            if (!currentPDFBlob || !currentPDFPreviewData) {
+                alert('No PDF available to download');
+                return;
+            }
+
+            try {
+                const projectName = (currentPDFPreviewData.projectName || 'Project').replace(/[^a-z0-9]/gi, '_');
+                const categoryNameSafe = currentPDFPreviewData.categoryName.replace(/[^a-z0-9]/gi, '_');
+                const filename = `Q${currentPDFPreviewData.quarterIndex}_${projectName}_${categoryNameSafe}.pdf`;
+
+                // Create download link
+                const url = URL.createObjectURL(currentPDFBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Cleanup
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+
+                console.log(`[Category PDF Export] Downloaded: ${filename}`);
+
+                // Close modal
+                closePDFPreviewModal();
+
+            } catch (error) {
+                console.error('[Category PDF Export] Download failed:', error);
+                alert('Failed to download PDF. See console for details.');
+            }
+        }
+
+        // Close PDF preview modal
+        function closePDFPreviewModal() {
+            const modal = document.getElementById('pdfPreviewModal');
+            if (modal) {
+                // Revoke object URL from iframe
+                const iframe = modal.querySelector('iframe');
+                if (iframe && iframe.src) {
+                    URL.revokeObjectURL(iframe.src);
+                }
+                modal.remove();
+            }
+
+            // Clear preview data
+            if (currentPDFBlob) {
+                URL.revokeObjectURL(URL.createObjectURL(currentPDFBlob));
+            }
+            currentPDFPreviewData = null;
+            currentPDFBlob = null;
+        }
+
+        // ========== END CATEGORY-SPECIFIC PDF EXPORT ==========
+
+        // ========== END CATEGORY-SPECIFIC EXCEL EXPORT ==========
 
         // ========== END QUARTERLY XLS EXPORT FUNCTIONALITY ==========
 
@@ -4876,8 +5488,8 @@ Rules:
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-capital-ns-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
-                                                <div class="quarterly-breakdown-container">
+                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
+                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                             <thead>
@@ -4955,8 +5567,8 @@ Rules:
                                             <td ${summary.difference > 0 ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>${summary.difference.toFixed(1)}%</td>
                                         </tr>
                                         <tr id="wg-capital-ns-summary-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: transparent;">
-                                                <div class="quarterly-breakdown-container">
+                                            <td colspan="8" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
+                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
                                                     <h4 class="quarterly-breakdown-header">Capital Non-Standard - Quarterly Breakdown</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                         <thead>
@@ -4971,7 +5583,19 @@ Rules:
                                                                 <td style="font-weight: 600;">Costs Claimed</td>
                                                                 ${quarters.map(q => {
                                                                     const qClaimed = summary.quarterlyTotals['q' + q.index] || 0;
-                                                                    return `<td data-quarter="${q.index}" style="font-weight: 600;">£${qClaimed.toLocaleString()}</td>`;
+                                                                    return `
+                                                                        <td data-quarter="${q.index}">
+                                                                            <input
+                                                                                type="number"
+                                                                                value="${qClaimed}"
+                                                                                onchange="updateCategoryQuarterlyCost(sections.capital.nonStandard, ${q.index}, parseFloat(this.value) || 0, 'Capital Non-Standard', 'capitalNonStandard'); displayWelshGovBudget(projectBudget.welshGovData);"
+                                                                                onkeypress="if(event.key==='Enter'){event.preventDefault();const val=this.value;updateCategoryQuarterlyCost(sections.capital.nonStandard, ${q.index}, parseFloat(val) || 0, 'Capital Non-Standard', 'capitalNonStandard'); displayWelshGovBudget(projectBudget.welshGovData);}"
+                                                                                onclick="event.stopPropagation()"
+                                                                                style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 600;"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
+                                                                    `;
                                                                 }).join('')}
                                                                 <td style="font-weight: 700; background: #dbeafe;">£${summary.totalClaimed.toLocaleString()}</td>
                                                             </tr>
@@ -5062,8 +5686,8 @@ Rules:
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-revenue-ns-${index}-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: transparent;">
-                                                <div class="quarterly-breakdown-container">
+                                            <td colspan="8" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
+                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                             <thead>
@@ -5157,7 +5781,19 @@ Rules:
                                                                 <td style="font-weight: 600;">Costs Claimed</td>
                                                                 ${quarters.map(q => {
                                                                     const qClaimed = summary.quarterlyTotals['q' + q.index] || 0;
-                                                                    return `<td data-quarter="${q.index}" style="font-weight: 600;">£${qClaimed.toLocaleString()}</td>`;
+                                                                    return `
+                                                                        <td data-quarter="${q.index}">
+                                                                            <input
+                                                                                type="number"
+                                                                                value="${qClaimed}"
+                                                                                onchange="updateCategoryQuarterlyCost(sections.revenue.nonStandard, ${q.index}, parseFloat(this.value) || 0, 'Revenue Non-Standard', 'revenueNonStandard'); displayWelshGovBudget(projectBudget.welshGovData);"
+                                                                                onkeypress="if(event.key==='Enter'){event.preventDefault();const val=this.value;updateCategoryQuarterlyCost(sections.revenue.nonStandard, ${q.index}, parseFloat(val) || 0, 'Revenue Non-Standard', 'revenueNonStandard'); displayWelshGovBudget(projectBudget.welshGovData);}"
+                                                                                onclick="event.stopPropagation()"
+                                                                                style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 600;"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
+                                                                    `;
                                                                 }).join('')}
                                                                 <td style="font-weight: 700; background: #dcfce7;">£${summary.totalClaimed.toLocaleString()}</td>
                                                             </tr>
@@ -6431,10 +7067,39 @@ ${inputText}`
             document.getElementById('results').classList.add('show');
         }
 
+        // Save expanded state of all breakdown sections
+        function saveExpandedState() {
+            const expandedSections = [];
+            document.querySelectorAll('[id$="-breakdown"]').forEach(row => {
+                if (row.style.display !== 'none') {
+                    expandedSections.push(row.id);
+                }
+            });
+            return expandedSections;
+        }
+
+        // Restore expanded state after re-render
+        function restoreExpandedState(expandedSections) {
+            if (!expandedSections || expandedSections.length === 0) return;
+
+            // Use setTimeout to ensure DOM has been updated
+            setTimeout(() => {
+                expandedSections.forEach(id => {
+                    const row = document.getElementById(id);
+                    if (row) {
+                        row.style.display = '';
+                    }
+                });
+            }, 50);
+        }
+
         async function displayDetailedBudget() {
             console.log('[DISPLAY] Displaying detailed budget');
             console.log('[DISPLAY] Funding Body:', projectBudget.fundingBody);
             addLog('🎨 Rendering detailed budget sections...');
+
+            // Save which sections are currently expanded
+            const expandedSections = saveExpandedState();
 
             // Ensure transactions and invoices are loaded before displaying
             if (!cachedTransactions || cachedTransactions.length === 0) {
@@ -6469,6 +7134,8 @@ ${inputText}`
                     displayWelshGovBudget(projectBudget.welshGovData);
                     document.getElementById('detailedBudgetResults').classList.add('show');
                     addLog('✅ Welsh Gov budget displayed');
+                    // Restore expanded state
+                    restoreExpandedState(expandedSections);
                 } else {
                     console.warn('⚠️ [DISPLAY] Welsh Gov project but no welshGovData found');
                     addLog('⚠️ Welsh Gov data missing - may need to re-parse');
@@ -6826,7 +7493,19 @@ ${inputText}`
                                                 <td style="font-weight: 600;">Costs Claimed</td>
                                                 ${quarters.map(q => {
                                                     const qClaimed = summary.quarterlyTotals[`q${q.index}`] || 0;
-                                                    return `<td data-quarter="${q.index}" style="font-weight: 600;">£${qClaimed.toLocaleString()}</td>`;
+                                                    return `
+                                                        <td data-quarter="${q.index}">
+                                                            <input
+                                                                type="number"
+                                                                value="${qClaimed}"
+                                                                onchange="updateCategoryQuarterlyCost(projectBudget.labour.staff, ${q.index}, parseFloat(this.value) || 0, 'Labour', 'labour'); displayDetailedBudget();"
+                                                                onkeypress="if(event.key==='Enter'){event.preventDefault();const val=this.value;updateCategoryQuarterlyCost(projectBudget.labour.staff, ${q.index}, parseFloat(val) || 0, 'Labour', 'labour'); displayDetailedBudget();}"
+                                                                onclick="event.stopPropagation()"
+                                                                style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 600;"
+                                                                step="0.01"
+                                                            />
+                                                        </td>
+                                                    `;
                                                 }).join('')}
                                                 <td style="font-weight: 700; background: #e3f2fd;">£${summary.totalClaimed.toLocaleString()}</td>
                                             </tr>
@@ -6959,8 +7638,8 @@ ${inputText}`
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="materials-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
-                                                <div class="quarterly-breakdown-container">
+                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
+                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
                                                     <div id="quarterly-table-materials-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.item}</h4>
                                                         <table class="quarterly-breakdown-table">
@@ -7062,7 +7741,19 @@ ${inputText}`
                                                                 <td style="font-weight: 600;">Costs Claimed</td>
                                                                 ${quarters.map(q => {
                                                                     const qClaimed = summary.quarterlyTotals['q' + q.index] || 0;
-                                                                    return `<td data-quarter="${q.index}" style="font-weight: 600;">£${qClaimed.toLocaleString()}</td>`;
+                                                                    return `
+                                                                        <td data-quarter="${q.index}">
+                                                                            <input
+                                                                                type="number"
+                                                                                value="${qClaimed}"
+                                                                                onchange="updateCategoryQuarterlyCost(projectBudget.materials.items, ${q.index}, parseFloat(this.value) || 0, 'Materials', 'materials'); displayDetailedBudget();"
+                                                                                onkeypress="if(event.key==='Enter'){event.preventDefault();const val=this.value;updateCategoryQuarterlyCost(projectBudget.materials.items, ${q.index}, parseFloat(val) || 0, 'Materials', 'materials'); displayDetailedBudget();}"
+                                                                                onclick="event.stopPropagation()"
+                                                                                style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 600;"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
+                                                                    `;
                                                                 }).join('')}
                                                                 <td style="font-weight: 700; background: #e8f5e9;">£${summary.totalClaimed.toLocaleString()}</td>
                                                             </tr>
@@ -7198,8 +7889,8 @@ ${inputText}`
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="capital-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
-                                                <div class="quarterly-breakdown-container">
+                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
+                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
                                                     <div id="quarterly-table-capitalUsage-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                         <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -7295,7 +7986,19 @@ ${inputText}`
                                                                 <td style="font-weight: 600;">Costs Claimed</td>
                                                                 ${quarters.map(q => {
                                                                     const qClaimed = summary.quarterlyTotals['q' + q.index] || 0;
-                                                                    return `<td data-quarter="${q.index}" style="font-weight: 600;">£${qClaimed.toLocaleString()}</td>`;
+                                                                    return `
+                                                                        <td data-quarter="${q.index}">
+                                                                            <input
+                                                                                type="number"
+                                                                                value="${qClaimed}"
+                                                                                onchange="updateCategoryQuarterlyCost(projectBudget.capitalUsage.items, ${q.index}, parseFloat(this.value) || 0, 'Capital Usage', 'capitalUsage'); displayDetailedBudget();"
+                                                                                onkeypress="if(event.key==='Enter'){event.preventDefault();const val=this.value;updateCategoryQuarterlyCost(projectBudget.capitalUsage.items, ${q.index}, parseFloat(val) || 0, 'Capital Usage', 'capitalUsage'); displayDetailedBudget();}"
+                                                                                onclick="event.stopPropagation()"
+                                                                                style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 600;"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
+                                                                    `;
                                                                 }).join('')}
                                                                 <td style="font-weight: 700; background: #fff3e0;">£${summary.totalClaimed.toLocaleString()}</td>
                                                             </tr>
@@ -7388,8 +8091,8 @@ ${inputText}`
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="subcontracting-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
-                                                <div class="quarterly-breakdown-container">
+                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
+                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
                                                     <div id="quarterly-table-subcontracting-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${contractor.name}</h4>
                                                         <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -7485,7 +8188,19 @@ ${inputText}`
                                                                 <td style="font-weight: 600;">Costs Claimed</td>
                                                                 ${quarters.map(q => {
                                                                     const qClaimed = summary.quarterlyTotals['q' + q.index] || 0;
-                                                                    return `<td data-quarter="${q.index}" style="font-weight: 600;">£${qClaimed.toLocaleString()}</td>`;
+                                                                    return `
+                                                                        <td data-quarter="${q.index}">
+                                                                            <input
+                                                                                type="number"
+                                                                                value="${qClaimed}"
+                                                                                onchange="updateCategoryQuarterlyCost(projectBudget.subcontracting.contractors, ${q.index}, parseFloat(this.value) || 0, 'Subcontracting', 'subcontracting'); displayDetailedBudget();"
+                                                                                onkeypress="if(event.key==='Enter'){event.preventDefault();const val=this.value;updateCategoryQuarterlyCost(projectBudget.subcontracting.contractors, ${q.index}, parseFloat(val) || 0, 'Subcontracting', 'subcontracting'); displayDetailedBudget();}"
+                                                                                onclick="event.stopPropagation()"
+                                                                                style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 600;"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
+                                                                    `;
                                                                 }).join('')}
                                                                 <td style="font-weight: 700; background: #fce4ec;">£${summary.totalClaimed.toLocaleString()}</td>
                                                             </tr>
@@ -7589,10 +8304,12 @@ ${inputText}`
                                         trip.totalCost = trip.total;
                                     }
                                     initializeQuarterlyCosts(trip);
-                                    const costsClaimed = getTotalCostsClaimed(trip);
-                                    const remaining = getRemainingBudget(trip);
-                                    const difference = getDifferencePercentage(trip);
-                                    const isOverBudget = costsClaimed > (trip.total || trip.totalCost);
+                                    // FIX: Calculate costs from actual transaction assignments, not stale quarterly data
+                                    const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Travel', 'travel-' + index);
+                                    const totalBudget = trip.total || trip.totalCost;
+                                    const remaining = totalBudget - costsClaimed;
+                                    const difference = totalBudget > 0 ? ((costsClaimed - totalBudget) / totalBudget) * 100 : 0;
+                                    const isOverBudget = costsClaimed > totalBudget;
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
@@ -7672,7 +8389,8 @@ ${inputText}`
                                 }).join('')}
 
                                 ${hasQuarters && ((projectBudget.travel.trips && projectBudget.travel.trips.length > 0) || projectBudget.travel.quarterlyCosts) ? (() => {
-                                    const summary = getCategorySummary(projectBudget.travel.trips && projectBudget.travel.trips.length > 0 ? projectBudget.travel.trips : [projectBudget.travel]);
+                                    // FIX: Pass category and itemKeyPrefix to use transaction-based calculation
+                                    const summary = getCategorySummary(projectBudget.travel.trips && projectBudget.travel.trips.length > 0 ? projectBudget.travel.trips : [projectBudget.travel], 'Travel', 'travel');
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     // Initialize category forecast if it doesn't exist
@@ -7705,7 +8423,19 @@ ${inputText}`
                                                                 <td style="font-weight: 600;">Costs Claimed</td>
                                                                 ${quarters.map(q => {
                                                                     const qClaimed = summary.quarterlyTotals['q' + q.index] || 0;
-                                                                    return `<td data-quarter="${q.index}" style="font-weight: 600;">£${qClaimed.toLocaleString()}</td>`;
+                                                                    return `
+                                                                        <td data-quarter="${q.index}">
+                                                                            <input
+                                                                                type="number"
+                                                                                value="${qClaimed}"
+                                                                                onchange="updateCategoryQuarterlyCost(projectBudget.travel.trips && projectBudget.travel.trips.length > 0 ? projectBudget.travel.trips : [projectBudget.travel], ${q.index}, parseFloat(this.value) || 0, 'Travel', 'travel'); displayDetailedBudget();"
+                                                                                onkeypress="if(event.key==='Enter'){event.preventDefault();const val=this.value;updateCategoryQuarterlyCost(projectBudget.travel.trips && projectBudget.travel.trips.length > 0 ? projectBudget.travel.trips : [projectBudget.travel], ${q.index}, parseFloat(val) || 0, 'Travel', 'travel'); displayDetailedBudget();}"
+                                                                                onclick="event.stopPropagation()"
+                                                                                style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 600;"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
+                                                                    `;
                                                                 }).join('')}
                                                                 <td style="font-weight: 700; background: #e1f5fe;">£${summary.totalClaimed.toLocaleString()}</td>
                                                             </tr>
@@ -7777,11 +8507,13 @@ ${inputText}`
                                     }
                                     initializeQuarterlyCosts(item);
                                     const itemKey = `otherCosts-${index}`;
+                                    console.log(`📊 [OTHER COSTS] Rendering item: "${item.description}" (index=${index}, itemKey=${itemKey})`);
                                     const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Other Costs', itemKey);
                                     const budgetAmount = item.estimatedCost || item.totalCost;
                                     const remaining = budgetAmount - costsClaimed;
                                     const difference = budgetAmount > 0 ? ((costsClaimed - budgetAmount) / budgetAmount) * 100 : 0;
                                     const isOverBudget = costsClaimed > budgetAmount;
+                                    console.log(`📊 [OTHER COSTS] "${item.description}": budget=${budgetAmount}, claimed=${costsClaimed.toFixed(2)}, remaining=${remaining.toFixed(2)}`);
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
@@ -7795,7 +8527,7 @@ ${inputText}`
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="othercosts-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '5' : '2'}" style="padding: 0; background: transparent;">
+                                            <td colspan="${hasQuarters ? '5' : '2'}" class="breakdown-row-cell">
                                                 <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-otherCosts-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description || 'General Other Costs'}</h4>
@@ -7859,7 +8591,8 @@ ${inputText}`
                                 }).join('')}
 
                                 ${hasQuarters && ((projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0) || projectBudget.otherCosts.quarterlyCosts) ? (() => {
-                                    const summary = getCategorySummary(projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? projectBudget.otherCosts.items : [projectBudget.otherCosts]);
+                                    // FIX: Pass category and itemKeyPrefix to use transaction-based calculation
+                                    const summary = getCategorySummary(projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? projectBudget.otherCosts.items : [projectBudget.otherCosts], 'Other Costs', 'otherCosts');
                                     const isSummaryOverBudget = summary.totalClaimed > summary.totalCosts;
 
                                     // Initialize category forecast if it doesn't exist
@@ -7892,7 +8625,19 @@ ${inputText}`
                                                                 <td style="font-weight: 600;">Costs Claimed</td>
                                                                 ${quarters.map(q => {
                                                                     const qClaimed = summary.quarterlyTotals['q' + q.index] || 0;
-                                                                    return `<td data-quarter="${q.index}" style="font-weight: 600;">£${qClaimed.toLocaleString()}</td>`;
+                                                                    return `
+                                                                        <td data-quarter="${q.index}">
+                                                                            <input
+                                                                                type="number"
+                                                                                value="${qClaimed}"
+                                                                                onchange="updateCategoryQuarterlyCost(projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? projectBudget.otherCosts.items : [projectBudget.otherCosts], ${q.index}, parseFloat(this.value) || 0, 'Other Costs', 'otherCosts'); displayDetailedBudget();"
+                                                                                onkeypress="if(event.key==='Enter'){event.preventDefault();const val=this.value;updateCategoryQuarterlyCost(projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? projectBudget.otherCosts.items : [projectBudget.otherCosts], ${q.index}, parseFloat(val) || 0, 'Other Costs', 'otherCosts'); displayDetailedBudget();}"
+                                                                                onclick="event.stopPropagation()"
+                                                                                style="width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: 600;"
+                                                                                step="0.01"
+                                                                            />
+                                                                        </td>
+                                                                    `;
                                                                 }).join('')}
                                                                 <td style="font-weight: 700; background: #f3e5f5;">£${summary.totalClaimed.toLocaleString()}</td>
                                                             </tr>
@@ -7946,6 +8691,9 @@ ${inputText}`
 
             addLog('✅ Detailed budget displayed');
             detailedResults.style.display = 'block';
+
+            // Restore expanded state
+            restoreExpandedState(expandedSections);
         }
 
         function updateItem(id, field, value) {
@@ -8346,7 +9094,10 @@ ${inputText}`
         function getItemClaimedFromTransactions(projectId, category, itemKey) {
             if (!cachedTransactions || cachedTransactions.length === 0) return 0;
 
+            console.log(`🔍 [COSTS] Calculating costs for: projectId=${projectId}, category=${category}, itemKey=${itemKey}`);
+
             let total = 0;
+            let matchCount = 0;
             cachedTransactions.forEach(transaction => {
                 if (!transaction.assignments) return;
 
@@ -8360,11 +9111,34 @@ ${inputText}`
                     const itemMatch = assignment.itemKey === itemKey;
 
                     if (projectMatch && categoryMatch && itemMatch) {
-                        total += parseFloat(assignment.amount) || 0;
+                        // FIX: Calculate amount dynamically from transaction ex-VAT value and percentage
+                        // This ensures the total matches what's displayed in the assigned transactions table
+                        const spentAmount = parseAmount(transaction.spent);
+
+                        // Calculate ex-VAT amount (same logic as display)
+                        let valueExTax = 0;
+                        if (transaction.zeroVAT || transaction.spent_ex_vat) {
+                            valueExTax = parseAmount(transaction.spent_ex_vat || transaction.spent);
+                        } else {
+                            valueExTax = spentAmount / 1.2; // 20% UK VAT
+                        }
+
+                        // Calculate assigned amount using percentage
+                        const percentage = parseFloat(assignment.percentage) || 0;
+                        const assignedAmount = (valueExTax * percentage) / 100;
+
+                        // CRITICAL FIX: Round to 2 decimal places to match the display
+                        // This ensures the sum matches what user sees in the table
+                        const roundedAmount = Math.round(assignedAmount * 100) / 100;
+
+                        console.log(`  ✓ Match #${++matchCount}: ${transaction.description?.substring(0, 30)} | spent=${transaction.spent} | exVAT=${valueExTax.toFixed(2)} | ${percentage}% | assigned=${roundedAmount.toFixed(2)} (raw=${assignedAmount.toFixed(4)}) | stored=${assignment.amount}`);
+
+                        total += roundedAmount;
                     }
                 });
             });
 
+            console.log(`💰 [COSTS] Total claimed: £${total.toFixed(2)} (from ${matchCount} transactions)`);
             return total;
         }
 
@@ -8412,8 +9186,22 @@ ${inputText}`
                             const itemMatch = assignment.itemKey === itemKey;
 
                             if (projectMatch && categoryMatch && itemMatch && assignment.quarter) {
+                                // FIX: Calculate amount dynamically (same as getItemClaimedFromTransactions)
+                                const spentAmount = parseAmount(transaction.spent);
+                                let valueExTax = 0;
+                                if (transaction.zeroVAT || transaction.spent_ex_vat) {
+                                    valueExTax = parseAmount(transaction.spent_ex_vat || transaction.spent);
+                                } else {
+                                    valueExTax = spentAmount / 1.2;
+                                }
+                                const percentage = parseFloat(assignment.percentage) || 0;
+                                const assignedAmount = (valueExTax * percentage) / 100;
+
+                                // CRITICAL FIX: Round to match display
+                                const roundedAmount = Math.round(assignedAmount * 100) / 100;
+
                                 const qKey = `q${assignment.quarter}`;
-                                quarterlyTotals[qKey] = (quarterlyTotals[qKey] || 0) + (parseFloat(assignment.amount) || 0);
+                                quarterlyTotals[qKey] = (quarterlyTotals[qKey] || 0) + roundedAmount;
                             }
                         });
                     });
@@ -8486,12 +9274,74 @@ ${inputText}`
             saveToIndexedDB();
         }
 
+        // Update quarterly cost at category level - distributes value across all items
+        function updateCategoryQuarterlyCost(categoryItems, quarter, newValue, categoryName, categoryKey) {
+            const quarterKey = `q${quarter}`;
+            const newTotal = parseFloat(newValue) || 0;
+
+            // Initialize quarterly costs for all items if needed
+            categoryItems.forEach(item => {
+                if (!item.quarterlyCosts) {
+                    item.quarterlyCosts = {q1: 0, q2: 0, q3: 0, q4: 0};
+                }
+            });
+
+            // Calculate current total for this quarter
+            const currentTotal = categoryItems.reduce((sum, item) => {
+                return sum + (item.quarterlyCosts[quarterKey] || 0);
+            }, 0);
+
+            // If new total is 0, clear all items for this quarter
+            if (newTotal === 0) {
+                categoryItems.forEach(item => {
+                    item.quarterlyCosts[quarterKey] = 0;
+                });
+            }
+            // If current total is 0 but new total is not, distribute equally
+            else if (currentTotal === 0) {
+                const perItem = newTotal / categoryItems.length;
+                categoryItems.forEach(item => {
+                    item.quarterlyCosts[quarterKey] = perItem;
+                });
+            }
+            // Otherwise, distribute proportionally based on existing values
+            else {
+                const ratio = newTotal / currentTotal;
+                categoryItems.forEach(item => {
+                    const currentItemValue = item.quarterlyCosts[quarterKey] || 0;
+                    item.quarterlyCosts[quarterKey] = currentItemValue * ratio;
+                });
+            }
+
+            // Update budget summary overview if it's currently visible
+            const summarySection = document.getElementById('budgetSummaryOverview');
+            if (summarySection && summarySection.style.display !== 'none') {
+                summarySection.innerHTML = generateBudgetSummaryOverview();
+            }
+
+            // Auto-save after update
+            saveToIndexedDB();
+        }
+
         // Toggle quarterly breakdown visibility
         function toggleQuarterlyBreakdown(rowId) {
             const breakdownRow = document.getElementById(`${rowId}-breakdown`);
             if (breakdownRow) {
                 const isCurrentlyHidden = breakdownRow.style.display === 'none' || breakdownRow.style.display === '';
                 breakdownRow.style.display = isCurrentlyHidden ? 'block' : 'none';
+
+                console.log(`🔽 [ALIGNMENT] Toggling breakdown for: ${rowId}, New state: ${isCurrentlyHidden ? 'VISIBLE' : 'HIDDEN'}`);
+
+                // Log width information when opening
+                if (isCurrentlyHidden) {
+                    const parentTable = breakdownRow.closest('.item-table-container');
+                    const breakdownCell = breakdownRow.querySelector('.breakdown-row-cell');
+                    const container = breakdownRow.querySelector('.quarterly-breakdown-container');
+
+                    console.log(`📏 [WIDTH DEBUG] Parent container width: ${parentTable?.offsetWidth}px`);
+                    console.log(`📏 [WIDTH DEBUG] Breakdown cell width: ${breakdownCell?.offsetWidth}px`);
+                    console.log(`📏 [WIDTH DEBUG] Quarterly container width: ${container?.offsetWidth}px`);
+                }
 
                 // Update arrow indicator
                 const arrow = document.getElementById(`${rowId}-arrow`);

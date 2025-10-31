@@ -4034,6 +4034,9 @@
          * This calculates the amount excluding VAT for budget assignments
          */
         function getTransactionExVatAmount(transaction) {
+            // Always use GBP amounts for assignments, even if transaction shows USD conversion
+            // The USD amount is just for display/reference purposes
+
             // Handle received transactions (no VAT calculation needed)
             if (transaction.received && !transaction.spent) {
                 return parseAmount(transaction.received);
