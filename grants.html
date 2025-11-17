@@ -53,6 +53,7 @@
             padding: 15px 20px;
             margin-bottom: 12px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            overflow-x: auto;
         }
 
         #detailedBudgetResults.show {
@@ -332,6 +333,58 @@
             font-family: 'Roboto', sans-serif;
         }
 
+        .card > table {
+            table-layout: fixed;
+        }
+
+        /* Column width distribution for budget tables */
+        .card > table th:nth-child(1),
+        .card > table td:nth-child(1) {
+            width: 8%;
+        }
+
+        .card > table th:nth-child(2),
+        .card > table td:nth-child(2) {
+            width: 30%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card > table th:nth-child(3),
+        .card > table td:nth-child(3) {
+            width: 10%;
+        }
+
+        .card > table th:nth-child(4),
+        .card > table td:nth-child(4) {
+            width: 10%;
+        }
+
+        .card > table th:nth-child(5),
+        .card > table td:nth-child(5) {
+            width: 12%;
+        }
+
+        .card > table th:nth-child(6),
+        .card > table td:nth-child(6) {
+            width: 10%;
+        }
+
+        .card > table th:nth-child(7),
+        .card > table td:nth-child(7) {
+            width: 10%;
+        }
+
+        .card > table th:nth-child(8),
+        .card > table td:nth-child(8) {
+            width: 10%;
+        }
+
+        /* Ensure breakdown row doesn't affect column widths */
+        .card > table tr[id$="-breakdown"] td {
+            width: auto !important;
+        }
+
         th {
             background: #f8fafc;
             padding: 12px;
@@ -416,27 +469,27 @@
         .quarterly-breakdown-container {
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             border-radius: 0;
-            padding: 20px 0 0 0;
-            margin: 0 -20px;
+            padding: 20px;
+            margin: 0;
             border: none;
             border-top: 2px solid #e2e8f0;
             box-shadow: none;
-            width: calc(100% + 40px);
+            width: 100%;
             box-sizing: border-box;
-            overflow-x: visible;
+            overflow-x: auto;
             position: relative;
             left: 0;
         }
 
         .quarterly-breakdown-header {
-            margin: 0 20px 16px 20px;
+            margin: 0 0 16px 0;
+            padding: 0 0 12px 0;
             color: #475569;
             font-size: 0.95em;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
-            padding-bottom: 12px;
             border-bottom: 2px solid #cbd5e1;
         }
 
@@ -445,8 +498,8 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            margin: 0 20px !important;
-            width: calc(100% - 40px);
+            margin: 0 !important;
+            width: 100%;
         }
 
         .quarterly-breakdown-table thead tr {
@@ -1721,7 +1774,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             return `
                 <div style="margin: 20px 0 0 0; padding: 15px 0; background: white; border-radius: 0; border-top: 2px solid #e2e8f0; width: 100%; box-sizing: border-box;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 20px 15px 20px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 15px 0; flex-wrap: wrap; gap: 8px;">
                         <h5 style="margin: 0; color: #3b82f6; font-size: 0.95em;">💳 Assigned Transactions</h5>
                         <div style="display: flex; gap: 8px;">
                             <button onclick="toggleQuarterlyTable('${quarterlyTableId}'); event.stopPropagation();" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; font-weight: 600; box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(251, 191, 36, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(251, 191, 36, 0.3)';" title="Toggle quarterly breakdown table">
@@ -5488,8 +5541,8 @@ Rules:
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-capital-ns-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
-                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
+                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                             <thead>
@@ -5567,8 +5620,8 @@ Rules:
                                             <td ${summary.difference > 0 ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>${summary.difference.toFixed(1)}%</td>
                                         </tr>
                                         <tr id="wg-capital-ns-summary-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
-                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
+                                            <td colspan="8" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Capital Non-Standard - Quarterly Breakdown</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                         <thead>
@@ -5686,8 +5739,8 @@ Rules:
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-revenue-ns-${index}-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
-                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
+                                            <td colspan="8" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                             <thead>
@@ -7638,8 +7691,8 @@ ${inputText}`
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="materials-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
-                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
+                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-materials-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.item}</h4>
                                                         <table class="quarterly-breakdown-table">
@@ -7889,8 +7942,8 @@ ${inputText}`
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="capital-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
-                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
+                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-capitalUsage-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                         <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -8091,8 +8144,8 @@ ${inputText}`
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="subcontracting-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent; max-width: 100%; overflow: visible;">
-                                                <div class="quarterly-breakdown-container" style="max-width: 100%; box-sizing: border-box;">
+                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
+                                                <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-subcontracting-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${contractor.name}</h4>
                                                         <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
