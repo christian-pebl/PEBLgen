@@ -340,12 +340,12 @@
         /* Column width distribution for budget tables */
         .card > table th:nth-child(1),
         .card > table td:nth-child(1) {
-            width: 8%;
+            width: 6.4%;
         }
 
         .card > table th:nth-child(2),
         .card > table td:nth-child(2) {
-            width: 30%;
+            width: 24%;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -357,27 +357,27 @@
 
         .card > table th:nth-child(4),
         .card > table td:nth-child(4) {
-            width: 10%;
+            width: 8%;
         }
 
         .card > table th:nth-child(5),
         .card > table td:nth-child(5) {
-            width: 12%;
+            width: 9.6%;
         }
 
         .card > table th:nth-child(6),
         .card > table td:nth-child(6) {
-            width: 10%;
+            width: 8%;
         }
 
         .card > table th:nth-child(7),
         .card > table td:nth-child(7) {
-            width: 10%;
+            width: 8%;
         }
 
         .card > table th:nth-child(8),
         .card > table td:nth-child(8) {
-            width: 10%;
+            width: 8%;
         }
 
         /* Ensure breakdown row doesn't affect column widths */
@@ -1513,6 +1513,13 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 const transactionsWithAssignments = allTransactions.filter(t => t.assignments && t.assignments.length > 0);
                 console.log(`[TRANSACTIONS] ${transactionsWithAssignments.length} transactions have assignments`);
 
+                // Debug: Show how many transactions have transaction references
+                const transactionsWithRefs = allTransactions.filter(t => t.transactionRef);
+                console.log(`📝 [TRANSACTION REF] ${transactionsWithRefs.length} transactions have transaction references`);
+                if (transactionsWithRefs.length > 0) {
+                    console.log(`📝 [TRANSACTION REF] Sample references:`, transactionsWithRefs.slice(0, 5).map(t => `${t.date}: ${t.transactionRef}`));
+                }
+
                 // Removed verbose logging - transactions loaded successfully
 
                 return allTransactions;
@@ -1653,6 +1660,60 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             return null;
         }
 
+        // Generate transaction reference number: A + MMDD + sequential counter (01-99)
+        // This creates unique references like A092301 for the first transaction on Sept 23
+        function generateTransactionRef(transaction, allTransactions) {
+            // If transaction already has a reference, return it
+            if (transaction.transactionRef) {
+                return transaction.transactionRef;
+            }
+
+            // Parse the date to get month and day
+            const dateStr = transaction.date || '';
+            const dateParts = dateStr.split('/'); // Assuming DD/MM/YYYY or similar format
+
+            let month = '';
+            let day = '';
+
+            if (dateParts.length >= 2) {
+                // Try DD/MM/YYYY format first
+                if (dateParts[0].length <= 2 && dateParts[1].length <= 2) {
+                    day = dateParts[0].padStart(2, '0');
+                    month = dateParts[1].padStart(2, '0');
+                }
+                // Try YYYY-MM-DD format
+                else if (dateStr.includes('-')) {
+                    const isoDate = new Date(dateStr);
+                    if (!isNaN(isoDate.getTime())) {
+                        month = String(isoDate.getMonth() + 1).padStart(2, '0');
+                        day = String(isoDate.getDate()).padStart(2, '0');
+                    }
+                }
+            }
+
+            // If we couldn't parse the date, use default
+            if (!month || !day) {
+                month = '00';
+                day = '00';
+            }
+
+            // Find all transactions on the same date and count position
+            const sameDateTransactions = allTransactions.filter(t => t.date === transaction.date);
+            const positionInDate = sameDateTransactions.findIndex(t =>
+                t.date === transaction.date &&
+                t.description === transaction.description &&
+                t.spent === transaction.spent
+            );
+
+            // Sequential counter (1-based, padded to 2 digits)
+            const counter = String(Math.min(positionInDate >= 0 ? positionInDate + 1 : 1, 99)).padStart(2, '0');
+
+            // Format: A + MMDD + counter
+            const ref = `A${month}${day}${counter}`;
+
+            return ref;
+        }
+
         // Render transaction details table
         function renderTransactionDetails(transactions, projectId, category, itemKey, quarter, invoices) {
             if (!transactions || transactions.length === 0) {
@@ -1749,9 +1810,18 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 // Create view in spend button
                 const viewInSpendBtn = `<button onclick="viewInSpend('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}'); event.stopPropagation();" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap;">👁️ View in Spend</button>`;
 
+                // Get transaction reference (will be generated in spend.html when assigned)
+                const transactionRef = transaction.transactionRef || '-';
+
+                // Debug logging for first few transactions
+                if (transactions.indexOf(transaction) < 3) {
+                    console.log(`📝 [TRANSACTION REF] Transaction ${transactions.indexOf(transaction)}: ${transaction.date} - Ref: ${transactionRef}`);
+                }
+
                 return `
                     <tr id="${transactionId}" data-transaction-date="${escapeHtml(transaction.date)}" data-transaction-description="${escapeHtml(transaction.description)}">
                         <td style="padding: 6px 10px; white-space: nowrap;">${escapeHtml(date)}</td>
+                        <td style="padding: 6px 10px; text-align: center; white-space: nowrap; font-weight: 600; color: #059669; font-family: monospace;">${escapeHtml(transactionRef)}</td>
                         <td style="padding: 6px 10px; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(description)}${currencyNote}</td>
                         <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${currencySymbol}${valueExTax}</td>
                         <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${currencySymbol}${valueIncTax}</td>
@@ -1791,6 +1861,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             <thead>
                                 <tr style="background: #f1f5f9;">
                                     <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Date</th>
+                                    <th style="padding: 8px 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Transaction Ref</th>
                                     <th style="padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Description</th>
                                     <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Value ex Tax</th>
                                     <th style="padding: 8px 10px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1; white-space: nowrap;">Value Inc Tax</th>
@@ -1970,6 +2041,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             <thead>
                                 <tr style="background: #f1f5f9;">
                                     <th style="padding: 6px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Date</th>
+                                    <th style="padding: 6px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Transaction Ref</th>
                                     <th style="padding: 6px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Description</th>
                                     <th style="padding: 6px 8px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Value ex Tax</th>
                                     <th style="padding: 6px 8px; text-align: right; font-weight: 600; border-bottom: 2px solid #cbd5e1;">Value Inc Tax</th>
@@ -2025,9 +2097,13 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         const percentage = parseFloat(assignment.percentage) || 0;
                         const assignedAmount = ((parseFloat(valueExTax) * percentage) / 100).toFixed(2);
 
+                        // Get transaction reference
+                        const transactionRef = transaction.transactionRef || '-';
+
                         html += `
                             <tr style="border-bottom: 1px solid #f1f5f9;">
                                 <td style="padding: 6px 8px;">${escapeHtml(date)}</td>
+                                <td style="padding: 6px 8px; text-align: center; font-weight: 600; color: #059669; font-family: monospace;">${escapeHtml(transactionRef)}</td>
                                 <td style="padding: 6px 8px;">${escapeHtml(description)}</td>
                                 <td style="padding: 6px 8px; text-align: right;">${currencySymbol}${valueExTax}</td>
                                 <td style="padding: 6px 8px; text-align: right;">${currencySymbol}${valueIncTax}</td>
@@ -2042,7 +2118,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     // Category total row with accounting-style formatting
                     html += `
                                 <tr style="border-top: 2px solid #cbd5e1;">
-                                    <td colspan="7" style="padding: 8px; text-align: right; font-weight: 700;">Total ${displayName}:</td>
+                                    <td colspan="8" style="padding: 8px; text-align: right; font-weight: 700;">Total ${displayName}:</td>
                                     <td style="padding: 8px; text-align: right; font-weight: 700;">£${categoryTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 </tr>
                             </tbody>
@@ -6037,9 +6113,9 @@ Rules:
                                     initializeQuarterlyCosts(item);
                                     const itemKey = `itemBreakdownCapital-${index}`;
                                     const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Item Breakdown Capital', itemKey);
-                                    const remaining = item.maxGrantApproved - costsClaimed;
-                                    const difference = item.maxGrantApproved > 0 ? ((costsClaimed - item.maxGrantApproved) / item.maxGrantApproved) * 100 : 0;
-                                    const isOverBudget = costsClaimed > item.maxGrantApproved;
+                                    const remaining = item.totalCost - costsClaimed;
+                                    const difference = item.totalCost > 0 ? ((costsClaimed - item.totalCost) / item.totalCost) * 100 : 0;
+                                    const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
@@ -6149,9 +6225,9 @@ Rules:
                                     initializeQuarterlyCosts(item);
                                     const itemKey = `itemBreakdownRevenue-${index}`;
                                     const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Item Breakdown Revenue', itemKey);
-                                    const remaining = item.maxGrantApproved - costsClaimed;
-                                    const difference = item.maxGrantApproved > 0 ? ((costsClaimed - item.maxGrantApproved) / item.maxGrantApproved) * 100 : 0;
-                                    const isOverBudget = costsClaimed > item.maxGrantApproved;
+                                    const remaining = item.totalCost - costsClaimed;
+                                    const difference = item.totalCost > 0 ? ((costsClaimed - item.totalCost) / item.totalCost) * 100 : 0;
+                                    const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">

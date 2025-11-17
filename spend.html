@@ -1178,6 +1178,9 @@
                     <button onclick="downloadCurrentTableAsCSV()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 5px 8px; font-size: 10px; grid-column: span 2; background: #10b981; color: white;" title="Download current view as CSV">
                         Download Table
                     </button>
+                    <button onclick="regenerateTransactionRefs(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 5px 8px; font-size: 10px; grid-column: span 2; background: #8b5cf6; color: white;" title="Regenerate all transaction reference numbers">
+                        🔄 Regen Transaction Refs
+                    </button>
                 </div>
             </div>
         </div>
@@ -2475,6 +2478,15 @@
                 console.log('ℹ️ [AUTO-LOAD CSV] No transactions to load');
             }
 
+            // Migrate existing assigned transactions to have transaction references
+            if (allTransactions.length > 0) {
+                console.log('\n═══════════════════════════════════════════════════════');
+                console.log('📝 TRANSACTION REFERENCE MIGRATION');
+                console.log('═══════════════════════════════════════════════════════');
+                await migrateExistingTransactionRefs();
+                console.log('═══════════════════════════════════════════════════════\n');
+            }
+
             isAutoLoadingCSVs = false;
             console.log('✅ [AUTO-LOAD CSV] Auto-load complete, flag reset');
         }
@@ -3174,47 +3186,29 @@
                 return;
             }
 
-            console.log('═══════════════════════════════════════════════════════');
-            console.log('🚀 [PAGE LOAD] DOMContentLoaded event fired');
-            console.log('📅 [PAGE LOAD] Timestamp:', new Date().toISOString());
-            console.log('═══════════════════════════════════════════════════════');
+            console.log('🚀 [PAGE LOAD] Spend page initializing...');
 
             try {
-                console.log('⚙️ [PAGE LOAD] Step 1/6: Loading display settings...');
                 loadDisplaySettings();
-
-                console.log('💾 [PAGE LOAD] Step 2/6: Initializing IndexedDB...');
                 await initIndexedDB();
-
-                console.log('📊 [PAGE LOAD] Step 3/6: Loading projects from DB...');
                 await loadProjectsFromDB();
-
-                console.log('📂 [PAGE LOAD] Step 4/6: Loading saved CSV files...');
                 await loadSavedCSVFiles();
-
-                console.log('🔑 [PAGE LOAD] Step 5/6: Updating API key status...');
                 updateAPIKeyStatus(); // Update API key status display
 
                 // Auto-configure OpenExchangeRates App ID if not already set
                 if (!localStorage.getItem('exchangeRateApiKey')) {
                     localStorage.setItem('exchangeRateApiKey', 'e30981c5ed1f418fb5cac0faf1dccfe4');
-                    console.log('💱 [PAGE LOAD] OpenExchangeRates App ID auto-configured');
                 }
 
                 updateExchangeRateStatus(); // Update exchange rate API status display
-
-                console.log('📧 [PAGE LOAD] Step 6/6: Loading Gmail accounts...');
                 loadGmailAccountsFromStorage(); // Restore saved Gmail accounts
                 updateGmailStatus(); // Update UI to show restored accounts
 
+                // Note: Transaction reference migration now happens AFTER CSV files are loaded
+                // See autoLoadSavedCSVs() function for the migration call
+
                 // Final summary
-                console.log('═══════════════════════════════════════════════════════');
-                console.log('✅ [PAGE LOAD] Page initialization complete!');
-                console.log('📊 [PAGE LOAD] Summary:');
-                console.log(`   - CSV Files: ${savedCSVFiles.length}`);
-                console.log(`   - Total Transactions: ${allTransactions.length}`);
-                console.log(`   - Projects Loaded: ${allProjects.length}`);
-                console.log('═══════════════════════════════════════════════════════');
+                console.log(`✅ [PAGE LOAD] Complete! Database initialized, CSV files will load next.`);
 
                 // Populate project filter dropdown
                 populateProjectFilter();
@@ -3365,6 +3359,10 @@
             const displayText = `${allProjects.length} project${allProjects.length > 1 ? 's' : ''} (£${totalBudget.toLocaleString()})`;
             console.log(`✅ [BUDGET INFO] Setting display text: "${displayText}"`);
             infoDiv.innerHTML = displayText;
+
+            // Update the project filter dropdown with all loaded projects
+            console.log('🔄 [BUDGET INFO] Calling populateProjectFilter()...');
+            populateProjectFilter();
 
             console.log('✅ [BUDGET INFO] updateBudgetInfo complete');
         }
@@ -3571,24 +3569,13 @@
 
         function populateProjectFilter() {
             const filterSelect = document.getElementById('filterProject');
-            if (!filterSelect) return;
+            if (!filterSelect) {
+                console.warn('⚠️ [POPULATE FILTER] filterProject element not found');
+                return;
+            }
 
-            // Get unique projects from assignments
-            const projects = new Set();
-            projects.add('GENERAL_EXPENSES'); // Always include General Expenses
-
-            allTransactions.forEach(trans => {
-                if (trans.assignments && trans.assignments.length > 0) {
-                    trans.assignments.forEach(assignment => {
-                        if (assignment.projectId && assignment.projectName) {
-                            projects.add(JSON.stringify({
-                                id: assignment.projectId,
-                                name: assignment.projectName
-                            }));
-                        }
-                    });
-                }
-            });
+            console.log('📋 [POPULATE FILTER] Starting to populate project filter...');
+            console.log('📊 [POPULATE FILTER] Active projects loaded:', activeProjects.length);
 
             // Clear and rebuild options
             filterSelect.innerHTML = '<option value="">All Projects</option>';
@@ -3596,15 +3583,24 @@
             // Add General Expenses first
             filterSelect.innerHTML += '<option value="GENERAL_EXPENSES">PEBL General Expenses</option>';
 
-            // Add other projects sorted by name
-            const projectArray = Array.from(projects)
-                .filter(p => p !== 'GENERAL_EXPENSES')
-                .map(p => JSON.parse(p))
-                .sort((a, b) => a.name.localeCompare(b.name));
+            // Add all loaded projects (from grants) sorted by name
+            if (activeProjects && activeProjects.length > 0) {
+                const sortedProjects = [...activeProjects].sort((a, b) => {
+                    const nameA = a.projectName || a.projectNumber || '';
+                    const nameB = b.projectName || b.projectNumber || '';
+                    return nameA.localeCompare(nameB);
+                });
 
-            projectArray.forEach(proj => {
-                filterSelect.innerHTML += `<option value="${proj.id}">${escapeHtml(proj.name)}</option>`;
-            });
+                sortedProjects.forEach(proj => {
+                    const projectName = proj.projectName || proj.projectNumber || `Project ${proj.projectId}`;
+                    console.log('🔍 [POPULATE FILTER] Adding project to dropdown:', proj.projectId, '-', projectName);
+                    filterSelect.innerHTML += `<option value="${proj.projectId}">${escapeHtml(projectName)}</option>`;
+                });
+
+                console.log('✅ [POPULATE FILTER] Added', sortedProjects.length, 'projects to dropdown');
+            } else {
+                console.warn('⚠️ [POPULATE FILTER] No active projects found');
+            }
         }
 
         function handleProjectFilterChange() {
@@ -3613,6 +3609,8 @@
             const statusDiv = document.getElementById('filterStatus');
 
             currentFilterProject = filterSelect.value;
+
+            console.log('🔍 [FILTER] Project filter changed:', currentFilterProject);
 
             // Reset category filter
             categorySelect.innerHTML = '<option value="">All Categories</option>';
@@ -3632,6 +3630,8 @@
                         });
                     }
                 });
+
+                console.log('📋 [FILTER] Found', categories.size, 'categories for project');
 
                 Array.from(categories).sort().forEach(cat => {
                     categorySelect.innerHTML += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`;
@@ -3770,6 +3770,8 @@
 
             // Then apply project/category filters
             if (currentFilterProject || currentFilterCategory) {
+                const beforeCount = transactionsWithIndices.length;
+
                 transactionsWithIndices = transactionsWithIndices.filter(item => {
                     const transaction = item.transaction;
                     // Check if transaction has assignments matching the filter
@@ -3792,6 +3794,8 @@
                         return projectMatch && categoryMatch;
                     });
                 });
+
+                console.log(`🔍 [RENDER FILTER] Filtered to ${transactionsWithIndices.length} of ${beforeCount} transactions`);
             }
 
             console.log(`✅ [RENDER] Rendering ${transactionsWithIndices.length} of ${allTransactions.length} transactions...`);
@@ -5423,6 +5427,183 @@
             }
         }
 
+        /**
+         * Migrate existing assigned transactions to have transaction references
+         * This is called automatically on page load to add references to transactions
+         * that were assigned before the feature was implemented
+         */
+        async function migrateExistingTransactionRefs() {
+            let migratedCount = 0;
+            let alreadyHaveRef = 0;
+            let totalAssigned = 0;
+            const allRefs = new Set(); // Track all references to check uniqueness
+            const duplicates = []; // Track any duplicate references
+
+            allTransactions.forEach(transaction => {
+                // Check if transaction is assigned (has assignments array or old format)
+                const isAssigned = (transaction.assignments && transaction.assignments.length > 0) || transaction.assignedItemName;
+
+                if (isAssigned) {
+                    totalAssigned++;
+
+                    if (!transaction.transactionRef) {
+                        // Generate reference for this transaction
+                        transaction.transactionRef = generateTransactionRef(transaction, allTransactions);
+                        migratedCount++;
+
+                        // Check for duplicates
+                        if (allRefs.has(transaction.transactionRef)) {
+                            duplicates.push({
+                                ref: transaction.transactionRef,
+                                date: transaction.date,
+                                description: transaction.description?.substring(0, 40)
+                            });
+                        }
+                        allRefs.add(transaction.transactionRef);
+
+                        // Only log first 5 and last one
+                        if (migratedCount <= 5 || migratedCount === totalAssigned) {
+                            console.log(`  ✅ ${transaction.transactionRef} → ${transaction.date} - ${transaction.description?.substring(0, 40)}`);
+                        } else if (migratedCount === 6) {
+                            console.log(`  ... generating references for ${totalAssigned - 5} more transactions ...`);
+                        }
+                    } else {
+                        alreadyHaveRef++;
+                        // Also check existing references for duplicates
+                        if (allRefs.has(transaction.transactionRef)) {
+                            duplicates.push({
+                                ref: transaction.transactionRef,
+                                date: transaction.date,
+                                description: transaction.description?.substring(0, 40)
+                            });
+                        }
+                        allRefs.add(transaction.transactionRef);
+                    }
+                }
+            });
+
+            console.log('');
+            console.log(`📊 SUMMARY:`);
+            console.log(`   • Total assigned transactions: ${totalAssigned}`);
+            console.log(`   • Already had references: ${alreadyHaveRef}`);
+            console.log(`   • Newly generated: ${migratedCount}`);
+            console.log(`   • Unique references: ${allRefs.size}`);
+
+            // Check uniqueness
+            if (duplicates.length > 0) {
+                console.log('');
+                console.log(`❌ DUPLICATE REFERENCES DETECTED (${duplicates.length}):`);
+                duplicates.forEach(dup => {
+                    console.log(`   ⚠️ ${dup.ref} → ${dup.date} - ${dup.description}`);
+                });
+            } else if (totalAssigned > 0) {
+                console.log(`   ✅ All references are unique!`);
+            }
+
+            // Save to database if any were migrated
+            if (migratedCount > 0) {
+                console.log('');
+                console.log('💾 Saving to database...');
+                await saveTransactionsToStorage();
+                console.log('✅ MIGRATION COMPLETE! Transaction references saved.');
+                showSimpleToast(`✅ Generated ${migratedCount} transaction references`, 'success');
+            } else {
+                console.log('✅ All transactions already have references - no migration needed');
+            }
+        }
+
+        /**
+         * Generate transaction reference number: A + MMDD + sequential counter (01-99)
+         * Example: A092301 for the first transaction on September 23
+         *
+         * @param {Object} transaction - The transaction object
+         * @param {Array} allTransactions - All transactions array for counter calculation
+         * @returns {string} Transaction reference like "A092301"
+         */
+        function generateTransactionRef(transaction, allTransactions) {
+            // Parse the transaction date to extract month and day
+            const dateStr = transaction.date || '';
+            let month = '00';
+            let day = '00';
+
+            // Try different date formats
+            if (dateStr.includes('/')) {
+                // DD/MM/YYYY or MM/DD/YYYY format
+                const parts = dateStr.split('/');
+                if (parts.length >= 2) {
+                    // Assume DD/MM/YYYY (UK format used in CSV)
+                    day = parts[0].padStart(2, '0');
+                    month = parts[1].padStart(2, '0');
+                }
+            } else if (dateStr.includes('-')) {
+                // YYYY-MM-DD or similar
+                try {
+                    const date = new Date(dateStr);
+                    if (!isNaN(date.getTime())) {
+                        month = String(date.getMonth() + 1).padStart(2, '0');
+                        day = String(date.getDate()).padStart(2, '0');
+                    }
+                } catch (e) {
+                    console.error('Error parsing date:', e);
+                }
+            }
+
+            // Find the global index of this transaction in allTransactions
+            const globalIndex = allTransactions.indexOf(transaction);
+
+            // Find all transactions on the same date that appear BEFORE or AT this transaction
+            // This ensures each transaction gets a unique sequential number based on its position
+            let positionInDate = 0;
+            for (let i = 0; i <= globalIndex && i < allTransactions.length; i++) {
+                if (allTransactions[i].date === transaction.date) {
+                    positionInDate++;
+                }
+            }
+
+            // Sequential counter (1-based, padded to 2 digits, max 99)
+            const counter = String(Math.min(positionInDate, 99)).padStart(2, '0');
+
+            // Format: A + MMDD + counter
+            const ref = `A${month}${day}${counter}`;
+
+            return ref;
+        }
+
+        /**
+         * Regenerate all transaction references
+         * Clears existing references and generates new ones for all assigned transactions
+         */
+        async function regenerateTransactionRefs(event) {
+            if (event) event.preventDefault();
+
+            if (!confirm('🔄 Regenerate Transaction References\n\nThis will:\n1. Clear all existing transaction references\n2. Generate new unique references for all assigned transactions\n3. Save to database\n\nContinue?')) {
+                return;
+            }
+
+            console.log('🔄 Clearing existing transaction references...');
+            let clearedCount = 0;
+            allTransactions.forEach(t => {
+                if (t.transactionRef) {
+                    delete t.transactionRef;
+                    clearedCount++;
+                }
+            });
+
+            console.log(`✅ Cleared ${clearedCount} existing references`);
+
+            // Trigger migration to regenerate all references
+            console.log('\n═══════════════════════════════════════════════════════');
+            console.log('📝 TRANSACTION REFERENCE REGENERATION');
+            console.log('═══════════════════════════════════════════════════════');
+            await migrateExistingTransactionRefs();
+            console.log('═══════════════════════════════════════════════════════\n');
+
+            showSimpleToast('✅ Transaction references regenerated successfully', 'success');
+
+            // Optionally reload page to refresh display
+            // setTimeout(() => location.reload(), 1500);
+        }
+
         async function saveAssignment() {
             if (currentEditingIndex === null) return;
 
@@ -5437,6 +5618,11 @@
             if (!project) {
                 alert('❌ Project not found');
                 return;
+            }
+
+            // Generate transaction reference if it doesn't exist
+            if (!transaction.transactionRef) {
+                transaction.transactionRef = generateTransactionRef(transaction, allTransactions);
             }
 
             // Calculate quarter from transaction date
@@ -5501,6 +5687,9 @@
 
             // Re-render the table
             renderTransactions();
+
+            // Save transactions to database (including the new transaction reference)
+            await saveTransactionsToStorage();
 
             // Close modal (this will set selectedCategory = null)
             closeAssignModal();
