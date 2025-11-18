@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timesheet</title>
+    <title>Labour</title>
     <!-- Google Fonts - PEBL Brand Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,6 +16,16 @@
             font-weight: 300;
             background: linear-gradient(to bottom, #DEF2F1 0%, #ffffff 100%);
             min-height: 100vh;
+        }
+
+        /* Excel-like drag autofill styles */
+        .drag-highlight {
+            border: 2px solid #2196F3 !important;
+        }
+
+        .cell-drag-handle:hover {
+            background: #1976D2 !important;
+            transform: scale(1.2);
         }
 
         /* Navigation Banner */
@@ -68,109 +78,151 @@
             border-color: rgba(255, 255, 255, 0.9);
         }
 
+        /* Tab Navigation */
+        .tab-container {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #2B7A78;
+        }
+        .tab-btn {
+            background: white;
+            border: none;
+            padding: 10px 24px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .tab-btn:hover {
+            color: #2B7A78;
+            background: #f5f5f5;
+        }
+        .tab-btn.active {
+            color: #2B7A78;
+            border-bottom-color: #2B7A78;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Paste selection highlight */
+        .paste-selected {
+            outline: 3px solid #2196F3 !important;
+            outline-offset: -3px;
+            background-color: #e3f2fd !important;
+        }
+
         /* Content Container */
         .content-container {
-            padding: 20px;
+            padding: 15px;
             max-width: 1400px;
             margin: 0 auto;
-            padding-top: 90px;
+            padding-top: 80px;
         }
 
         /* Section Styles */
         .section {
-            margin-bottom: 25px;
-            padding: 20px;
+            margin-bottom: 15px;
+            padding: 12px;
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
 
         .section h2 {
             margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 18px;
+            margin-bottom: 8px;
+            font-size: 15px;
             color: #333;
             border-bottom: 2px solid #2196F3;
-            padding-bottom: 10px;
+            padding-bottom: 6px;
+            font-weight: 600;
         }
 
         /* System Prompt Section */
         .system-prompt-section {
             background-color: #e0f7fa;
-            border-left: 4px solid #00acc1;
+            border-left: 3px solid #00acc1;
         }
 
         #systemPrompt {
             width: 100%;
-            min-height: 120px;
-            padding: 12px;
-            border: 2px solid #2196F3;
+            min-height: 80px;
+            padding: 8px;
+            border: 1px solid #2196F3;
             border-radius: 4px;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 14px;
+            font-size: 12px;
             resize: vertical;
         }
 
         /* Staff Mapping Section */
         .staff-mapping-section {
             background-color: #f3e5f5;
-            border-left: 4px solid #9c27b0;
+            border-left: 3px solid #9c27b0;
         }
 
         .mapping-input-group {
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         .mapping-input-group label {
             display: block;
             font-weight: 500;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
             color: #555;
+            font-size: 13px;
         }
 
         .mapping-input-group input {
             width: 100%;
-            padding: 10px;
+            padding: 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         /* Forecast Data Section */
         .forecast-section {
             background-color: #fff3e0;
-            border-left: 4px solid #ff9800;
+            border-left: 3px solid #ff9800;
         }
 
         .instructions {
-            font-size: 13px;
+            font-size: 11px;
             color: #666;
-            margin-bottom: 10px;
-            font-style: italic;
+            margin-bottom: 6px;
         }
 
         #forecastInput {
             width: 100%;
-            min-height: 100px;
-            padding: 10px;
-            border: 2px solid #ff9800;
+            min-height: 80px;
+            padding: 6px;
+            border: 1px solid #ff9800;
             border-radius: 4px;
             font-family: 'Courier New', monospace;
-            font-size: 13px;
+            font-size: 11px;
             resize: vertical;
         }
 
         .preview-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 13px;
+            margin-top: 8px;
+            font-size: 11px;
         }
 
         .preview-table th,
         .preview-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 4px;
             text-align: left;
         }
 
@@ -187,61 +239,61 @@
         /* Gantt Section */
         .gantt-section {
             background-color: #e8f5e9;
-            border-left: 4px solid #4caf50;
+            border-left: 3px solid #4caf50;
         }
 
         .gantt-dropdown {
             width: 100%;
-            padding: 10px;
+            padding: 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            font-size: 14px;
-            margin-bottom: 10px;
+            font-size: 13px;
+            margin-bottom: 6px;
         }
 
         .gantt-summary {
             background-color: white;
-            padding: 15px;
+            padding: 8px;
             border-radius: 4px;
-            margin-top: 15px;
+            margin-top: 8px;
             border: 1px solid #ddd;
         }
 
         .gantt-summary h3 {
             margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 16px;
+            margin-bottom: 6px;
+            font-size: 14px;
             color: #4caf50;
         }
 
         .gantt-summary p {
-            margin: 5px 0;
-            font-size: 14px;
+            margin: 3px 0;
+            font-size: 12px;
         }
 
         /* Generate Section */
         .generate-section {
             background-color: #e1f5fe;
-            border-left: 4px solid #03a9f4;
+            border-left: 3px solid #03a9f4;
         }
 
         .cost-estimate {
             background-color: white;
-            padding: 15px;
+            padding: 8px;
             border-radius: 4px;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             border: 2px solid #03a9f4;
             text-align: center;
         }
 
         .cost-estimate h3 {
-            margin: 0 0 5px 0;
-            font-size: 14px;
+            margin: 0 0 3px 0;
+            font-size: 12px;
             color: #666;
         }
 
         .cost-amount {
-            font-size: 28px;
+            font-size: 20px;
             font-weight: bold;
             color: #0277bd;
             margin: 0;
@@ -250,20 +302,20 @@
         /* Output Section */
         .output-section {
             background-color: #fce4ec;
-            border-left: 4px solid #e91e63;
+            border-left: 3px solid #e91e63;
         }
 
         .timesheet-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
-            margin-top: 15px;
+            font-size: 11px;
+            margin-top: 8px;
         }
 
         .timesheet-table th,
         .timesheet-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 4px;
             text-align: left;
         }
 
@@ -317,15 +369,15 @@
 
         /* Buttons */
         .btn {
-            padding: 10px 20px;
+            padding: 6px 14px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             transition: all 0.3s ease;
-            margin-right: 10px;
-            margin-bottom: 10px;
+            margin-right: 8px;
+            margin-bottom: 8px;
         }
 
         .btn:disabled {
@@ -465,12 +517,12 @@
 <body>
     <!-- Navigation Banner -->
     <div class="nav-banner">
-        <h1>PEBLGen</h1>
+        <h1>Labour</h1>
         <div class="nav-buttons">
             <a href="grants.html" class="nav-btn">Grants</a>
             <a href="spend.html" class="nav-btn">Spend</a>
             <a href="gantt.html" class="nav-btn">Gantt</a>
-            <a href="timesheet.html" class="nav-btn active">Timesheet</a>
+            <a href="timesheet.html" class="nav-btn active">Labour</a>
             <a href="index.html" class="nav-btn">Sketcher</a>
             <a href="exploit.html" class="nav-btn">Exploit</a>
             <a href="risks.html" class="nav-btn">Risks</a>
@@ -479,9 +531,17 @@
     </div>
 
     <div class="content-container">
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('timesheets')">Timesheets</button>
+            <button class="tab-btn" onclick="switchTab('allocation')">Labour Allocation</button>
+        </div>
+
+        <!-- Timesheets Tab -->
+        <div id="timesheets-tab" class="tab-content active">
         <!-- Section 1: System Prompt -->
         <div class="section system-prompt-section">
-            <h2 onclick="toggleSystemPrompt()" style="cursor: pointer;">1. System Prompt Configuration <span id="promptToggle">▼ Show</span></h2>
+            <h2 onclick="toggleSystemPrompt()" style="cursor: pointer;">System Prompt <span id="promptToggle">▼</span></h2>
             <textarea id="systemPrompt" style="display: none;" placeholder="Enter AI system prompt...">Generate technical work descriptions for weekly timesheets based on Gantt chart tasks.
 
 Keep it simple and technical:
@@ -516,31 +576,28 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
 
         <!-- Section 2: Forecast Data -->
         <div class="section forecast-section">
-            <h2>2. Forecast Data Input</h2>
-            <p class="instructions">Paste forecast data rows below the headers (without headers). Data should be tab-separated.</p>
+            <h2>Forecast Data</h2>
+            <p class="instructions">Paste tab-separated data (no headers)</p>
 
             <!-- Fixed Header Table -->
-            <table class="preview-table" style="margin-bottom: 15px;">
+            <table class="preview-table" style="margin-bottom: 8px;">
                 <thead>
                     <tr>
                         <th>Month</th>
                         <th>Staff</th>
-                        <th>Days Forecast</th>
-                        <th>Rate/day</th>
-                        <th>Hrs Forecast</th>
-                        <th>Hrs Remaining</th>
-                        <th>Hrs Spent</th>
+                        <th>Days</th>
+                        <th>Rate</th>
+                        <th>Hrs</th>
+                        <th>Remaining</th>
+                        <th>Spent</th>
                         <th>Ref</th>
-                        <th>Cost per month</th>
+                        <th>Cost</th>
                     </tr>
                 </thead>
             </table>
 
             <!-- Paste Area -->
-            <textarea id="forecastPasteArea" placeholder="Example (paste data rows only):
-Apr    Hardware / Consulation Lead / CW    7.92    162.00    63.33    0.00    63.33        1282.43
-Apr    Project Manager / CB    7.17    172.00    57.33    0.00    57.33        1232.60
-Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77" style="width: 100%; min-height: 120px; padding: 10px; border: 2px solid #ff9800; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; resize: vertical; margin-bottom: 10px;"></textarea>
+            <textarea id="forecastPasteArea" placeholder="Apr    Hardware / Lead / CW    7.92    162.00    63.33    0.00    63.33        1282.43" style="width: 100%; min-height: 80px; padding: 6px; border: 1px solid #ff9800; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11px; resize: vertical; margin-bottom: 6px;"></textarea>
 
             <button class="btn btn-primary" onclick="parseForecastData()">Parse Forecast Data</button>
 
@@ -550,69 +607,54 @@ Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77"
 
         <!-- Section 3: Load Gantt -->
         <div class="section gantt-section">
-            <h2>3. Load Gantt Chart</h2>
-            <p class="instructions">Load from localStorage or from a JSON file saved on your computer</p>
-            <p style="color: #666; font-size: 12px;">💡 <strong>Tip:</strong> Gantt JSON files are auto-saved to <code>PEBLGen/GanttCharts/</code> if you clicked "Set Save Folder" in the Gantt page.</p>
-            
-            <div style="margin-bottom: 15px;">
-                <label><strong>Option 1: Load from localStorage</strong></label>
+            <h2>Gantt</h2>
+
+            <div style="margin-bottom: 8px;">
                 <select id="ganttDropdown" class="gantt-dropdown">
-                    <option value="">-- Select a Gantt project --</option>
+                    <option value="">-- Select Gantt --</option>
                 </select>
-                <button class="btn btn-success" onclick="loadGanttProject()">Load Selected Gantt</button>
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-                <label><strong>Option 2: Load from JSON File</strong></label><br>
-                <button class="btn btn-info" onclick="document.getElementById('ganttFileInput').click()">Choose Gantt JSON File</button>
+                <button class="btn btn-success" onclick="loadGanttProject()">Load</button>
+                <button class="btn btn-info" onclick="document.getElementById('ganttFileInput').click()">JSON File</button>
                 <input type="file" id="ganttFileInput" accept=".json" style="display:none" onchange="loadGanttFromFile(event)">
-                <span id="selectedFileName" style="margin-left: 10px; color: #666;"></span>
+                <span id="selectedFileName" style="margin-left: 8px; color: #666; font-size: 11px;"></span>
             </div>
             
             <div id="ganttSummary"></div>
         </div>
 
-        <!-- Section 5: Processing Log -->
-        <div class="section log-section">
-            <h2>5. Processing Log</h2>
-            <div id="processingLog" style="background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;"></div>
-        </div>
-
-                <!-- Section 4: Generate Timesheet -->
+        <!-- Section 4: Generate Timesheet -->
         <div class="section generate-section">
-            <h2>4. Generate Timesheet Descriptions</h2>
+            <h2>Generate</h2>
             <div class="cost-estimate">
-                <h3>Estimated Cost</h3>
                 <p class="cost-amount">$<span id="estimatedCost">0.00</span></p>
-                <p style="margin-top: 5px; font-size: 12px; color: #666;">Based on GPT-4o pricing (~$0.005-0.015 per timesheet entry)</p>
             </div>
             <button class="btn btn-success" id="generateBtn" onclick="generateTimesheets()">
-                Generate Timesheet Descriptions
+                Generate
             </button>
         </div>
 
         <!-- Section 5: Processing Log -->
+        <div class="section log-section">
+            <h2>Log</h2>
+            <div id="processingLog" style="background: #1e1e1e; color: #00ff00; padding: 8px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 10px; max-height: 200px; overflow-y: auto; white-space: pre-wrap;"></div>
+        </div>
+
+        <!-- Section 6: Timesheet Output -->
         <div class="section output-section">
-            <h2>6. Timesheet Output</h2>
-            <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
-                💡 <strong>Tips:</strong>
-                • <strong>Drag to select</strong> multiple cells, then Ctrl+C to copy directly to Excel
-                • <strong>Double-click</strong> any cell to edit it (Enter or click away to save)
-                • "Copy Week Data Only" button copies all week columns without headers (starts from Week 1 In/Out)
-            </p>
+            <h2>Output</h2>
             <div id="validationWarnings"></div>
             <div id="timesheetOutput">
                 <p class="empty-state">Generate timesheet data to see output here.</p>
             </div>
         </div>
 
-        <!-- Section 6: Timesheet Output -->
+        <!-- Section 7: Export Options -->
         <div class="section">
-            <h2>7. Export Options</h2>
-            <button class="btn btn-info" onclick="copyForExcel()">Copy Week Data Only (No Headers)</button>
-            <button class="btn btn-warning" onclick="downloadCSV()">Download CSV</button>
-            <button class="btn btn-success" onclick="showHistory()">Show Generation History</button>
-            <button class="btn btn-danger" onclick="clearTimesheet()">Clear Timesheet</button>
+            <h2>Export</h2>
+            <button class="btn btn-info" onclick="copyForExcel()">Copy Weeks</button>
+            <button class="btn btn-warning" onclick="downloadCSV()">CSV</button>
+            <button class="btn btn-success" onclick="showHistory()">History</button>
+            <button class="btn btn-danger" onclick="clearTimesheet()">Clear</button>
         </div>
 
         <!-- History Modal (hidden by default) -->
@@ -623,23 +665,19 @@ Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77"
                 <button class="btn btn-secondary" onclick="closeHistory()">Close</button>
             </div>
         </div>
-    </div>
 
-        <!-- Section 8: Save Merged Payslips (Compact) -->
-        <div class="section" style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px;">
-            <h2 style="margin-bottom: 8px; font-size: 18px;">8. Merge Payslips</h2>
-            <p style="color: #666; font-size: 12px; margin: 0 0 10px 0;">Select parent "02 - Employees" folder. Check months per member, fetch, and merge PDFs.</p>
+        <!-- Section 8: Merge Payslips -->
+        <div class="section" style="background-color: #e8f5e9; border-left: 3px solid #4caf50;">
+            <h2>Merge Payslips</h2>
 
-            <!-- Compact Folder Selection -->
-            <div style="margin-bottom: 10px; padding: 8px; background: white; border-radius: 3px;">
-                <button class="btn btn-success" onclick="selectPayslipFolder()" style="padding: 4px 12px; font-size: 12px;">📁 Select "02 - Employees" Folder</button>
-                <span id="payslipFolderStatus" style="margin-left: 10px; color: #666; font-size: 11px;"></span>
+            <div style="margin-bottom: 8px;">
+                <button class="btn btn-success" onclick="selectPayslipFolder()">📁 Folder</button>
+                <span id="payslipFolderStatus" style="margin-left: 8px; color: #666; font-size: 11px;"></span>
             </div>
 
-            <!-- Compact Table with Per-Member Month Selection -->
-            <div style="margin-bottom: 10px; padding: 8px; background: white; border-radius: 3px; overflow-x: auto;">
-                <div style="margin-bottom: 8px;">
-                    <label style="font-weight: 500; font-size: 12px; margin-right: 8px;">Year:</label>
+            <div style="margin-bottom: 8px; overflow-x: auto;">
+                <div style="margin-bottom: 6px;">
+                    <label style="font-weight: 500; font-size: 11px; margin-right: 6px;">Year:</label>
                     <select id="payslipYear" style="padding: 3px; font-size: 11px; border-radius: 3px; border: 1px solid #ccc;">
                         <option value="2025" selected>2025</option>
                         <option value="2026">2026</option>
@@ -743,16 +781,73 @@ Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77"
                 </table>
             </div>
 
-            <!-- Compact Action Buttons -->
-            <div style="margin-bottom: 8px;">
-                <button class="btn btn-primary" id="fetchPayslipsBtn" onclick="fetchPayslips()" disabled style="padding: 4px 12px; font-size: 12px;">📄 Fetch</button>
-                <button class="btn btn-success" id="mergePayslipsBtn" onclick="mergePayslips()" style="display: none; padding: 4px 12px; font-size: 12px;">📦 Merge</button>
-                <span id="payslipCount" style="margin-left: 10px; font-size: 11px; color: #666;"></span>
+            <div style="margin-bottom: 6px;">
+                <button class="btn btn-primary" id="fetchPayslipsBtn" onclick="fetchPayslips()" disabled>Fetch</button>
+                <button class="btn btn-success" id="mergePayslipsBtn" onclick="mergePayslips()" style="display: none;">Merge</button>
+                <span id="payslipCount" style="margin-left: 8px; font-size: 11px; color: #666;"></span>
             </div>
 
-            <!-- Compact Fetched Display -->
-            <div id="fetchedPayslipsDisplay" style="display: none; padding: 6px; background: white; border-radius: 3px; font-size: 11px;">
+            <div id="fetchedPayslipsDisplay" style="display: none; font-size: 11px;">
                 <div id="fetchedPayslipsList"></div>
+            </div>
+        </div>
+
+        </div> <!-- End Timesheets Tab -->
+
+        <!-- Labour Allocation Tab -->
+        <div id="allocation-tab" class="tab-content">
+            <div class="section">
+                <h2>Labour Allocation</h2>
+
+                <div style="margin-bottom: 10px;">
+                    <button class="btn btn-success" onclick="addStaffRow()">+ Staff</button>
+                    <button class="btn btn-info" onclick="addProject()">+ Project</button>
+                    <button class="btn btn-secondary" onclick="showAllProjects()" style="background: #607D8B;">Show All</button>
+                    <button class="btn btn-warning" onclick="saveLabourData()">Save</button>
+                    <button class="btn btn-primary" onclick="loadLabourData()">Load</button>
+                    <button class="btn btn-danger" onclick="clearLabourData()">Clear</button>
+                </div>
+
+                <!-- Labour allocation table -->
+                <div style="overflow-x: auto; max-height: 70vh; overflow-y: auto;">
+                    <p style="font-size: 10px; color: #666; margin-bottom: 6px;">ⓘ Tip: Type = then click cells to add references. Hover cells for the drag handle (blue dot) to autofill formulas. All editable (yellow) cells support formulas!</p>
+                    <table id="labourTable" style="border-collapse: collapse; font-size: 11px; width: 100%; min-width: 1400px;" tabindex="0">
+                        <thead style="position: sticky; top: 0; z-index: 10; background: white;">
+                            <tr id="columnLetterRow" style="background: #f5f5f5;">
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; position: sticky; left: 0; z-index: 12; background: #f5f5f5;">A</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; position: sticky; left: 80px; z-index: 12; background: #f5f5f5;">B</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">C</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">D</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">E</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">F</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">G</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">H</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">I</th>
+                                <!-- Project column letters will be added dynamically here -->
+                            </tr>
+                            <tr id="projectHeaderRow">
+                                <th rowspan="2" style="border: 1px solid #ddd; padding: 4px; background: #2B7A78; color: white; min-width: 80px; position: sticky; left: 0; z-index: 12;">Month</th>
+                                <th rowspan="2" style="border: 1px solid #ddd; padding: 4px; background: #2B7A78; color: white; min-width: 150px; position: sticky; left: 80px; z-index: 12;">Staff</th>
+                                <th colspan="2" style="border: 1px solid #ddd; padding: 4px; background: #3AAFA9; color: white;">Payslip</th>
+                                <th colspan="5" style="border: 1px solid #ddd; padding: 4px; background: #3AAFA9; color: white;">Pay Details</th>
+                                <!-- Projects will be added dynamically here -->
+                            </tr>
+                            <tr id="columnHeaderRow">
+                                <th style="border: 1px solid #ddd; padding: 4px; background: #5ec4be; color: white; font-size: 10px;">Net</th>
+                                <th style="border: 1px solid #ddd; padding: 4px; background: #5ec4be; color: white; font-size: 10px;">Gross</th>
+                                <th style="border: 1px solid #ddd; padding: 4px; background: #5ec4be; color: white; font-size: 10px;">FTE</th>
+                                <th style="border: 1px solid #ddd; padding: 4px; background: #5ec4be; color: white; font-size: 10px;">£/yr (if full time)</th>
+                                <th style="border: 1px solid #ddd; padding: 4px; background: #5ec4be; color: white; font-size: 10px;">£/yr (as paid)</th>
+                                <th onclick="configureDailyRate()" style="border: 1px solid #ddd; padding: 4px; background: #5ec4be; color: white; font-size: 10px; cursor: pointer; user-select: none;" title="Click to configure working days per year">£/day ⚙</th>
+                                <th onclick="configureHourlyRate()" style="border: 1px solid #ddd; padding: 4px; background: #5ec4be; color: white; font-size: 10px; cursor: pointer; user-select: none;" title="Click to configure hours per day">£/hr ⚙</th>
+                                <!-- Project columns will be added dynamically here -->
+                            </tr>
+                        </thead>
+                        <tbody id="labourTableBody">
+                            <!-- Rows will be added dynamically -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -763,8 +858,7 @@ Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77"
         
         // Prompt for API key if not set
         if (!API_KEY) {
-            const key = prompt('Please enter your OpenAI API key:
-(It will be saved in browser localStorage)');
+            const key = prompt('Please enter your OpenAI API key:\n(It will be saved in browser localStorage)');
             if (key) {
                 localStorage.setItem('openai_api_key', key);
                 API_KEY = key;
@@ -778,13 +872,13 @@ Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77"
         function toggleSystemPrompt() {
             const textarea = document.getElementById('systemPrompt');
             const toggle = document.getElementById('promptToggle');
-            
+
             if (textarea.style.display === 'none') {
                 textarea.style.display = 'block';
-                toggle.textContent = '▲ Hide';
+                toggle.textContent = '▲';
             } else {
                 textarea.style.display = 'none';
-                toggle.textContent = '▼ Show';
+                toggle.textContent = '▼';
             }
         }
 
@@ -882,6 +976,27 @@ Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77"
         let ganttData = null;
         let timesheetData = [];
 
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Remove active from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            if (tabName === 'timesheets') {
+                document.getElementById('timesheets-tab').classList.add('active');
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+            } else if (tabName === 'allocation') {
+                document.getElementById('allocation-tab').classList.add('active');
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadGanttProjects();
@@ -944,9 +1059,8 @@ Apr    Engineer / JG    7.17    161.00    57.33    0.00    57.33        1153.77"
         function displayForecastPreview() {
             const preview = document.getElementById('forecastPreview');
 
-            let html = '<h3 style="margin-top: 20px; margin-bottom: 10px; font-size: 16px; color: #333;">Preview (Hrs Forecast highlighted for AI generation)</h3>';
-            html += '<table class="preview-table">';
-            html += '<thead><tr><th>Month</th><th>Staff</th><th style="background-color: #4CAF50;">Hrs Forecast</th></tr></thead>';
+            let html = '<table class="preview-table" style="margin-top: 8px;">';
+            html += '<thead><tr><th>Month</th><th>Staff</th><th>Hrs</th></tr></thead>';
             html += '<tbody>';
 
             forecastData.forEach(item => {
@@ -1736,6 +1850,1589 @@ Return JSON:
             localStorage.setItem('timesheetHistory', JSON.stringify(history));
             showHistory(); // Refresh
         }
+
+        // ============================================
+        // LABOUR ALLOCATION FUNCTIONALITY
+        // ============================================
+
+        let labourProjects = [];
+        let labourRows = [];
+        let hiddenProjects = new Set(); // Track which projects are hidden
+        let staffDatabase = []; // Staff members list
+        let workingDaysPerYear = 224; // Configurable days per year for £/day calculation
+        let hoursPerDay = 8; // Configurable hours per day for £/hr calculation
+
+        // Initialize labour allocation on page load
+        async function initLabourAllocation() {
+            // Try to load from cloud/localStorage first
+            try {
+                await ensureAuthenticated();
+
+                // Check if we have saved data in Supabase or localStorage
+                const { data: supabaseData } = await supabaseClient
+                    .from('labour_allocation')
+                    .select('allocation_data')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+
+                const hasSupabaseData = supabaseData && supabaseData.allocation_data;
+                const hasLocalData = localStorage.getItem('labour_allocation_data');
+
+                if (hasSupabaseData || hasLocalData) {
+                    // Load existing data
+                    await loadLabourData();
+                    return;
+                }
+            } catch (error) {
+                console.log('⚠️ Error checking for saved data:', error);
+            }
+
+            // Initialize with default projects if no saved data
+            labourProjects = [
+                { name: 'OceanOS Q3', color: '#e3f2fd' },
+                { name: 'SeaLens Cymru', color: '#f3e5f5' },
+                { name: 'PEBL-FLOW', color: '#e8f5e9' },
+                { name: 'Atlas', color: '#fff3e0' },
+                { name: 'BluePower', color: '#fce4ec' },
+                { name: 'eFloat', color: '#e0f7fa' }
+            ];
+
+            renderLabourTable();
+            console.log('✨ Initialized with default projects');
+        }
+
+        // Render the entire labour table
+        function renderLabourTable() {
+            renderProjectHeaders();
+            renderLabourRows();
+        }
+
+        // Render project headers
+        function renderProjectHeaders() {
+            const columnLetterRow = document.getElementById('columnLetterRow');
+            const projectHeaderRow = document.getElementById('projectHeaderRow');
+            const columnHeaderRow = document.getElementById('columnHeaderRow');
+
+            // Remove existing project headers
+            while (columnLetterRow.children.length > 9) {
+                columnLetterRow.removeChild(columnLetterRow.lastChild);
+            }
+            while (projectHeaderRow.children.length > 4) {
+                projectHeaderRow.removeChild(projectHeaderRow.lastChild);
+            }
+            while (columnHeaderRow.children.length > 7) {
+                columnHeaderRow.removeChild(columnHeaderRow.lastChild);
+            }
+
+            // Add project headers
+            labourProjects.forEach((project, idx) => {
+                const isHidden = hiddenProjects.has(idx);
+                const baseColIndex = 9 + (idx * 4); // 9 fixed columns + 4 columns per project
+
+                // Column letters (row 0)
+                for (let i = 0; i < 4; i++) {
+                    const letterTh = document.createElement('th');
+                    const colLetter = columnIndexToLetter(baseColIndex + i);
+                    letterTh.style.cssText = `border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;`;
+                    // Add visual separator to first column of each project
+                    if (idx > 0 && i === 0) {
+                        letterTh.style.borderLeft = '3px solid #90a4ae';
+                    }
+                    letterTh.textContent = colLetter;
+                    letterTh.dataset.projectIdx = idx;
+
+                    if (isHidden) {
+                        letterTh.style.display = 'none';
+                    }
+
+                    columnLetterRow.appendChild(letterTh);
+                }
+
+                // Project name header (row 1)
+                const projectTh = document.createElement('th');
+                projectTh.colSpan = 4; // Days, Rate, Total, Remaining
+                projectTh.style.cssText = `border: 1px solid #ddd; padding: 4px; background: ${project.color}; color: #333; position: relative;`;
+                // Add visual separator between projects
+                if (idx > 0) {
+                    projectTh.style.borderLeft = '3px solid #90a4ae';
+                }
+                projectTh.dataset.projectIdx = idx;
+                projectTh.innerHTML = `
+                    ${project.name}
+                    <button onclick="toggleProjectVisibility(${idx})" style="float: right; background: ${isHidden ? '#4CAF50' : '#FF9800'}; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 14px; margin-left: 4px; line-height: 1;" title="${isHidden ? 'Show project' : 'Hide project'}">${isHidden ? '+' : '−'}</button>
+                `;
+
+                if (isHidden) {
+                    projectTh.style.display = 'none';
+                }
+
+                projectHeaderRow.appendChild(projectTh);
+
+                // Column headers (row 2)
+                const headers = ['Days', '£/rate', 'Total', 'Remain'];
+                headers.forEach((header, headerIdx) => {
+                    const th = document.createElement('th');
+                    th.style.cssText = `border: 1px solid #ddd; padding: 4px; background: ${project.color}; color: #333; font-size: 10px; opacity: 0.9;`;
+                    // Add visual separator to first column of each project
+                    if (idx > 0 && headerIdx === 0) {
+                        th.style.borderLeft = '3px solid #90a4ae';
+                    }
+                    th.textContent = header;
+                    th.dataset.projectIdx = idx;
+
+                    if (isHidden) {
+                        th.style.display = 'none';
+                    }
+
+                    columnHeaderRow.appendChild(th);
+                });
+            });
+        }
+
+        // Render labour rows
+        function renderLabourRows() {
+            const tbody = document.getElementById('labourTableBody');
+            tbody.innerHTML = '';
+
+            if (labourRows.length === 0) {
+                // Add a default row
+                labourRows.push(createDefaultRow());
+            }
+
+            // Track month changes for alternating background colors and borders
+            let previousMonth = null;
+            let monthGroupIndex = 0;
+            const monthColors = ['#ffffff', '#f0f4ff']; // White alternating with light blue
+
+            labourRows.forEach((row, rowIdx) => {
+                const tr = document.createElement('tr');
+                const displayRowNum = rowIdx + 1; // 1-indexed for display
+                let colIdx = 0; // Track column index for cell references
+
+                // Add row number as data attribute for cell references
+                tr.dataset.rowNumber = displayRowNum;
+
+                // Detect month change
+                const isNewMonth = previousMonth !== null && previousMonth !== row.month;
+                if (isNewMonth) {
+                    monthGroupIndex = (monthGroupIndex + 1) % 2;
+                }
+                previousMonth = row.month;
+
+                // Apply background color to entire row based on month group
+                tr.style.backgroundColor = monthColors[monthGroupIndex];
+
+                // Add thick border on top of first row of new month
+                if (isNewMonth) {
+                    tr.style.borderTop = '3px solid #2B7A78';
+                }
+
+                // Month (dropdown) - STICKY with row number
+                const monthCell = createMonthDropdownCell(row.month, (val) => {
+                    labourRows[rowIdx].month = val;
+                    saveLabourData();
+                });
+                monthCell.style.position = 'sticky';
+                monthCell.style.left = '0';
+                monthCell.style.zIndex = '5';
+                monthCell.style.backgroundColor = monthColors[monthGroupIndex];
+                if (isNewMonth) {
+                    monthCell.style.borderTop = '3px solid #2B7A78';
+                }
+                // Add row number as a small prefix
+                const originalContent = monthCell.textContent;
+                monthCell.innerHTML = `<span style="font-size: 8px; color: #999; margin-right: 4px;">${displayRowNum}</span>${originalContent}`;
+                monthCell.dataset.colIdx = colIdx;
+                monthCell.title = `Cell: ${columnIndexToLetter(colIdx)}${displayRowNum}`;
+                colIdx++;
+                tr.appendChild(monthCell);
+
+                // Staff (dropdown with database) - STICKY
+                const staffCell = createStaffDropdownCell(row.staff, (val) => {
+                    labourRows[rowIdx].staff = val;
+                    saveLabourData();
+                });
+                staffCell.style.position = 'sticky';
+                staffCell.style.left = '80px';
+                staffCell.style.zIndex = '5';
+                staffCell.style.backgroundColor = monthColors[monthGroupIndex];
+                if (isNewMonth) {
+                    staffCell.style.borderTop = '3px solid #2B7A78';
+                }
+                staffCell.dataset.colIdx = colIdx++;
+                tr.appendChild(staffCell);
+
+                // Net (calculated)
+                const netCell = createCalculatedCell(row.net || 0);
+                netCell.dataset.colIdx = colIdx++;
+                tr.appendChild(netCell);
+
+                // Gross (calculated)
+                const grossCell = createCalculatedCell(row.gross || 0);
+                grossCell.dataset.colIdx = colIdx++;
+                tr.appendChild(grossCell);
+
+                // FTE (editable with formula support)
+                const fteDisplayValue = row.fte ? row.fte.toFixed(2) : '1.00';
+                const fteCell = createEditableCell(fteDisplayValue, 'number', (val, evaluated) => {
+                    labourRows[rowIdx].fte = evaluated.value;
+                    labourRows[rowIdx].fteFormula = evaluated.formula;
+                    recalculateRow(rowIdx);
+                    saveLabourData();
+                }, row.fteFormula);
+                fteCell.style.background = '#fffde7';
+                fteCell.dataset.colIdx = colIdx;
+                fteCell.title = `Cell: ${columnIndexToLetter(colIdx)}${displayRowNum}`;
+                colIdx++;
+                tr.appendChild(fteCell);
+
+                // £/yr (if full time) - editable with formula support
+                const yearlyDisplayValue = row.yearlyPay ? row.yearlyPay.toFixed(2) : '0';
+                const yearlyCell = createEditableCell(yearlyDisplayValue, 'number', (val, evaluated) => {
+                    labourRows[rowIdx].yearlyPay = evaluated.value;
+                    labourRows[rowIdx].yearlyPayFormula = evaluated.formula;
+                    recalculateRow(rowIdx);
+                    saveLabourData();
+                }, row.yearlyPayFormula);
+                yearlyCell.style.background = '#fffde7';
+                yearlyCell.dataset.colIdx = colIdx;
+                yearlyCell.title = `Cell: ${columnIndexToLetter(colIdx)}${displayRowNum}`;
+                colIdx++;
+                tr.appendChild(yearlyCell);
+
+                // £/yr (as paid) - calculated (accounts for FTE)
+                const yearlyAsPaidCell = createCalculatedCell(row.yearlyAsPaid || 0);
+                yearlyAsPaidCell.dataset.colIdx = colIdx++;
+                tr.appendChild(yearlyAsPaidCell);
+
+                // £/day (calculated)
+                const dailyCell = createCalculatedCell(row.dailyRate || 0);
+                dailyCell.dataset.colIdx = colIdx++;
+                tr.appendChild(dailyCell);
+
+                // £/hr (calculated)
+                const hourlyCell = createCalculatedCell(row.hourlyRate || 0);
+                hourlyCell.dataset.colIdx = colIdx++;
+                tr.appendChild(hourlyCell);
+
+                // Ensure formula fields exist for backward compatibility
+                if (row.fteFormula === undefined) row.fteFormula = null;
+                if (row.yearlyPayFormula === undefined) row.yearlyPayFormula = null;
+
+                // Project allocations
+                labourProjects.forEach((project, projIdx) => {
+                    if (!row.projects[projIdx]) {
+                        row.projects[projIdx] = { days: 0, daysFormula: null, rate: 0, rateFormula: null, total: 0, remaining: 0 };
+                    }
+                    // Ensure formula fields exist for backward compatibility
+                    if (row.projects[projIdx].daysFormula === undefined) {
+                        row.projects[projIdx].daysFormula = null;
+                    }
+                    if (row.projects[projIdx].rateFormula === undefined) {
+                        row.projects[projIdx].rateFormula = null;
+                    }
+
+                    const proj = row.projects[projIdx];
+                    const isHidden = hiddenProjects.has(projIdx);
+
+                    // Days (with formula support)
+                    const displayValue = proj.days ? proj.days.toFixed(2) : '0';
+                    const daysCell = createEditableCell(displayValue, 'number', (val, evaluated) => {
+                        labourRows[rowIdx].projects[projIdx].days = evaluated.value;
+                        labourRows[rowIdx].projects[projIdx].daysFormula = evaluated.formula;
+                        recalculateRow(rowIdx);
+                        saveLabourData();
+                    }, proj.daysFormula);
+                    daysCell.style.background = '#fffde7';
+                    // Add visual separator between projects
+                    if (projIdx > 0) {
+                        daysCell.style.borderLeft = '3px solid #90a4ae';
+                    }
+                    daysCell.dataset.projectIdx = projIdx;
+                    daysCell.dataset.rowIdx = rowIdx;
+                    daysCell.dataset.colIdx = colIdx;
+                    daysCell.title = `Cell: ${columnIndexToLetter(colIdx)}${displayRowNum}`;
+                    colIdx++;
+                    if (isHidden) daysCell.style.display = 'none';
+                    tr.appendChild(daysCell);
+
+                    // Rate (editable with formula support)
+                    const rateDisplayValue = proj.rate ? proj.rate.toFixed(2) : '0';
+                    const rateCell = createEditableCell(rateDisplayValue, 'number', (val, evaluated) => {
+                        labourRows[rowIdx].projects[projIdx].rate = evaluated.value;
+                        labourRows[rowIdx].projects[projIdx].rateFormula = evaluated.formula;
+                        recalculateRow(rowIdx);
+                        saveLabourData();
+                    }, proj.rateFormula);
+                    rateCell.style.background = '#fffde7';
+                    rateCell.dataset.projectIdx = projIdx;
+                    rateCell.dataset.colIdx = colIdx;
+                    rateCell.title = `Cell: ${columnIndexToLetter(colIdx)}${displayRowNum}`;
+                    colIdx++;
+                    if (isHidden) rateCell.style.display = 'none';
+                    tr.appendChild(rateCell);
+
+                    // Total (calculated)
+                    const totalCell = createCalculatedCell(proj.total || 0);
+                    totalCell.style.background = '#e8f5e9';
+                    totalCell.dataset.projectIdx = projIdx;
+                    totalCell.dataset.colIdx = colIdx++;
+                    if (isHidden) totalCell.style.display = 'none';
+                    tr.appendChild(totalCell);
+
+                    // Remaining (calculated)
+                    const remainCell = createCalculatedCell(proj.remaining || 0);
+                    remainCell.style.background = proj.remaining < 0 ? '#ffcdd2' : '#e8f5e9';
+                    remainCell.dataset.projectIdx = projIdx;
+                    remainCell.dataset.colIdx = colIdx++;
+                    if (isHidden) remainCell.style.display = 'none';
+                    tr.appendChild(remainCell);
+                });
+
+                // Delete row button
+                const deleteCell = document.createElement('td');
+                deleteCell.style.cssText = 'border: 1px solid #ddd; padding: 4px; text-align: center;';
+                deleteCell.innerHTML = `<button onclick="deleteRow(${rowIdx})" style="background: #f44336; color: white; border: none; padding: 2px 8px; cursor: pointer; border-radius: 3px; font-size: 10px;">Delete</button>`;
+                tr.appendChild(deleteCell);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Create month dropdown cell
+        function createMonthDropdownCell(value, onchange) {
+            const td = document.createElement('td');
+            td.style.cssText = 'border: 1px solid #ddd; padding: 4px; cursor: pointer;';
+            td.textContent = value || '';
+
+            td.addEventListener('click', function() {
+                // Prevent multiple dropdowns
+                if (td.querySelector('select')) return;
+
+                const select = document.createElement('select');
+                select.style.cssText = 'width: 100%; border: 2px solid #2196F3; padding: 2px; font-size: 11px;';
+
+                // Generate months (current year and next 2 years)
+                const currentYear = new Date().getFullYear();
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+                for (let year = currentYear - 1; year <= currentYear + 2; year++) {
+                    for (let month = 0; month < 12; month++) {
+                        const monthValue = `${year}-${String(month + 1).padStart(2, '0')}`;
+                        const option = document.createElement('option');
+                        option.value = monthValue;
+                        option.textContent = `${months[month]}-${year}`;
+                        if (monthValue === value) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    }
+                }
+
+                let isChanging = false;
+
+                select.addEventListener('change', function() {
+                    isChanging = true;
+                    const newValue = select.value;
+                    td.textContent = newValue;
+                    if (onchange) onchange(newValue);
+                    setTimeout(() => isChanging = false, 100);
+                });
+
+                select.addEventListener('blur', function() {
+                    if (!isChanging) {
+                        // User closed without selecting, restore original value
+                        td.textContent = value || '';
+                    }
+                });
+
+                select.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        const newValue = select.value;
+                        td.textContent = newValue;
+                        if (onchange) onchange(newValue);
+                        select.blur();
+                    }
+                    if (e.key === 'Escape') {
+                        td.textContent = value || '';
+                        select.blur();
+                    }
+                });
+
+                td.textContent = '';
+                td.appendChild(select);
+                select.focus();
+
+                // Open dropdown automatically
+                setTimeout(() => {
+                    if (select.showPicker) {
+                        select.showPicker();
+                    } else {
+                        select.click();
+                    }
+                }, 50);
+            });
+
+            return td;
+        }
+
+        // Create staff dropdown cell with database
+        function createStaffDropdownCell(value, onchange) {
+            const td = document.createElement('td');
+            td.style.cssText = 'border: 1px solid #ddd; padding: 4px; cursor: pointer;';
+            td.textContent = value || '';
+
+            td.addEventListener('click', function() {
+                // Prevent multiple dropdowns
+                if (td.querySelector('select')) return;
+
+                const select = document.createElement('select');
+                select.style.cssText = 'width: 100%; border: 2px solid #2196F3; padding: 2px; font-size: 11px;';
+
+                // Add empty option
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = '-- Select Staff --';
+                select.appendChild(emptyOption);
+
+                // Add existing staff from database
+                staffDatabase.forEach(staff => {
+                    const option = document.createElement('option');
+                    option.value = staff;
+                    option.textContent = staff;
+                    if (staff === value) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+
+                // Add "Add new staff" option
+                const addNewOption = document.createElement('option');
+                addNewOption.value = '__ADD_NEW__';
+                addNewOption.textContent = '+ Add New Staff';
+                addNewOption.style.fontWeight = 'bold';
+                addNewOption.style.color = '#4CAF50';
+                select.appendChild(addNewOption);
+
+                let isChanging = false;
+
+                select.addEventListener('change', function() {
+                    isChanging = true;
+
+                    if (select.value === '__ADD_NEW__') {
+                        // Prompt for new staff name
+                        const newStaff = prompt('Enter new staff member name / initials:');
+                        if (newStaff && newStaff.trim()) {
+                            const trimmedStaff = newStaff.trim();
+                            // Add to database if not already exists
+                            if (!staffDatabase.includes(trimmedStaff)) {
+                                staffDatabase.push(trimmedStaff);
+                                staffDatabase.sort(); // Keep alphabetically sorted
+                                saveLabourData();
+                            }
+                            // Set the value
+                            td.textContent = trimmedStaff;
+                            if (onchange) onchange(trimmedStaff);
+                        } else {
+                            // User cancelled, restore original value
+                            td.textContent = value || '';
+                        }
+                    } else {
+                        // Regular selection
+                        td.textContent = select.value;
+                        if (onchange) onchange(select.value);
+                    }
+
+                    setTimeout(() => isChanging = false, 100);
+                });
+
+                select.addEventListener('blur', function() {
+                    if (!isChanging) {
+                        // User closed without selecting, restore original value
+                        td.textContent = value || '';
+                    }
+                });
+
+                select.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        select.dispatchEvent(new Event('change'));
+                        select.blur();
+                    }
+                    if (e.key === 'Escape') {
+                        td.textContent = value || '';
+                        select.blur();
+                    }
+                });
+
+                td.textContent = '';
+                td.appendChild(select);
+                select.focus();
+
+                // Open dropdown automatically
+                setTimeout(() => {
+                    if (select.showPicker) {
+                        select.showPicker();
+                    } else {
+                        select.click();
+                    }
+                }, 50);
+            });
+
+            return td;
+        }
+
+        // Convert column index to Excel-style letter (0=A, 25=Z, 26=AA, 27=AB, etc.)
+        function columnIndexToLetter(index) {
+            let letter = '';
+            while (index >= 0) {
+                letter = String.fromCharCode((index % 26) + 65) + letter;
+                index = Math.floor(index / 26) - 1;
+            }
+            return letter;
+        }
+
+        // Get cell value by reference (e.g., "A1", "AF67")
+        function getCellValue(cellRef) {
+            // Parse cell reference (e.g., "AF67" -> column: AF, row: 67)
+            const match = cellRef.match(/^([A-Z]+)(\d+)$/);
+            if (!match) return 0;
+
+            const colLetters = match[1];
+            const rowNum = parseInt(match[2]) - 1; // Convert to 0-indexed
+
+            // Convert column letters to index
+            let colIndex = 0;
+            for (let i = 0; i < colLetters.length; i++) {
+                colIndex = colIndex * 26 + (colLetters.charCodeAt(i) - 64);
+            }
+            colIndex -= 1; // Convert to 0-indexed
+
+            // Find the cell in the table using data attributes
+            const tbody = document.getElementById('labourTableBody');
+            if (!tbody || rowNum >= labourRows.length) return 0;
+
+            const row = tbody.children[rowNum];
+            if (!row) return 0;
+
+            // Find cell with matching colIdx
+            const cells = Array.from(row.children);
+            const cell = cells.find(c => parseInt(c.dataset.colIdx) === colIndex);
+            if (!cell) return 0;
+
+            // Get the value from the cell's textContent
+            // Remove any HTML tags and extract just the number
+            const textContent = cell.textContent.replace(/[^\d.\-]/g, '');
+            const value = parseFloat(textContent) || 0;
+            return value;
+        }
+
+        // Evaluate formula (Excel-like: =86/12 or =AF67/AI67)
+        function evaluateFormula(input) {
+            if (typeof input !== 'string' || !input.startsWith('=')) {
+                return { isFormula: false, value: parseFloat(input) || 0, formula: null };
+            }
+
+            try {
+                let expression = input.substring(1).trim(); // Remove '='
+
+                // Replace cell references with their values (e.g., AF67 -> 123.45)
+                expression = expression.replace(/([A-Z]+\d+)/g, (match) => {
+                    const cellValue = getCellValue(match);
+                    return cellValue.toString();
+                });
+
+                // Security: Only allow numbers, basic operators, parentheses, and dots
+                if (!/^[\d\s+\-*/(). ]+$/.test(expression)) {
+                    throw new Error('Invalid characters in formula');
+                }
+
+                // Evaluate the expression safely
+                const result = Function('"use strict"; return (' + expression + ')')();
+
+                if (isNaN(result) || !isFinite(result)) {
+                    throw new Error('Invalid result');
+                }
+
+                return { isFormula: true, value: result, formula: input };
+            } catch (error) {
+                console.error('Formula evaluation error:', error);
+                return { isFormula: true, value: 0, formula: input, error: true };
+            }
+        }
+
+        // Adjust cell references in formula based on offset (like Excel autofill)
+        function adjustFormulaReferences(formula, rowOffset, colOffset) {
+            if (!formula || !formula.startsWith('=')) return formula;
+
+            // Match cell references like A1, AB23, etc.
+            return formula.replace(/([A-Z]+)(\d+)/g, (match, colLetters, rowNum) => {
+                // Convert column letters to index
+                let colIndex = 0;
+                for (let i = 0; i < colLetters.length; i++) {
+                    colIndex = colIndex * 26 + (colLetters.charCodeAt(i) - 64);
+                }
+                colIndex -= 1; // Convert to 0-indexed
+
+                // Apply offsets
+                const newColIndex = colIndex + colOffset;
+                const newRowNum = parseInt(rowNum) + rowOffset;
+
+                // Convert back to letters
+                const newColLetters = columnIndexToLetter(newColIndex);
+                return newColLetters + newRowNum;
+            });
+        }
+
+        // Highlight cells in drag range
+        function highlightDragRange(startRow, startCol, endRow, endCol) {
+            const tbody = document.getElementById('labourTableBody');
+            if (!tbody) return;
+
+            const minRow = Math.min(startRow, endRow);
+            const maxRow = Math.max(startRow, endRow);
+            const minCol = Math.min(startCol, endCol);
+            const maxCol = Math.max(startCol, endCol);
+
+            for (let r = minRow; r <= maxRow; r++) {
+                const row = tbody.children[r];
+                if (!row) continue;
+
+                for (let c = minCol; c <= maxCol; c++) {
+                    const cells = Array.from(row.children);
+                    const cell = cells.find(td => parseInt(td.dataset.colIdx) === c);
+
+                    if (cell && cell.dataset.cellType === 'editable') {
+                        cell.classList.add('drag-highlight');
+                        cell.dataset.originalBg = cell.style.background || '#fffde7';
+                        cell.style.background = '#bbdefb';
+                    }
+                }
+            }
+        }
+
+        // Fill cells in drag range with adjusted formulas
+        function fillDragRange(startRow, startCol, endRow, endCol, sourceCell) {
+            const tbody = document.getElementById('labourTableBody');
+            if (!tbody) return;
+
+            const sourceFormula = sourceCell.dataset.formula;
+            const sourceValue = sourceCell.textContent;
+
+            const minRow = Math.min(startRow, endRow);
+            const maxRow = Math.max(startRow, endRow);
+            const minCol = Math.min(startCol, endCol);
+            const maxCol = Math.max(startCol, endCol);
+
+            for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    // Skip the source cell
+                    if (r === startRow && c === startCol) continue;
+
+                    const rowOffset = r - startRow;
+                    const colOffset = c - startCol;
+
+                    // Adjust formula references
+                    const adjustedFormula = adjustFormulaReferences(sourceFormula, rowOffset, colOffset);
+
+                    // Find the target cell
+                    const row = tbody.children[r];
+                    if (!row) continue;
+
+                    const cells = Array.from(row.children);
+                    const targetCell = cells.find(td => parseInt(td.dataset.colIdx) === c);
+
+                    if (targetCell && targetCell.dataset.cellType === 'editable') {
+                        if (adjustedFormula && adjustedFormula.startsWith('=')) {
+                            // Evaluate and apply formula
+                            const evaluated = evaluateFormula(adjustedFormula);
+                            targetCell.textContent = evaluated.error ? '#ERROR' : evaluated.value;
+                            targetCell.dataset.formula = adjustedFormula;
+                            targetCell.style.color = evaluated.error ? 'red' : '';
+
+                            // Trigger onchange callback if we can find it
+                            // This updates the underlying data
+                            triggerCellUpdate(r, c, adjustedFormula, evaluated);
+                        } else {
+                            // No formula, just copy the value
+                            targetCell.textContent = sourceValue;
+                            targetCell.dataset.formula = '';
+
+                            // Trigger update with plain value
+                            const evaluated = { isFormula: false, value: parseFloat(sourceValue) || 0, formula: null };
+                            triggerCellUpdate(r, c, sourceValue, evaluated);
+                        }
+                    }
+                }
+            }
+
+            // Re-render the table to ensure all calculations are updated
+            renderLabourRows();
+        }
+
+        // Trigger cell update to sync with underlying data
+        function triggerCellUpdate(rowIdx, colIdx, value, evaluated) {
+            if (rowIdx >= labourRows.length) return;
+
+            const row = labourRows[rowIdx];
+
+            // Map column index to field
+            if (colIdx === 4) { // FTE
+                row.fte = evaluated.value;
+                row.fteFormula = evaluated.formula;
+                recalculateRow(rowIdx);
+            } else if (colIdx === 5) { // yearlyPay
+                row.yearlyPay = evaluated.value;
+                row.yearlyPayFormula = evaluated.formula;
+                recalculateRow(rowIdx);
+            } else if (colIdx >= 9) { // Project columns
+                const projectColIdx = colIdx - 9;
+                const projectIdx = Math.floor(projectColIdx / 4);
+                const fieldInProject = projectColIdx % 4;
+
+                if (projectIdx < labourProjects.length && row.projects[projectIdx]) {
+                    if (fieldInProject === 0) { // Days
+                        row.projects[projectIdx].days = evaluated.value;
+                        row.projects[projectIdx].daysFormula = evaluated.formula;
+                        recalculateRow(rowIdx);
+                    } else if (fieldInProject === 1) { // Rate
+                        row.projects[projectIdx].rate = evaluated.value;
+                        row.projects[projectIdx].rateFormula = evaluated.formula;
+                        recalculateRow(rowIdx);
+                    }
+                }
+            }
+
+            saveLabourData();
+        }
+
+        // Create editable cell (with formula support and drag handle)
+        function createEditableCell(value, type, onchange, formulaValue = null) {
+            const td = document.createElement('td');
+            td.style.cssText = 'border: 1px solid #ddd; padding: 4px; cursor: pointer; position: relative;';
+            td.textContent = value || '';
+
+            // Store formula for copy/paste
+            td.dataset.formula = formulaValue || '';
+            td.dataset.cellType = 'editable';
+
+            // Add drag handle (small square in bottom-right corner)
+            const dragHandle = document.createElement('div');
+            dragHandle.style.cssText = `
+                position: absolute;
+                bottom: 0;
+                right: 0;
+                width: 6px;
+                height: 6px;
+                background: #2196F3;
+                cursor: crosshair;
+                display: none;
+                z-index: 10;
+            `;
+            dragHandle.className = 'cell-drag-handle';
+
+            // Show drag handle on hover
+            td.addEventListener('mouseenter', function() {
+                dragHandle.style.display = 'block';
+            });
+            td.addEventListener('mouseleave', function() {
+                if (!td.dataset.dragging) {
+                    dragHandle.style.display = 'none';
+                }
+            });
+
+            // Drag handle functionality
+            let isDragging = false;
+            let startCell = null;
+            let startRowIdx = null;
+            let startColIdx = null;
+
+            dragHandle.addEventListener('mousedown', function(e) {
+                e.stopPropagation();
+                isDragging = true;
+                td.dataset.dragging = 'true';
+                startCell = td;
+
+                // Get starting position
+                const row = td.parentElement;
+                startRowIdx = parseInt(row.dataset.rowNumber) - 1; // Convert to 0-indexed
+                startColIdx = parseInt(td.dataset.colIdx);
+
+                // Add visual feedback
+                td.style.background = '#e3f2fd';
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+
+                // Find the cell we're hovering over
+                const targetElement = document.elementFromPoint(e.clientX, e.clientY);
+                const targetCell = targetElement?.closest('td');
+
+                if (targetCell && targetCell.dataset.cellType === 'editable') {
+                    // Highlight cells in the drag range
+                    const targetRow = targetCell.parentElement;
+                    const endRowIdx = parseInt(targetRow.dataset.rowNumber) - 1;
+                    const endColIdx = parseInt(targetCell.dataset.colIdx);
+
+                    // Clear previous highlights
+                    document.querySelectorAll('.drag-highlight').forEach(cell => {
+                        cell.classList.remove('drag-highlight');
+                        const origBg = cell.dataset.originalBg || '#fffde7';
+                        cell.style.background = origBg;
+                    });
+
+                    // Highlight cells in range
+                    highlightDragRange(startRowIdx, startColIdx, endRowIdx, endColIdx);
+                }
+            }
+
+            function onMouseUp(e) {
+                if (!isDragging) return;
+
+                isDragging = false;
+                delete td.dataset.dragging;
+                dragHandle.style.display = 'none';
+
+                // Get end position
+                const targetElement = document.elementFromPoint(e.clientX, e.clientY);
+                const targetCell = targetElement?.closest('td');
+
+                if (targetCell && targetCell.dataset.cellType === 'editable') {
+                    const targetRow = targetCell.parentElement;
+                    const endRowIdx = parseInt(targetRow.dataset.rowNumber) - 1;
+                    const endColIdx = parseInt(targetCell.dataset.colIdx);
+
+                    // Fill cells with adjusted formulas
+                    fillDragRange(startRowIdx, startColIdx, endRowIdx, endColIdx, startCell);
+                }
+
+                // Clear highlights
+                document.querySelectorAll('.drag-highlight').forEach(cell => {
+                    cell.classList.remove('drag-highlight');
+                    const origBg = cell.dataset.originalBg || '#fffde7';
+                    cell.style.background = origBg;
+                });
+
+                // Restore original background
+                const origBg = td.dataset.originalBg || '#fffde7';
+                td.style.background = origBg;
+
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            td.appendChild(dragHandle);
+
+            td.addEventListener('click', function(e) {
+                // Don't open editor if clicking drag handle
+                if (e.target.classList.contains('cell-drag-handle')) return;
+
+                const input = document.createElement('input');
+                input.type = 'text'; // Always use text to allow formulas
+                input.value = formulaValue || value || '';
+                input.style.cssText = 'width: 100%; border: 2px solid #2196F3; padding: 2px; font-size: 11px;';
+                input.dataset.isFormula = input.value.startsWith('=');
+
+                // Enable cell click to add reference mode
+                let cellClickHandler = null;
+
+                input.addEventListener('input', function() {
+                    const isFormula = input.value.startsWith('=');
+                    if (isFormula && !cellClickHandler) {
+                        // Add cell click listener
+                        cellClickHandler = function(e) {
+                            const clickedCell = e.target.closest('td');
+                            if (clickedCell && clickedCell !== td && clickedCell.dataset.colIdx !== undefined) {
+                                const row = clickedCell.parentElement;
+                                const rowNum = row.dataset.rowNumber;
+                                const colIdx = parseInt(clickedCell.dataset.colIdx);
+                                const cellRef = columnIndexToLetter(colIdx) + rowNum;
+
+                                // Insert cell reference at cursor position
+                                const cursorPos = input.selectionStart;
+                                const textBefore = input.value.substring(0, cursorPos);
+                                const textAfter = input.value.substring(cursorPos);
+                                input.value = textBefore + cellRef + textAfter;
+
+                                // Move cursor after inserted reference
+                                const newPos = cursorPos + cellRef.length;
+                                input.setSelectionRange(newPos, newPos);
+                                input.focus();
+
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        };
+                        document.addEventListener('click', cellClickHandler, true);
+                    } else if (!isFormula && cellClickHandler) {
+                        // Remove cell click listener if formula is deleted
+                        document.removeEventListener('click', cellClickHandler, true);
+                        cellClickHandler = null;
+                    }
+                });
+
+                input.addEventListener('blur', function() {
+                    // Clean up cell click listener
+                    if (cellClickHandler) {
+                        document.removeEventListener('click', cellClickHandler, true);
+                        cellClickHandler = null;
+                    }
+
+                    const newValue = input.value;
+
+                    // Check if it's a formula
+                    if (newValue.startsWith('=')) {
+                        const evaluated = evaluateFormula(newValue);
+
+                        if (!evaluated.error) {
+                            td.textContent = evaluated.value;
+                            td.dataset.formula = evaluated.formula;
+                            td.style.color = '';
+                            if (onchange) onchange(newValue, evaluated);
+                        } else {
+                            td.textContent = '#ERROR';
+                            td.dataset.formula = evaluated.formula;
+                            td.style.color = 'red';
+                            if (onchange) onchange(newValue, evaluated);
+                        }
+                    } else {
+                        // Not a formula, just plain value
+                        td.textContent = newValue;
+                        td.dataset.formula = '';
+                        td.style.color = '';
+                        if (onchange) onchange(newValue, { isFormula: false, value: parseFloat(newValue) || 0, formula: null });
+                    }
+                });
+
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        input.blur();
+                    }
+                    if (e.key === 'Escape') {
+                        // Clean up cell click listener
+                        if (cellClickHandler) {
+                            document.removeEventListener('click', cellClickHandler, true);
+                            cellClickHandler = null;
+                        }
+                        td.textContent = value || '';
+                        input.blur();
+                    }
+                });
+
+                // Enable cell click mode immediately if editing formula
+                if (input.value.startsWith('=')) {
+                    cellClickHandler = function(e) {
+                        const clickedCell = e.target.closest('td');
+                        if (clickedCell && clickedCell !== td && clickedCell.dataset.colIdx !== undefined) {
+                            const row = clickedCell.parentElement;
+                            const rowNum = row.dataset.rowNumber;
+                            const colIdx = parseInt(clickedCell.dataset.colIdx);
+                            const cellRef = columnIndexToLetter(colIdx) + rowNum;
+
+                            // Insert cell reference at cursor position
+                            const cursorPos = input.selectionStart;
+                            const textBefore = input.value.substring(0, cursorPos);
+                            const textAfter = input.value.substring(cursorPos);
+                            input.value = textBefore + cellRef + textAfter;
+
+                            // Move cursor after inserted reference
+                            const newPos = cursorPos + cellRef.length;
+                            input.setSelectionRange(newPos, newPos);
+                            input.focus();
+
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    };
+                    document.addEventListener('click', cellClickHandler, true);
+                }
+
+                td.textContent = '';
+                td.appendChild(input);
+                input.focus();
+                input.select();
+            });
+
+            // Add copy/paste support
+            td.addEventListener('copy', function(e) {
+                e.preventDefault();
+                const formula = td.dataset.formula || td.textContent;
+                e.clipboardData.setData('text/plain', formula);
+            });
+
+            td.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pastedText = e.clipboardData.getData('text/plain');
+
+                if (pastedText.startsWith('=')) {
+                    const evaluated = evaluateFormula(pastedText);
+
+                    if (!evaluated.error) {
+                        td.textContent = evaluated.value;
+                        td.dataset.formula = evaluated.formula;
+                        td.style.color = '';
+                        if (onchange) onchange(pastedText, evaluated);
+                    } else {
+                        td.textContent = '#ERROR';
+                        td.dataset.formula = evaluated.formula;
+                        td.style.color = 'red';
+                        if (onchange) onchange(pastedText, evaluated);
+                    }
+                } else {
+                    td.textContent = pastedText;
+                    td.dataset.formula = '';
+                    td.style.color = '';
+                    if (onchange) onchange(pastedText, { isFormula: false, value: parseFloat(pastedText) || 0, formula: null });
+                }
+            });
+
+            return td;
+        }
+
+
+        // Create calculated (read-only) cell
+        function createCalculatedCell(value) {
+            const td = document.createElement('td');
+            td.style.cssText = 'border: 1px solid #ddd; padding: 4px; background: #f5f5f5; color: #666; font-weight: 500;';
+            const formatted = typeof value === 'number' ? value.toFixed(2) : value;
+            td.textContent = formatted;
+            return td;
+        }
+
+        // Create default row
+        function createDefaultRow() {
+            const projects = labourProjects.map(() => ({
+                days: 0,
+                daysFormula: null,
+                rate: 0,
+                rateFormula: null,
+                total: 0,
+                remaining: 0
+            }));
+            return {
+                month: new Date().toISOString().split('T')[0].substring(0, 7), // YYYY-MM
+                staff: '',
+                net: 0,
+                gross: 0,
+                fte: 1.0,
+                fteFormula: null,
+                yearlyPay: 0,
+                yearlyPayFormula: null,
+                yearlyAsPaid: 0,
+                dailyRate: 0,
+                hourlyRate: 0,
+                projects: projects
+            };
+        }
+
+        // Recalculate row
+        function recalculateRow(rowIdx) {
+            const row = labourRows[rowIdx];
+
+            // Calculate everything from yearlyPay (£/yr if full time) and FTE
+            if (row.yearlyPay > 0 && row.fte > 0) {
+                // Calculate actual paid amount (accounting for FTE)
+                row.yearlyAsPaid = row.yearlyPay * row.fte;
+
+                // Calculate monthly gross from yearly as paid
+                row.gross = row.yearlyAsPaid / 12;
+
+                // Calculate net (assuming 80% take-home after tax/NI)
+                row.net = row.gross * 0.8;
+
+                // Calculate daily rate (based on full-time rate and configurable working days)
+                row.dailyRate = row.yearlyPay / workingDaysPerYear;
+
+                // Calculate hourly rate (based on daily rate and configurable hours per day)
+                row.hourlyRate = row.dailyRate / hoursPerDay;
+            } else {
+                // If either is 0, reset calculated fields
+                row.yearlyAsPaid = 0;
+                row.gross = 0;
+                row.net = 0;
+                row.dailyRate = 0;
+                row.hourlyRate = 0;
+            }
+
+            // Calculate project totals
+            let runningRemaining = row.gross;
+            row.projects.forEach(proj => {
+                proj.total = proj.days * proj.rate;
+                runningRemaining -= proj.total;
+                proj.remaining = runningRemaining;
+            });
+
+            renderLabourRows();
+            saveLabourData();
+        }
+
+        // Add staff row
+        function addStaffRow() {
+            labourRows.push(createDefaultRow());
+            renderLabourRows();
+            saveLabourData();
+        }
+
+        // Delete row
+        function deleteRow(rowIdx) {
+            if (confirm('Delete this row?')) {
+                labourRows.splice(rowIdx, 1);
+                renderLabourRows();
+                saveLabourData();
+            }
+        }
+
+        // Add project
+        function addProject() {
+            const name = prompt('Enter project name:');
+            if (name) {
+                const colors = ['#e3f2fd', '#f3e5f5', '#e8f5e9', '#fff3e0', '#fce4ec', '#e0f7fa'];
+                const color = colors[labourProjects.length % colors.length];
+                labourProjects.push({ name, color });
+
+                // Add project to all existing rows
+                labourRows.forEach(row => {
+                    row.projects.push({ days: 0, daysFormula: null, rate: 0, rateFormula: null, total: 0, remaining: 0 });
+                });
+
+                renderLabourTable();
+                saveLabourData();
+            }
+        }
+
+        // Remove project
+        function removeProject(projIdx) {
+            if (confirm(`Remove project "${labourProjects[projIdx].name}"?`)) {
+                labourProjects.splice(projIdx, 1);
+
+                // Remove project from all rows
+                labourRows.forEach(row => {
+                    row.projects.splice(projIdx, 1);
+                });
+
+                // Update hidden projects set (shift indices)
+                const newHidden = new Set();
+                hiddenProjects.forEach(idx => {
+                    if (idx < projIdx) {
+                        newHidden.add(idx);
+                    } else if (idx > projIdx) {
+                        newHidden.add(idx - 1);
+                    }
+                });
+                hiddenProjects = newHidden;
+
+                renderLabourTable();
+                saveLabourData();
+            }
+        }
+
+        // Configure daily rate calculation (working days per year)
+        function configureDailyRate() {
+            const newValue = prompt(
+                `Configure daily rate calculation:\n\nEnter working days per year (currently: ${workingDaysPerYear}):\n\nNote: Standard UK = 224 days (52 weeks × 5 days - 8 bank holidays - 28 days holiday)`,
+                workingDaysPerYear
+            );
+
+            if (newValue !== null && newValue.trim() !== '') {
+                const parsedValue = parseFloat(newValue);
+                if (!isNaN(parsedValue) && parsedValue > 0 && parsedValue <= 365) {
+                    workingDaysPerYear = parsedValue;
+
+                    // Recalculate all rows
+                    labourRows.forEach((row, idx) => recalculateRow(idx));
+
+                    saveLabourData();
+                    showToast(`Daily rate now calculated using ${workingDaysPerYear} working days per year`, 'success');
+                } else {
+                    alert('Please enter a valid number between 1 and 365');
+                }
+            }
+        }
+
+        // Configure hourly rate calculation (hours per day)
+        function configureHourlyRate() {
+            const newValue = prompt(
+                `Configure hourly rate calculation:\n\nEnter hours per working day (currently: ${hoursPerDay}):\n\nNote: Standard = 8 hours per day`,
+                hoursPerDay
+            );
+
+            if (newValue !== null && newValue.trim() !== '') {
+                const parsedValue = parseFloat(newValue);
+                if (!isNaN(parsedValue) && parsedValue > 0 && parsedValue <= 24) {
+                    hoursPerDay = parsedValue;
+
+                    // Recalculate all rows
+                    labourRows.forEach((row, idx) => recalculateRow(idx));
+
+                    saveLabourData();
+                    showToast(`Hourly rate now calculated using ${hoursPerDay} hours per day`, 'success');
+                } else {
+                    alert('Please enter a valid number between 1 and 24');
+                }
+            }
+        }
+
+        // Toggle project visibility
+        function toggleProjectVisibility(projIdx) {
+            if (hiddenProjects.has(projIdx)) {
+                hiddenProjects.delete(projIdx);
+            } else {
+                hiddenProjects.add(projIdx);
+            }
+
+            // Toggle visibility of header cells
+            const projectHeaders = document.querySelectorAll(`[data-project-idx="${projIdx}"]`);
+            projectHeaders.forEach(cell => {
+                if (hiddenProjects.has(projIdx)) {
+                    cell.style.display = 'none';
+                } else {
+                    cell.style.display = '';
+                }
+            });
+
+            // Update button text/color
+            renderProjectHeaders();
+            saveLabourData();
+        }
+
+        // Show all projects (unhide all minimized projects)
+        function showAllProjects() {
+            if (hiddenProjects.size === 0) {
+                showToast('All projects are already visible', 'info');
+                return;
+            }
+
+            const hiddenCount = hiddenProjects.size;
+            hiddenProjects.clear();
+
+            renderProjectHeaders();
+            renderLabourRows();
+            saveLabourData();
+
+            showToast(`Showing all ${hiddenCount} hidden project(s)`, 'success');
+        }
+
+        // Save labour data
+        async function saveLabourData() {
+            const data = {
+                projects: labourProjects,
+                rows: labourRows,
+                hiddenProjects: Array.from(hiddenProjects), // Convert Set to Array for JSON
+                staff: staffDatabase,
+                workingDaysPerYear: workingDaysPerYear,
+                hoursPerDay: hoursPerDay
+            };
+
+            // Save to localStorage as fallback
+            localStorage.setItem('labour_allocation_data', JSON.stringify(data));
+            console.log('✅ Labour data saved to localStorage');
+
+            // Save to Supabase cloud
+            try {
+                await ensureAuthenticated();
+
+                // Check if user already has a record
+                const { data: existing, error: fetchError } = await supabaseClient
+                    .from('labour_allocation')
+                    .select('id')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+
+                if (fetchError && fetchError.code !== 'PGRST116') {
+                    throw fetchError;
+                }
+
+                if (existing) {
+                    // Update existing record
+                    const { error: updateError } = await supabaseClient
+                        .from('labour_allocation')
+                        .update({ allocation_data: data })
+                        .eq('user_id', currentUser.id);
+
+                    if (updateError) throw updateError;
+                    console.log('☁️ Labour data updated in Supabase');
+                } else {
+                    // Insert new record
+                    const { error: insertError } = await supabaseClient
+                        .from('labour_allocation')
+                        .insert({
+                            user_id: currentUser.id,
+                            allocation_data: data
+                        });
+
+                    if (insertError) throw insertError;
+                    console.log('☁️ Labour data saved to Supabase');
+                }
+            } catch (error) {
+                console.error('❌ Failed to save to Supabase:', error);
+                console.log('⚠️ Data saved to localStorage only');
+            }
+        }
+
+        // Load labour data
+        async function loadLabourData() {
+            try {
+                // Try to load from Supabase first
+                await ensureAuthenticated();
+
+                const { data: supabaseData, error } = await supabaseClient
+                    .from('labour_allocation')
+                    .select('allocation_data')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
+                }
+
+                if (supabaseData && supabaseData.allocation_data) {
+                    const data = supabaseData.allocation_data;
+                    labourProjects = data.projects || [];
+                    labourRows = data.rows || [];
+                    hiddenProjects = new Set(data.hiddenProjects || []); // Convert Array back to Set
+                    staffDatabase = data.staff || staffDatabase;
+                    workingDaysPerYear = data.workingDaysPerYear || workingDaysPerYear;
+                    hoursPerDay = data.hoursPerDay || hoursPerDay;
+
+                    renderLabourTable();
+                    showToast('☁️ Labour data loaded from cloud', 'success');
+                    console.log('☁️ Labour data loaded from Supabase');
+                    return;
+                }
+            } catch (error) {
+                console.error('❌ Failed to load from Supabase:', error);
+                console.log('⚠️ Trying localStorage fallback...');
+            }
+
+            // Fallback to localStorage
+            const saved = localStorage.getItem('labour_allocation_data');
+            if (saved) {
+                const data = JSON.parse(saved);
+                labourProjects = data.projects || [];
+                labourRows = data.rows || [];
+                hiddenProjects = new Set(data.hiddenProjects || []); // Convert Array back to Set
+                staffDatabase = data.staff || staffDatabase;
+                workingDaysPerYear = data.workingDaysPerYear || workingDaysPerYear;
+                hoursPerDay = data.hoursPerDay || hoursPerDay;
+
+                renderLabourTable();
+                showToast('Labour data loaded from local storage', 'success');
+                console.log('💾 Labour data loaded from localStorage');
+            } else {
+                showToast('No saved data found', 'warning');
+                console.log('⚠️ No saved data found');
+            }
+        }
+
+        // Clear labour data
+        async function clearLabourData() {
+            if (confirm('Clear all labour allocation data? This will delete both local and cloud backups.')) {
+                labourProjects = [];
+                labourRows = [];
+                hiddenProjects = new Set();
+
+                // Clear localStorage
+                localStorage.removeItem('labour_allocation_data');
+
+                // Clear Supabase
+                try {
+                    await ensureAuthenticated();
+                    const { error } = await supabaseClient
+                        .from('labour_allocation')
+                        .delete()
+                        .eq('user_id', currentUser.id);
+
+                    if (error) throw error;
+                    console.log('☁️ Labour data deleted from Supabase');
+                } catch (error) {
+                    console.error('❌ Failed to delete from Supabase:', error);
+                }
+
+                initLabourAllocation();
+                showToast('Data cleared from local and cloud', 'success');
+            }
+        }
+
+        // Handle paste from Excel
+        let selectedCell = null;
+        let selectedRowIdx = null;
+        let selectedColIdx = null;
+
+        function setupPasteHandler() {
+            const table = document.getElementById('labourTable');
+            const tbody = document.getElementById('labourTableBody');
+
+            // Track which cell was clicked with visual highlight
+            tbody.addEventListener('mousedown', function(e) {
+                // Remove previous highlight
+                const previousSelected = tbody.querySelector('.paste-selected');
+                if (previousSelected) {
+                    previousSelected.classList.remove('paste-selected');
+                }
+
+                const cell = e.target.closest('td');
+                if (cell) {
+                    // Don't select the delete button column
+                    const cells = Array.from(cell.parentElement.children);
+                    const cellIndex = cells.indexOf(cell);
+
+                    // Skip if it's the last column (delete button)
+                    if (cellIndex === cells.length - 1) {
+                        return;
+                    }
+
+                    selectedCell = cell;
+                    selectedRowIdx = Array.from(cell.parentElement.parentElement.children).indexOf(cell.parentElement);
+                    selectedColIdx = cellIndex;
+
+                    // Visual highlight
+                    cell.classList.add('paste-selected');
+
+                    console.log('Selected - Row:', selectedRowIdx, '(data row ' + selectedRowIdx + '), Col:', selectedColIdx);
+                    console.log('Total rows in data:', labourRows.length);
+                }
+            });
+
+            // Handle paste event
+            document.addEventListener('paste', function(e) {
+                // Only handle if we're in the labour allocation tab
+                if (!document.getElementById('allocation-tab').classList.contains('active')) {
+                    return;
+                }
+
+                // If pasting into an input element, allow default paste behavior
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    console.log('✅ Allowing default paste into input/textarea element');
+                    return; // Let the browser handle pasting into the input
+                }
+
+                e.preventDefault();
+
+                const pasteData = e.clipboardData.getData('text');
+                console.log('📋 RAW CLIPBOARD DATA:', JSON.stringify(pasteData));
+                console.log('📋 Clipboard length:', pasteData ? pasteData.length : 0);
+
+                if (!pasteData) {
+                    console.log('❌ No paste data found in clipboard');
+                    return;
+                }
+
+                // Parse tab-separated values (Excel format)
+                const rows = pasteData.split('\n').filter(row => row.trim() !== '');
+                console.log('📋 Parsed rows:', rows.length, ':', rows);
+
+                let startRowIdx = selectedRowIdx !== null ? selectedRowIdx : 0;
+                let startColIdx = selectedColIdx !== null ? selectedColIdx : 0;
+
+                console.log('📍 Pasting at row:', startRowIdx, 'col:', startColIdx);
+
+                // Column mapping for editable fields
+                const editableColumns = {
+                    0: 'month',     // Month
+                    1: 'staff',     // Staff
+                    4: 'fte',       // FTE (editable)
+                    5: 'yearlyPay'  // £/yr (if full time) (editable)
+                    // Columns 2-3 are calculated (Net, Gross)
+                    // Columns 6-8 are calculated (£/yr paid, £/day, £/hr)
+                    // Project columns start at index 9
+                };
+
+                rows.forEach((row, rowOffset) => {
+                    const rowIdx = startRowIdx + rowOffset;
+
+                    console.log('🔄 Processing paste row', rowOffset, '-> data row', rowIdx);
+
+                    // Add new row if needed
+                    while (rowIdx >= labourRows.length) {
+                        console.log('➕ Creating new row at index', labourRows.length);
+                        labourRows.push(createDefaultRow());
+                    }
+
+                    const cells = row.split('\t');
+                    console.log('📊 Row has', cells.length, 'cells:', cells);
+
+                    cells.forEach((value, colOffset) => {
+                        const colIdx = startColIdx + colOffset;
+
+                        // Handle editable columns (Month, Staff, FTE, £/yr if full time)
+                        if (editableColumns.hasOwnProperty(colIdx)) {
+                            const field = editableColumns[colIdx];
+                            console.log(`✏️ Setting row[${rowIdx}].${field} = "${value}" (col ${colIdx})`);
+
+                            if (field === 'month' || field === 'staff') {
+                                labourRows[rowIdx][field] = value.trim();
+                                console.log(`✅ Set to: "${labourRows[rowIdx][field]}"`);
+                            } else if (field === 'fte') {
+                                const evaluated = evaluateFormula(value);
+                                labourRows[rowIdx].fte = evaluated.value;
+                                labourRows[rowIdx].fteFormula = evaluated.formula;
+                                console.log(`✅ Set fte = ${evaluated.value} (formula: ${evaluated.formula || 'none'})`);
+                            } else if (field === 'yearlyPay') {
+                                const evaluated = evaluateFormula(value);
+                                labourRows[rowIdx].yearlyPay = evaluated.value;
+                                labourRows[rowIdx].yearlyPayFormula = evaluated.formula;
+                                console.log(`✅ Set yearlyPay = ${evaluated.value} (formula: ${evaluated.formula || 'none'})`);
+                            }
+                        }
+                        // Skip calculated columns (Net, Gross, etc.)
+                        else if (colIdx >= 2 && colIdx <= 8) {
+                            console.log(`⚠️ Column ${colIdx} is calculated - skipping`);
+                        }
+                        // Handle project allocation columns
+                        // Column 9+ are project fields (Days, Rate repeating)
+                        else if (colIdx >= 9) {
+                            const projectColIdx = colIdx - 9; // Offset past the fixed columns (9 total now)
+                            const projectIdx = Math.floor(projectColIdx / 4); // Each project has 4 columns
+                            const fieldInProject = projectColIdx % 4; // 0=Days, 1=Rate, 2=Total, 3=Remaining
+
+                            console.log(`🎯 Project column detected - col ${colIdx} -> project ${projectIdx}, field ${fieldInProject}`);
+
+                            if (projectIdx < labourProjects.length) {
+                                if (!labourRows[rowIdx].projects[projectIdx]) {
+                                    labourRows[rowIdx].projects[projectIdx] = { days: 0, daysFormula: null, rate: 0, rateFormula: null, total: 0, remaining: 0 };
+                                }
+
+                                if (fieldInProject === 0) { // Days
+                                    const evaluated = evaluateFormula(value);
+                                    labourRows[rowIdx].projects[projectIdx].days = evaluated.value;
+                                    labourRows[rowIdx].projects[projectIdx].daysFormula = evaluated.formula;
+                                    console.log(`✅ Set project[${projectIdx}].days = ${evaluated.value} (formula: ${evaluated.formula || 'none'})`);
+                                } else if (fieldInProject === 1) { // Rate
+                                    const evaluated = evaluateFormula(value);
+                                    labourRows[rowIdx].projects[projectIdx].rate = evaluated.value;
+                                    labourRows[rowIdx].projects[projectIdx].rateFormula = evaluated.formula;
+                                    console.log(`✅ Set project[${projectIdx}].rate = ${evaluated.value} (formula: ${evaluated.formula || 'none'})`);
+                                }
+                                // Total and Remaining are calculated, skip them
+                            } else {
+                                console.log(`⚠️ Project index ${projectIdx} out of range (max: ${labourProjects.length - 1})`);
+                            }
+                        } else {
+                            console.log(`⚠️ Column ${colIdx} is in the calculated range (5-8) - skipping`);
+                        }
+                    });
+
+                    // Recalculate this row
+                    console.log(`🔢 Recalculating row ${rowIdx}`);
+                    recalculateRow(rowIdx);
+                });
+
+                // Re-render table
+                console.log('🎨 Re-rendering labour table');
+                renderLabourRows();
+                console.log('✅ PASTE COMPLETE');
+                showToast(`Pasted ${rows.length} row(s) successfully`, 'success');
+            });
+        }
+
+        // Initialize labour allocation when switching to that tab
+        document.addEventListener('DOMContentLoaded', function() {
+            initLabourAllocation();
+            setupPasteHandler();
+        });
 
 
         // IndexedDB helper for folder handles
