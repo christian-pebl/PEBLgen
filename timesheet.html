@@ -533,12 +533,12 @@
     <div class="content-container">
         <!-- Tab Navigation -->
         <div class="tab-container">
-            <button class="tab-btn active" onclick="switchTab('timesheets')">Timesheets</button>
-            <button class="tab-btn" onclick="switchTab('allocation')">Labour Allocation</button>
+            <button class="tab-btn" onclick="switchTab('timesheets')">Timesheets</button>
+            <button class="tab-btn active" onclick="switchTab('allocation')">Labour Allocation</button>
         </div>
 
         <!-- Timesheets Tab -->
-        <div id="timesheets-tab" class="tab-content active">
+        <div id="timesheets-tab" class="tab-content">
         <!-- Section 1: System Prompt -->
         <div class="section system-prompt-section">
             <h2 onclick="toggleSystemPrompt()" style="cursor: pointer;">System Prompt <span id="promptToggle">▼</span></h2>
@@ -665,6 +665,7 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                 <button class="btn btn-secondary" onclick="closeHistory()">Close</button>
             </div>
         </div>
+
 
         <!-- Section 8: Merge Payslips -->
         <div class="section" style="background-color: #e8f5e9; border-left: 3px solid #4caf50;">
@@ -795,17 +796,65 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
         </div> <!-- End Timesheets Tab -->
 
         <!-- Labour Allocation Tab -->
-        <div id="allocation-tab" class="tab-content">
+        <div id="allocation-tab" class="tab-content active">
             <div class="section">
                 <h2>Labour Allocation</h2>
 
                 <div style="margin-bottom: 10px;">
-                    <button class="btn btn-success" onclick="addStaffRow()">+ Staff</button>
+                    <button class="btn btn-success" onclick="addStaffRow()">+ Line</button>
                     <button class="btn btn-info" onclick="addProject()">+ Project</button>
+                    <button class="btn btn-warning" onclick="showCopyMonthDialog()" style="background: #ff9800; color: white;">📋 Copy Month</button>
                     <button class="btn btn-secondary" onclick="showAllProjects()" style="background: #607D8B;">Show All</button>
-                    <button class="btn btn-warning" onclick="saveLabourData()">Save</button>
-                    <button class="btn btn-primary" onclick="loadLabourData()">Load</button>
-                    <button class="btn btn-danger" onclick="clearLabourData()">Clear</button>
+                </div>
+
+                <!-- Copy Month Dialog -->
+                <div id="copyMonthDialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; width: 90%;">
+                        <h3 style="margin-top: 0; color: #1e40af;">Copy Month Data</h3>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Select month to copy:</label>
+                            <select id="copyMonthSelect" onchange="updateCopyMonthPreview()" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                <option value="">-- Select a month --</option>
+                            </select>
+                        </div>
+
+                        <div id="copyMonthPreview" style="margin-bottom: 20px; padding: 15px; background: #f3f4f6; border-radius: 4px; display: none;">
+                            <p style="margin: 0; color: #374151;"><strong>Preview:</strong></p>
+                            <p id="copyMonthPreviewText" style="margin: 10px 0 0 0; color: #6b7280;"></p>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="closeCopyMonthDialog()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>
+                            <button id="executeCopyBtn" onclick="executeCopyMonth()" disabled style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Labour Budget Summary Section (Collapsible) -->
+                <div id="labourBudgetSection" style="display: none; margin-bottom: 20px; padding: 20px; background: #f8fafc; border: 2px solid #3b82f6; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; color: #1e40af;" id="labourBudgetSectionTitle">Labour Budget Summary</h3>
+                        <button onclick="closeLabourBudgetSection()" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">Close</button>
+                    </div>
+
+                    <div id="labourBudgetSectionContent">
+                        <!-- Step 1: Add Staff Member -->
+                        <div id="addStaffSectionInline" style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <h4 style="margin-top: 0; font-size: 14px;">Add Staff Member</h4>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <select id="staffMemberSelectInline" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+                                    <option value="">-- Select Staff Member --</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="addStaffAllocationInline()" style="white-space: nowrap;">+ Add</button>
+                            </div>
+                        </div>
+
+                        <!-- Staff Allocations List -->
+                        <div id="staffAllocationsListInline" style="margin-bottom: 20px;">
+                            <!-- Staff allocations will be added here dynamically -->
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Labour allocation table -->
@@ -1834,6 +1883,1115 @@ Return JSON:
             document.getElementById('historyModal').style.display = 'none';
         }
 
+        // ============================================
+        // LABOUR BUDGET SUMMARY FUNCTIONALITY
+        // ============================================
+
+        let currentLabourBudgetProject = null;
+        let staffAllocations = []; // Array to store staff allocations with their grant item assignments
+        let labourBudgetStep = 1; // 1 = select project, 2 = select category, 3 = select item
+        let selectedStaffMember = null;
+        let selectedProjectForBudget = null;
+        let selectedCategoryForBudget = null;
+
+        async function showLabourBudgetSummary(projectIdx) {
+            currentLabourBudgetProject = labourProjects[projectIdx];
+
+            if (!currentLabourBudgetProject) {
+                alert('Project not found');
+                return;
+            }
+
+            // Update section title
+            const sectionTitle = document.getElementById('labourBudgetSectionTitle');
+            if (sectionTitle) {
+                sectionTitle.textContent = `Labour Budget Summary - ${currentLabourBudgetProject.name}`;
+            }
+
+            // Load staff allocations for this project from localStorage
+            const projectKey = currentLabourBudgetProject.id || currentLabourBudgetProject.name;
+            const savedAllocations = JSON.parse(localStorage.getItem(`labour_budget_allocations_${projectKey}`) || '[]');
+            staffAllocations = savedAllocations;
+
+            // Populate staff member dropdown
+            await populateStaffDropdownInline();
+
+            // Render existing allocations
+            renderStaffAllocationsInline();
+
+            // Show section
+            const section = document.getElementById('labourBudgetSection');
+            if (section) {
+                section.style.display = 'block';
+                // Scroll to the section
+                section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function closeLabourBudgetSection() {
+            document.getElementById('labourBudgetSection').style.display = 'none';
+            currentLabourBudgetProject = null;
+            staffAllocations = [];
+            labourBudgetStep = 1;
+            selectedStaffMember = null;
+            selectedProjectForBudget = null;
+            selectedCategoryForBudget = null;
+        }
+
+
+        async function populateStaffDropdown() {
+            const select = document.getElementById('staffMemberSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Select Staff Member --</option>';
+
+            // Load staff from database
+            if (staffDatabase && staffDatabase.length > 0) {
+                staffDatabase.forEach(staff => {
+                    const option = document.createElement('option');
+
+                    // Handle both object format {initials, name} and string format
+                    if (typeof staff === 'string') {
+                        // Staff is a simple string (e.g., "CW" or "Christian Abulhawa")
+                        option.value = staff;
+                        option.textContent = staff;
+                    } else {
+                        // Staff is an object with initials and name
+                        option.value = staff.initials || staff.name;
+                        option.textContent = `${staff.initials} - ${staff.name}`;
+                    }
+
+                    select.appendChild(option);
+                });
+            } else {
+                // If no staff in database, show message
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '-- Add staff in labour allocation table first --';
+                option.disabled = true;
+                select.appendChild(option);
+            }
+        }
+
+        async function populateStaffDropdownInline() {
+            const select = document.getElementById('staffMemberSelectInline');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Select Staff Member --</option>';
+
+            // Load staff from database
+            if (staffDatabase && staffDatabase.length > 0) {
+                staffDatabase.forEach(staff => {
+                    const option = document.createElement('option');
+
+                    // Handle both object format {initials, name} and string format
+                    if (typeof staff === 'string') {
+                        // Staff is a simple string (e.g., "CW" or "Christian Abulhawa")
+                        option.value = staff;
+                        option.textContent = staff;
+                    } else {
+                        // Staff is an object with initials and name
+                        option.value = staff.initials || staff.name;
+                        option.textContent = `${staff.initials} - ${staff.name}`;
+                    }
+
+                    select.appendChild(option);
+                });
+            } else {
+                // If no staff in database, show message
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '-- Add staff in labour allocation table first --';
+                option.disabled = true;
+                select.appendChild(option);
+            }
+        }
+
+        function addStaffAllocation() {
+            const select = document.getElementById('staffMemberSelect');
+            if (!select) return;
+            const staffValue = select.value;
+
+            if (!staffValue) {
+                alert('Please select a staff member');
+                return;
+            }
+
+            const staffName = select.options[select.selectedIndex].text;
+
+            // Check if staff member already added
+            const existing = staffAllocations.find(s => s.staffInitials === staffValue);
+            if (existing) {
+                alert('This staff member is already in the list. You can edit their grant allocation below.');
+                return;
+            }
+
+            // Add new staff allocation
+            const newAllocation = {
+                staffInitials: staffValue,
+                staffName: staffName,
+                grantCategory: null,
+                grantItemKey: null,
+                grantItemName: null,
+                grantProjectId: null,
+                grantProjectName: null,
+                budgetAllocated: 0,
+                totalClaimed: 0
+            };
+
+            staffAllocations.push(newAllocation);
+            saveStaffAllocations();
+            renderStaffAllocations();
+
+            // Reset dropdown
+            select.value = '';
+        }
+
+        function addStaffAllocationInline() {
+            const select = document.getElementById('staffMemberSelectInline');
+            if (!select) return;
+            const staffValue = select.value;
+
+            if (!staffValue) {
+                alert('Please select a staff member');
+                return;
+            }
+
+            const staffName = select.options[select.selectedIndex].text;
+
+            // Check if staff member already added
+            const existing = staffAllocations.find(s => s.staffInitials === staffValue);
+            if (existing) {
+                alert('This staff member is already in the list. You can edit their grant allocation below.');
+                return;
+            }
+
+            // Add new staff allocation
+            const newAllocation = {
+                staffInitials: staffValue,
+                staffName: staffName,
+                grantCategory: null,
+                grantItemKey: null,
+                grantItemName: null,
+                grantProjectId: null,
+                grantProjectName: null,
+                budgetAllocated: 0,
+                totalClaimed: 0
+            };
+
+            staffAllocations.push(newAllocation);
+            saveStaffAllocations();
+            renderStaffAllocationsInline();
+
+            // Reset dropdown
+            select.value = '';
+        }
+
+        function renderStaffAllocations() {
+            const container = document.getElementById('staffAllocationsList');
+            container.innerHTML = '';
+
+            if (staffAllocations.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No staff members added yet. Add one above to get started.</p>';
+                return;
+            }
+
+            staffAllocations.forEach((allocation, idx) => {
+                const allocDiv = document.createElement('div');
+                allocDiv.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-bottom: 15px; background: white;';
+
+                // Calculate total claimed from labour allocation table
+                const projectKey = currentLabourBudgetProject.id || currentLabourBudgetProject.name;
+                const totalClaimed = calculateTotalClaimedForStaff(allocation.staffInitials, projectKey);
+                allocation.totalClaimed = totalClaimed;
+
+                const hasGrantAssignment = allocation.grantCategory && allocation.grantItemKey;
+                const budgetRemaining = allocation.budgetAllocated - totalClaimed;
+                const percentageUsed = allocation.budgetAllocated > 0 ? (totalClaimed / allocation.budgetAllocated * 100).toFixed(1) : 0;
+
+                allocDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                                <h4 style="margin: 0; font-size: 16px;">${allocation.staffName}</h4>
+                                ${hasGrantAssignment ? `
+                                    <label style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #666; cursor: pointer;">
+                                        <input type="checkbox" id="showQuarterly_${idx}" onchange="toggleQuarterlyBreakdown(${idx})" style="cursor: pointer;">
+                                        Show quarterly breakdown
+                                    </label>
+                                ` : ''}
+                            </div>
+                            ${hasGrantAssignment ? `
+                                <div style="font-size: 12px; color: #666;">
+                                    <strong>Assigned to:</strong> ${allocation.grantProjectName || 'Unknown Project'}<br>
+                                    ${allocation.grantCategory} → ${allocation.grantItemName}
+                                </div>
+                            ` : `
+                                <div style="font-size: 12px; color: #f59e0b;">
+                                    ⚠️ No grant item assigned yet
+                                </div>
+                            `}
+                        </div>
+                        <button onclick="removeStaffAllocation(${idx})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">Remove</button>
+                    </div>
+
+                    ${hasGrantAssignment ? `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div style="background: #e0f2fe; padding: 10px; border-radius: 4px;">
+                                <div style="font-size: 11px; color: #0284c7; font-weight: 600;">BUDGET ALLOCATED</div>
+                                <div style="font-size: 18px; font-weight: bold; color: #0c4a6e;">£${allocation.budgetAllocated.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            </div>
+                            <div style="background: #fef3c7; padding: 10px; border-radius: 4px;">
+                                <div style="font-size: 11px; color: #d97706; font-weight: 600;">TOTAL CLAIMED</div>
+                                <div style="font-size: 18px; font-weight: bold; color: #92400e;">£${totalClaimed.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            </div>
+                            <div style="background: ${budgetRemaining >= 0 ? '#d1fae5' : '#fee2e2'}; padding: 10px; border-radius: 4px;">
+                                <div style="font-size: 11px; color: ${budgetRemaining >= 0 ? '#059669' : '#dc2626'}; font-weight: 600;">REMAINING</div>
+                                <div style="font-size: 18px; font-weight: bold; color: ${budgetRemaining >= 0 ? '#065f46' : '#991b1b'};">£${budgetRemaining.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <div style="background: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; width: ${Math.min(percentageUsed, 100)}%; transition: width 0.3s;"></div>
+                            </div>
+                            <div style="font-size: 11px; color: #666; margin-top: 4px; text-align: center;">
+                                ${percentageUsed}% of budget claimed
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${hasGrantAssignment ? `
+                        <div id="quarterlyBreakdown_${idx}" style="display: none; margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <!-- Quarterly breakdown will be inserted here -->
+                        </div>
+                    ` : ''}
+
+                    <button onclick="assignGrantItem(${idx})" class="btn btn-primary" style="width: 100%; margin-top: 5px;">
+                        ${hasGrantAssignment ? '✏️ Change Grant Assignment' : '➕ Assign to Grant Item'}
+                    </button>
+                `;
+
+                container.appendChild(allocDiv);
+            });
+        }
+
+        function renderStaffAllocationsInline() {
+            const container = document.getElementById('staffAllocationsListInline');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (staffAllocations.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No staff members added yet. Add one above to get started.</p>';
+                return;
+            }
+
+            staffAllocations.forEach((allocation, idx) => {
+                const allocDiv = document.createElement('div');
+                allocDiv.style.cssText = 'border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-bottom: 15px; background: white;';
+
+                // Calculate total claimed from labour allocation table
+                const projectKey = currentLabourBudgetProject.id || currentLabourBudgetProject.name;
+                const totalClaimed = calculateTotalClaimedForStaff(allocation.staffInitials, projectKey);
+                allocation.totalClaimed = totalClaimed;
+
+                const hasGrantAssignment = allocation.grantCategory && allocation.grantItemKey;
+                const budgetRemaining = allocation.budgetAllocated - totalClaimed;
+                const percentageUsed = allocation.budgetAllocated > 0 ? (totalClaimed / allocation.budgetAllocated * 100).toFixed(1) : 0;
+
+                allocDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                                <h4 style="margin: 0; font-size: 16px;">${allocation.staffName}</h4>
+                                ${hasGrantAssignment ? `
+                                    <label style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #666; cursor: pointer;">
+                                        <input type="checkbox" id="showQuarterlyInline_${idx}" onchange="toggleQuarterlyBreakdown(${idx})" style="cursor: pointer;">
+                                        Show quarterly breakdown
+                                    </label>
+                                ` : ''}
+                            </div>
+                            ${hasGrantAssignment ? `
+                                <div style="font-size: 12px; color: #666;">
+                                    <strong>Assigned to:</strong> ${allocation.grantProjectName || 'Unknown Project'}<br>
+                                    ${allocation.grantCategory} → ${allocation.grantItemName}
+                                </div>
+                            ` : `
+                                <div style="font-size: 12px; color: #f59e0b;">
+                                    ⚠️ No grant item assigned yet
+                                </div>
+                            `}
+                        </div>
+                        <button onclick="removeStaffAllocationInline(${idx})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">Remove</button>
+                    </div>
+
+                    ${hasGrantAssignment ? `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div style="background: #e0f2fe; padding: 10px; border-radius: 4px;">
+                                <div style="font-size: 11px; color: #0284c7; font-weight: 600;">BUDGET ALLOCATED</div>
+                                <div style="font-size: 18px; font-weight: bold; color: #0c4a6e;">£${allocation.budgetAllocated.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            </div>
+                            <div style="background: #fef3c7; padding: 10px; border-radius: 4px;">
+                                <div style="font-size: 11px; color: #d97706; font-weight: 600;">TOTAL CLAIMED</div>
+                                <div style="font-size: 18px; font-weight: bold; color: #92400e;">£${totalClaimed.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            </div>
+                            <div style="background: ${budgetRemaining >= 0 ? '#d1fae5' : '#fee2e2'}; padding: 10px; border-radius: 4px;">
+                                <div style="font-size: 11px; color: ${budgetRemaining >= 0 ? '#059669' : '#dc2626'}; font-weight: 600;">REMAINING</div>
+                                <div style="font-size: 18px; font-weight: bold; color: ${budgetRemaining >= 0 ? '#065f46' : '#991b1b'};">£${budgetRemaining.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <div style="background: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; width: ${Math.min(percentageUsed, 100)}%; transition: width 0.3s;"></div>
+                            </div>
+                            <div style="font-size: 11px; color: #666; margin-top: 4px; text-align: center;">
+                                ${percentageUsed}% of budget claimed
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${hasGrantAssignment ? `
+                        <div id="quarterlyBreakdownInline_${idx}" style="display: none; margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <!-- Quarterly breakdown will be inserted here -->
+                        </div>
+                    ` : ''}
+
+                    <button onclick="assignGrantItem(${idx})" class="btn btn-primary" style="width: 100%; margin-top: 5px;">
+                        ${hasGrantAssignment ? '✏️ Change Grant Assignment' : '➕ Assign to Grant Item'}
+                    </button>
+                `;
+
+                container.appendChild(allocDiv);
+            });
+        }
+
+        function removeStaffAllocationInline(idx) {
+            if (confirm(`Remove ${staffAllocations[idx].staffName} from this budget summary?`)) {
+                staffAllocations.splice(idx, 1);
+                saveStaffAllocations();
+                renderStaffAllocationsInline();
+            }
+        }
+
+        function calculateTotalClaimedForStaff(staffInitials, projectKey) {
+            // Calculate total claimed from labour allocation table
+            let total = 0;
+
+            labourRows.forEach(row => {
+                // Find the project column for this project (match by ID or name)
+                const projectIdx = labourProjects.findIndex(p => (p.id && p.id === projectKey) || p.name === projectKey);
+                if (projectIdx === -1) return;
+
+                const projectData = row.projects[projectIdx];
+                if (!projectData) return;
+
+                // Check if this row belongs to the staff member
+                // Match by staff initials (e.g., "CW", "CA") or full staff value
+                if (row.staff && (row.staff === staffInitials || row.staff.startsWith(staffInitials + ' ') || row.staff.startsWith(staffInitials + '-'))) {
+                    total += projectData.total || 0;
+                }
+            });
+
+            return total;
+        }
+
+        async function toggleQuarterlyBreakdown(staffIdx) {
+            const checkbox = document.getElementById(`showQuarterly_${staffIdx}`);
+            const breakdownDiv = document.getElementById(`quarterlyBreakdown_${staffIdx}`);
+
+            if (!checkbox || !breakdownDiv) return;
+
+            if (checkbox.checked) {
+                // Show quarterly breakdown
+                breakdownDiv.style.display = 'block';
+                await renderQuarterlyBreakdown(staffIdx);
+            } else {
+                // Hide quarterly breakdown
+                breakdownDiv.style.display = 'none';
+            }
+        }
+
+        async function renderQuarterlyBreakdown(staffIdx) {
+            const allocation = staffAllocations[staffIdx];
+            const breakdownDiv = document.getElementById(`quarterlyBreakdown_${staffIdx}`);
+
+            if (!allocation || !breakdownDiv) return;
+
+            // Load project data to get start date
+            try {
+                const db = await openDB('GrantsDB', 2);
+                const tx = db.transaction('projects', 'readonly');
+                const store = tx.objectStore('projects');
+                const allProjects = await store.getAll();
+                const grantProject = allProjects.find(p => p.projectId == allocation.grantProjectId);
+
+                if (!grantProject) {
+                    breakdownDiv.innerHTML = '<p style="color: #ef4444; font-size: 12px;">⚠️ Grant project not found</p>';
+                    return;
+                }
+
+                const startMonth = grantProject.projectStartMonth || grantProject.financeSummary?.projectStartMonth;
+                const startYear = grantProject.projectStartYear || grantProject.financeSummary?.projectStartYear;
+
+                if (!startMonth || !startYear) {
+                    breakdownDiv.innerHTML = '<p style="color: #ef4444; font-size: 12px;">⚠️ Project start date not set in grants page</p>';
+                    return;
+                }
+
+                // Calculate quarterly totals
+                const projectKey = currentLabourBudgetProject.id || currentLabourBudgetProject.name;
+                const quarterlyData = calculateQuarterlyTotals(allocation.staffInitials, projectKey, startMonth, startYear);
+
+                // Render quarterly breakdown table
+                let html = `
+                    <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #334155;">Quarterly Breakdown</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead>
+                            <tr style="background: #e2e8f0;">
+                                <th style="padding: 8px; text-align: left; border: 1px solid #cbd5e1;">Quarter</th>
+                                <th style="padding: 8px; text-align: left; border: 1px solid #cbd5e1;">Period</th>
+                                <th style="padding: 8px; text-align: right; border: 1px solid #cbd5e1;">Claimed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                if (quarterlyData.length === 0) {
+                    html += `
+                        <tr>
+                            <td colspan="3" style="padding: 15px; text-align: center; color: #94a3b8; border: 1px solid #cbd5e1;">
+                                No labour allocations found for this staff member
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    quarterlyData.forEach(quarter => {
+                        html += `
+                            <tr style="background: white;">
+                                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: 600;">Q${quarter.quarter}</td>
+                                <td style="padding: 8px; border: 1px solid #cbd5e1; color: #64748b;">${quarter.period}</td>
+                                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: 600; color: #0c4a6e;">
+                                    £${quarter.total.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    // Add total row
+                    const grandTotal = quarterlyData.reduce((sum, q) => sum + q.total, 0);
+                    html += `
+                        <tr style="background: #f1f5f9; font-weight: bold;">
+                            <td colspan="2" style="padding: 8px; border: 1px solid #cbd5e1;">TOTAL</td>
+                            <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; color: #0c4a6e;">
+                                £${grandTotal.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                html += `
+                        </tbody>
+                    </table>
+                `;
+
+                breakdownDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error rendering quarterly breakdown:', error);
+                breakdownDiv.innerHTML = '<p style="color: #ef4444; font-size: 12px;">⚠️ Failed to load quarterly breakdown</p>';
+            }
+        }
+
+        function calculateQuarterlyTotals(staffInitials, projectKey, startMonth, startYear) {
+            // Group labour allocations by quarter
+            const quarterTotals = new Map();
+
+            labourRows.forEach(row => {
+                // Check if this row belongs to the staff member
+                if (!row.staff || !(row.staff === staffInitials || row.staff.startsWith(staffInitials + ' ') || row.staff.startsWith(staffInitials + '-'))) {
+                    return;
+                }
+
+                // Find the project column (match by ID or name)
+                const projectIdx = labourProjects.findIndex(p => (p.id && p.id === projectKey) || p.name === projectKey);
+                if (projectIdx === -1) return;
+
+                const projectData = row.projects[projectIdx];
+                if (!projectData || !projectData.total) return;
+
+                // Parse the month (YYYY-MM format)
+                const monthStr = row.month;
+                if (!monthStr || typeof monthStr !== 'string') return;
+
+                const [yearStr, monthNumStr] = monthStr.split('-');
+                const year = parseInt(yearStr);
+                const month = parseInt(monthNumStr);
+
+                if (isNaN(year) || isNaN(month)) return;
+
+                // Calculate months since project start
+                const monthsSinceStart = (year - startYear) * 12 + (month - startMonth);
+
+                // Skip if before project start
+                if (monthsSinceStart < 0) return;
+
+                // Calculate quarter (1-based)
+                const quarter = Math.floor(monthsSinceStart / 3) + 1;
+
+                // Add to quarter total
+                if (!quarterTotals.has(quarter)) {
+                    // Calculate quarter period string
+                    const quarterStartMonth = startMonth + (quarter - 1) * 3;
+                    const quarterEndMonth = quarterStartMonth + 2;
+
+                    const qStartYear = startYear + Math.floor((quarterStartMonth - 1) / 12);
+                    const qStartMonth = ((quarterStartMonth - 1) % 12) + 1;
+                    const qEndYear = startYear + Math.floor((quarterEndMonth - 1) / 12);
+                    const qEndMonth = ((quarterEndMonth - 1) % 12) + 1;
+
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const periodStr = `${monthNames[qStartMonth - 1]} ${qStartYear} - ${monthNames[qEndMonth - 1]} ${qEndYear}`;
+
+                    quarterTotals.set(quarter, {
+                        quarter: quarter,
+                        period: periodStr,
+                        total: 0
+                    });
+                }
+
+                quarterTotals.get(quarter).total += projectData.total;
+            });
+
+            // Convert map to sorted array
+            return Array.from(quarterTotals.values()).sort((a, b) => a.quarter - b.quarter);
+        }
+
+        function removeStaffAllocation(idx) {
+            if (confirm(`Remove ${staffAllocations[idx].staffName} from this budget summary?`)) {
+                staffAllocations.splice(idx, 1);
+                saveStaffAllocations();
+                renderStaffAllocations();
+            }
+        }
+
+        function saveStaffAllocations() {
+            if (currentLabourBudgetProject) {
+                // Use project ID if available, otherwise use project name (backward compatibility)
+                const projectKey = currentLabourBudgetProject.id || currentLabourBudgetProject.name;
+                localStorage.setItem(
+                    `labour_budget_allocations_${projectKey}`,
+                    JSON.stringify(staffAllocations)
+                );
+            }
+        }
+
+        // ============================================
+        // GRANT ITEM SELECTION (Similar to Spend Assignment)
+        // ============================================
+
+        async function assignGrantItem(staffIdx) {
+            selectedStaffMember = staffAllocations[staffIdx];
+            labourBudgetStep = 1;
+
+            showToast('Loading grants data...', 'info');
+
+            // Try to load grants - auto-sync from Supabase if needed
+            try {
+                const allProjects = await loadGrantsData();
+
+                if (!allProjects || allProjects.length === 0) {
+                    alert('⚠️ No grants found.\n\nPlease add grant projects in grants.html first, or check your cloud sync.');
+                    return;
+                }
+
+                // Show project selection
+                showGrantProjectSelection(allProjects);
+                showToast(`Loaded ${allProjects.length} grant project(s)`, 'success');
+            } catch (error) {
+                console.error('Error loading grants:', error);
+                alert('⚠️ Failed to load grants data.\n\nError: ' + error.message + '\n\nPlease check your internet connection and try again.');
+            }
+        }
+
+        // Centralized function to load grants from Supabase + IndexedDB
+        async function loadGrantsData() {
+            console.log('[GRANTS SYNC] Loading grants data...');
+
+            // Step 1: Try IndexedDB first (fast local cache)
+            try {
+                const dbExists = await checkGrantsDBExists();
+                if (dbExists) {
+                    const db = await openDB('GrantsDB', 2);
+                    const tx = db.transaction('projects', 'readonly');
+                    const store = tx.objectStore('projects');
+                    const localProjects = await store.getAll();
+
+                    if (localProjects && localProjects.length > 0) {
+                        console.log(`[GRANTS SYNC] Found ${localProjects.length} projects in IndexedDB`);
+
+                        // Also sync from Supabase in background (don't wait)
+                        syncGrantsFromSupabase().catch(err => console.warn('[GRANTS SYNC] Background sync failed:', err));
+
+                        return localProjects;
+                    }
+                }
+            } catch (error) {
+                console.warn('[GRANTS SYNC] IndexedDB read failed:', error);
+            }
+
+            // Step 2: IndexedDB empty or failed - fetch from Supabase
+            console.log('[GRANTS SYNC] IndexedDB empty, fetching from Supabase...');
+            return await syncGrantsFromSupabase();
+        }
+
+        // Fetch grants from Supabase and populate IndexedDB
+        async function syncGrantsFromSupabase() {
+            console.log('[GRANTS SYNC] Syncing from Supabase...');
+
+            try {
+                await ensureAuthenticated();
+
+                // Fetch all grants from Supabase
+                const { data: grantsData, error } = await supabaseClient
+                    .from('grants')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+
+                if (error) {
+                    console.error('[GRANTS SYNC] Supabase error:', error);
+                    throw new Error('Failed to fetch grants from cloud: ' + error.message);
+                }
+
+                if (!grantsData || grantsData.length === 0) {
+                    console.log('[GRANTS SYNC] No grants found in Supabase');
+                    return [];
+                }
+
+                console.log(`[GRANTS SYNC] Found ${grantsData.length} grants in Supabase`);
+
+                // Parse and populate IndexedDB
+                const projects = grantsData.map(grant => grant.project_data);
+
+                // Create/update IndexedDB
+                const db = await initializeGrantsDB();
+                const tx = db.transaction('projects', 'readwrite');
+                const store = tx.objectStore('projects');
+
+                // Clear existing data
+                await store.clear();
+
+                // Add all projects
+                for (const project of projects) {
+                    await store.put(project);
+                }
+
+                await tx.complete;
+                console.log(`[GRANTS SYNC] ✅ Synced ${projects.length} projects to IndexedDB`);
+
+                return projects;
+
+            } catch (error) {
+                console.error('[GRANTS SYNC] Sync failed:', error);
+                throw error;
+            }
+        }
+
+        // Initialize GrantsDB if it doesn't exist
+        async function initializeGrantsDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('GrantsDB', 2);
+
+                request.onsuccess = function(event) {
+                    resolve(event.target.result);
+                };
+
+                request.onerror = function(event) {
+                    reject(new Error('Failed to open GrantsDB: ' + event.target.error));
+                };
+
+                request.onupgradeneeded = function(event) {
+                    const db = event.target.result;
+
+                    // Create projects object store if it doesn't exist
+                    if (!db.objectStoreNames.contains('projects')) {
+                        const objectStore = db.createObjectStore('projects', { keyPath: 'projectId' });
+                        objectStore.createIndex('projectName', 'projectName', { unique: false });
+                        console.log('[GRANTS SYNC] Created projects object store');
+                    }
+                };
+            });
+        }
+
+        // Helper function to check if GrantsDB exists
+        async function checkGrantsDBExists() {
+            return new Promise((resolve) => {
+                const request = indexedDB.open('GrantsDB', 2);
+
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    // Check if the 'projects' object store exists
+                    const hasProjectsStore = db.objectStoreNames.contains('projects');
+                    db.close();
+                    resolve(hasProjectsStore);
+                };
+
+                request.onerror = function() {
+                    resolve(false);
+                };
+
+                request.onupgradeneeded = function(event) {
+                    // Database doesn't exist yet - create object store
+                    const db = event.target.result;
+
+                    if (!db.objectStoreNames.contains('projects')) {
+                        const objectStore = db.createObjectStore('projects', { keyPath: 'projectId' });
+                        objectStore.createIndex('projectName', 'projectName', { unique: false });
+                        console.log('[GRANTS SYNC] Created projects object store in checkGrantsDBExists');
+                    }
+                    // Don't close here - let onsuccess handle it
+                    // Will resolve false since we just created it (was empty before)
+                };
+            });
+        }
+
+        function showGrantProjectSelection(projects) {
+            labourBudgetStep = 1;
+
+            let content = `
+                <div style="margin-bottom: 15px;">
+                    <h3 style="margin: 0; font-size: 16px;">Assigning: ${selectedStaffMember.staffName}</h3>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">Step 1: Select Grant Project</div>
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+            `;
+
+            projects.forEach(project => {
+                const projectName = project.projectName || project.projectNumber || `Project ${project.projectId}`;
+                content += `
+                    <div onclick="selectGrantProject('${project.projectId}')"
+                         style="padding: 12px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
+                         onmouseover="this.style.background='#f0f9ff'; this.style.borderColor='#3b82f6';"
+                         onmouseout="this.style.background='white'; this.style.borderColor='#ddd';">
+                        <div style="font-weight: 600; font-size: 14px; color: #1e293b;">${projectName}</div>
+                        <div style="font-size: 12px; color: #64748b;">Project ID: ${project.projectId}</div>
+                    </div>
+                `;
+            });
+
+            content += '</div>';
+
+            // Replace the staff allocations list with the grant selection UI
+            document.getElementById('staffAllocationsList').innerHTML = `
+                <div style="border: 1px solid #3b82f6; border-radius: 6px; padding: 15px; background: #f8fafc;">
+                    <button onclick="cancelGrantSelection()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 12px; margin-bottom: 15px;">← Back to Budget Summary</button>
+                    ${content}
+                </div>
+            `;
+        }
+
+        async function selectGrantProject(projectId) {
+            selectedProjectForBudget = projectId;
+            labourBudgetStep = 2;
+
+            // Load project data from IndexedDB
+            try {
+                const db = await openDB('GrantsDB', 2);
+                const tx = db.transaction('projects', 'readonly');
+                const store = tx.objectStore('projects');
+                const allProjects = await store.getAll();
+                const project = allProjects.find(p => p.projectId == projectId);
+
+                if (!project) {
+                    alert('Project not found');
+                    return;
+                }
+
+                showGrantCategorySelection(project);
+            } catch (error) {
+                console.error('Error loading project:', error);
+                alert('Failed to load project data');
+            }
+        }
+
+        function showGrantCategorySelection(project) {
+            const projectName = project.projectName || project.projectNumber || `Project ${project.projectId}`;
+
+            let content = `
+                <div style="margin-bottom: 15px;">
+                    <button onclick="assignGrantItem(${staffAllocations.indexOf(selectedStaffMember)})" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 12px;">← Back to Projects</button>
+                    <h3 style="margin: 5px 0 0 0; font-size: 16px;">Assigning: ${selectedStaffMember.staffName}</h3>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">${projectName} • Step 2: Select Category</div>
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+            `;
+
+            // Get all categories from the project (same logic as spend.html)
+            const categories = [];
+
+            // IUK Categories
+            if (project.labour) categories.push({ name: 'Labour', data: project.labour });
+            if (project.materials) categories.push({ name: 'Materials', data: project.materials });
+            if (project.capitalUsage) categories.push({ name: 'Capital Usage', data: project.capitalUsage });
+            if (project.subcontracting) categories.push({ name: 'Subcontracting', data: project.subcontracting });
+            if (project.travel) categories.push({ name: 'Travel', data: project.travel });
+            if (project.otherCosts) categories.push({ name: 'Other Costs', data: project.otherCosts });
+
+            // Welsh Gov Categories
+            if (project.capitalNonStandard) categories.push({ name: 'Capital Non-Standard', data: project.capitalNonStandard });
+            if (project.revenueNonStandard) categories.push({ name: 'Revenue Non-Standard', data: project.revenueNonStandard });
+            if (project.revenueStandard) categories.push({ name: 'Revenue Standard', data: project.revenueStandard });
+            if (project.itemBreakdownCapital) categories.push({ name: 'Item Breakdown Capital', data: project.itemBreakdownCapital });
+            if (project.itemBreakdownRevenue) categories.push({ name: 'Item Breakdown Revenue', data: project.itemBreakdownRevenue });
+
+            categories.forEach(cat => {
+                content += `
+                    <div onclick="selectGrantCategory('${cat.name}')"
+                         style="padding: 12px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
+                         onmouseover="this.style.background='#f0f9ff'; this.style.borderColor='#3b82f6';"
+                         onmouseout="this.style.background='white'; this.style.borderColor='#ddd';">
+                        <div style="font-weight: 600; font-size: 14px; color: #1e293b;">${cat.name}</div>
+                    </div>
+                `;
+            });
+
+            content += '</div>';
+
+            document.getElementById('staffAllocationsList').innerHTML = `
+                <div style="border: 1px solid #3b82f6; border-radius: 6px; padding: 15px; background: #f8fafc;">
+                    <button onclick="cancelGrantSelection()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 12px; margin-bottom: 15px;">← Cancel</button>
+                    ${content}
+                </div>
+            `;
+        }
+
+        async function selectGrantCategory(categoryName) {
+            selectedCategoryForBudget = categoryName;
+            labourBudgetStep = 3;
+
+            // Load project data
+            try {
+                const db = await openDB('GrantsDB', 2);
+                const tx = db.transaction('projects', 'readonly');
+                const store = tx.objectStore('projects');
+                const allProjects = await store.getAll();
+                const project = allProjects.find(p => p.projectId == selectedProjectForBudget);
+
+                if (!project) {
+                    alert('Project not found');
+                    return;
+                }
+
+                showGrantItemSelection(project, categoryName);
+            } catch (error) {
+                console.error('Error loading project:', error);
+                alert('Failed to load project data');
+            }
+        }
+
+        function showGrantItemSelection(project, categoryName) {
+            const projectName = project.projectName || project.projectNumber || `Project ${project.projectId}`;
+            const category = getCategoryObject(project, categoryName);
+
+            if (!category) {
+                alert('Category not found');
+                return;
+            }
+
+            let content = `
+                <div style="margin-bottom: 15px;">
+                    <button onclick="selectGrantProject('${project.projectId}')" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 12px;">← Back to Categories</button>
+                    <h3 style="margin: 5px 0 0 0; font-size: 16px;">Assigning: ${selectedStaffMember.staffName}</h3>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">${projectName} • ${categoryName} • Step 3: Select Item</div>
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+            `;
+
+            // Get items based on category (same logic as spend.html)
+            let items = [];
+            let itemPrefix = '';
+
+            // IUK Categories
+            if (categoryName === 'Labour' && category.staff) {
+                items = category.staff;
+                itemPrefix = 'labour';
+            } else if (categoryName === 'Materials' && category.items) {
+                items = category.items;
+                itemPrefix = 'materials';
+            } else if (categoryName === 'Capital Usage' && category.items) {
+                items = category.items;
+                itemPrefix = 'capitalUsage';
+            } else if (categoryName === 'Subcontracting' && category.contractors) {
+                items = category.contractors;
+                itemPrefix = 'subcontracting';
+            } else if (categoryName === 'Travel' && category.trips) {
+                items = category.trips;
+                itemPrefix = 'travel';
+            } else if (categoryName === 'Other Costs' && category.items) {
+                items = category.items;
+                itemPrefix = 'otherCosts';
+            }
+            // Welsh Gov Categories
+            else if (categoryName === 'Capital Non-Standard' && category.items) {
+                items = category.items;
+                itemPrefix = 'capitalNonStandard';
+            } else if (categoryName === 'Revenue Non-Standard' && category.items) {
+                items = category.items;
+                itemPrefix = 'revenueNonStandard';
+            } else if (categoryName === 'Revenue Standard' && category.items) {
+                items = category.items;
+                itemPrefix = 'revenueStandard';
+            } else if (categoryName === 'Item Breakdown Capital' && category.items) {
+                items = category.items;
+                itemPrefix = 'itemBreakdownCapital';
+            } else if (categoryName === 'Item Breakdown Revenue' && category.items) {
+                items = category.items;
+                itemPrefix = 'itemBreakdownRevenue';
+            }
+
+            if (items && items.length > 0) {
+                items.forEach((item, idx) => {
+                    const itemKey = `${itemPrefix}-${idx}`;
+                    let itemName = '';
+                    let itemBudget = 0;
+
+                    // Get item name and budget based on category type
+                    if (categoryName === 'Labour') {
+                        itemName = item.name;
+                        itemBudget = item.salary || 0;
+                    } else if (categoryName === 'Materials') {
+                        itemName = item.item;
+                        itemBudget = item.total || 0;
+                    } else if (categoryName === 'Capital Usage') {
+                        itemName = item.description;
+                        itemBudget = item.netCost || 0;
+                    } else if (categoryName === 'Subcontracting') {
+                        itemName = item.name;
+                        itemBudget = item.cost || 0;
+                    } else if (categoryName === 'Travel') {
+                        itemName = item.purpose;
+                        itemBudget = item.total || 0;
+                    } else if (categoryName === 'Other Costs') {
+                        itemName = item.description;
+                        itemBudget = item.estimatedCost || 0;
+                    } else {
+                        // Welsh Gov items
+                        itemName = item.name || item.item || item.description || 'Unnamed Item';
+                        itemBudget = item.total || item.cost || item.amount || 0;
+                    }
+
+                    content += `
+                        <div onclick="selectGrantItem('${itemKey}', '${itemName.replace(/'/g, "\\'")}', ${itemBudget})"
+                             style="padding: 12px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
+                             onmouseover="this.style.background='#f0f9ff'; this.style.borderColor='#3b82f6';"
+                             onmouseout="this.style.background='white'; this.style.borderColor='#ddd';">
+                            <div style="font-weight: 600; font-size: 14px; color: #1e293b;">${itemName}</div>
+                            <div style="font-size: 12px; color: #64748b;">Budget: £${itemBudget.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        </div>
+                    `;
+                });
+            } else {
+                content += '<p style="text-align: center; color: #999; padding: 20px;">No items found in this category</p>';
+            }
+
+            content += '</div>';
+
+            document.getElementById('staffAllocationsList').innerHTML = `
+                <div style="border: 1px solid #3b82f6; border-radius: 6px; padding: 15px; background: #f8fafc;">
+                    <button onclick="cancelGrantSelection()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 12px; margin-bottom: 15px;">← Cancel</button>
+                    ${content}
+                </div>
+            `;
+        }
+
+        async function selectGrantItem(itemKey, itemName, itemBudget) {
+            // Load project name for display
+            try {
+                const db = await openDB('GrantsDB', 2);
+                const tx = db.transaction('projects', 'readonly');
+                const store = tx.objectStore('projects');
+                const allProjects = await store.getAll();
+                const project = allProjects.find(p => p.projectId == selectedProjectForBudget);
+                const projectName = project ? (project.projectName || project.projectNumber || `Project ${project.projectId}`) : 'Unknown Project';
+
+                // Update the selected staff member's allocation
+                selectedStaffMember.grantCategory = selectedCategoryForBudget;
+                selectedStaffMember.grantItemKey = itemKey;
+                selectedStaffMember.grantItemName = itemName;
+                selectedStaffMember.grantProjectId = selectedProjectForBudget;
+                selectedStaffMember.grantProjectName = projectName;
+                selectedStaffMember.budgetAllocated = itemBudget;
+
+                saveStaffAllocations();
+
+                // Check which container is visible and render appropriately
+                const inlineContainer = document.getElementById('staffAllocationsListInline');
+                if (inlineContainer && inlineContainer.closest('#labourBudgetSection').style.display !== 'none') {
+                    renderStaffAllocationsInline();
+                } else {
+                    renderStaffAllocations();
+                }
+
+                // Show success message
+                showToast(`✅ Assigned ${selectedStaffMember.staffName} to ${itemName} (Budget: £${itemBudget.toLocaleString('en-GB')})`, 'success');
+            } catch (error) {
+                console.error('Error saving grant assignment:', error);
+                alert('Failed to save grant assignment');
+            }
+        }
+
+        function cancelGrantSelection() {
+            labourBudgetStep = 1;
+            selectedStaffMember = null;
+            selectedProjectForBudget = null;
+            selectedCategoryForBudget = null;
+
+            // Check which container is visible and render appropriately
+            const inlineContainer = document.getElementById('staffAllocationsListInline');
+            const modalContainer = document.getElementById('staffAllocationsList');
+
+            if (inlineContainer && inlineContainer.closest('#labourBudgetSection').style.display !== 'none') {
+                renderStaffAllocationsInline();
+            } else {
+                renderStaffAllocations();
+            }
+        }
+
+        function getCategoryObject(project, categoryName) {
+            const categoryMap = {
+                'Labour': 'labour',
+                'Materials': 'materials',
+                'Capital Usage': 'capitalUsage',
+                'Subcontracting': 'subcontracting',
+                'Travel': 'travel',
+                'Other Costs': 'otherCosts',
+                'Capital Non-Standard': 'capitalNonStandard',
+                'Revenue Non-Standard': 'revenueNonStandard',
+                'Revenue Standard': 'revenueStandard',
+                'Item Breakdown Capital': 'itemBreakdownCapital',
+                'Item Breakdown Revenue': 'itemBreakdownRevenue'
+            };
+
+            const key = categoryMap[categoryName];
+            return key ? project[key] : null;
+        }
+
+        // Helper function to open IndexedDB
+        function openDB(dbName, version) {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, version);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+
+                // Handle database upgrade for GrantsDB
+                request.onupgradeneeded = (event) => {
+                    if (dbName === 'GrantsDB') {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('projects')) {
+                            const objectStore = db.createObjectStore('projects', { keyPath: 'projectId' });
+                            objectStore.createIndex('projectName', 'projectName', { unique: false });
+                            console.log('[GRANTS SYNC] Created projects object store in openDB');
+                        }
+                    }
+                };
+            });
+        }
+
         function loadHistory(index) {
             const history = JSON.parse(localStorage.getItem('timesheetHistory') || '[]');
             if (history[index]) {
@@ -1862,6 +3020,22 @@ Return JSON:
         let workingDaysPerYear = 224; // Configurable days per year for £/day calculation
         let hoursPerDay = 8; // Configurable hours per day for £/hr calculation
 
+        // Migrate old projects to add IDs (backward compatibility)
+        function migrateProjectIds() {
+            let needsSave = false;
+            labourProjects.forEach(project => {
+                if (!project.id) {
+                    project.id = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+                    needsSave = true;
+                    console.log('[MIGRATION] Added ID to project:', project.name, '→', project.id);
+                }
+            });
+            if (needsSave) {
+                saveLabourData();
+                console.log('[MIGRATION] Projects migrated and saved');
+            }
+        }
+
         // Initialize labour allocation on page load
         async function initLabourAllocation() {
             // Try to load from cloud/localStorage first
@@ -1889,12 +3063,12 @@ Return JSON:
 
             // Initialize with default projects if no saved data
             labourProjects = [
-                { name: 'OceanOS Q3', color: '#e3f2fd' },
-                { name: 'SeaLens Cymru', color: '#f3e5f5' },
-                { name: 'PEBL-FLOW', color: '#e8f5e9' },
-                { name: 'Atlas', color: '#fff3e0' },
-                { name: 'BluePower', color: '#fce4ec' },
-                { name: 'eFloat', color: '#e0f7fa' }
+                { id: Date.now().toString() + '_1', name: 'OceanOS Q3', color: '#e3f2fd' },
+                { id: Date.now().toString() + '_2', name: 'SeaLens Cymru', color: '#f3e5f5' },
+                { id: Date.now().toString() + '_3', name: 'PEBL-FLOW', color: '#e8f5e9' },
+                { id: Date.now().toString() + '_4', name: 'Atlas', color: '#fff3e0' },
+                { id: Date.now().toString() + '_5', name: 'BluePower', color: '#fce4ec' },
+                { id: Date.now().toString() + '_6', name: 'eFloat', color: '#e0f7fa' }
             ];
 
             renderLabourTable();
@@ -1958,8 +3132,8 @@ Return JSON:
                 }
                 projectTh.dataset.projectIdx = idx;
                 projectTh.innerHTML = `
-                    ${project.name}
-                    <button onclick="toggleProjectVisibility(${idx})" style="float: right; background: ${isHidden ? '#4CAF50' : '#FF9800'}; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 14px; margin-left: 4px; line-height: 1;" title="${isHidden ? 'Show project' : 'Hide project'}">${isHidden ? '+' : '−'}</button>
+                    <span onclick="showLabourBudgetSummary(${idx})" style="cursor: pointer; text-decoration: underline;" title="Click to view labour budget summary">${project.name}</span>
+                    <button onclick="toggleProjectVisibility(${idx})" style="float: right; background: ${isHidden ? '#4CAF50' : '#FF9800'}; color: white; border: none; padding: 2px 4px; cursor: pointer; border-radius: 2px; font-size: 10px; margin-left: 4px; line-height: 1; opacity: 0.7;" title="${isHidden ? 'Show project' : 'Hide project'}">${isHidden ? '+' : '−'}</button>
                 `;
 
                 if (isHidden) {
@@ -2985,13 +4159,145 @@ Return JSON:
             }
         }
 
+        // Show copy month dialog
+        function showCopyMonthDialog() {
+            if (labourRows.length === 0) {
+                alert('No data to copy. Please add some rows first.');
+                return;
+            }
+
+            // Get unique months from the data, sorted
+            const uniqueMonths = [...new Set(labourRows.map(row => row.month))].sort();
+
+            if (uniqueMonths.length === 0) {
+                alert('No valid month data found.');
+                return;
+            }
+
+            // Populate the dropdown
+            const select = document.getElementById('copyMonthSelect');
+            select.innerHTML = '<option value="">-- Select a month --</option>';
+
+            uniqueMonths.forEach(month => {
+                const option = document.createElement('option');
+                option.value = month;
+                // Format: "2025-09" -> "September 2025"
+                const [year, monthNum] = month.split('-');
+                const monthName = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                option.textContent = monthName;
+                select.appendChild(option);
+            });
+
+            // Reset preview
+            document.getElementById('copyMonthPreview').style.display = 'none';
+            document.getElementById('executeCopyBtn').disabled = true;
+
+            // Show dialog
+            document.getElementById('copyMonthDialog').style.display = 'flex';
+        }
+
+        // Update preview when month is selected
+        function updateCopyMonthPreview() {
+            const selectedMonth = document.getElementById('copyMonthSelect').value;
+            const previewDiv = document.getElementById('copyMonthPreview');
+            const previewText = document.getElementById('copyMonthPreviewText');
+            const copyBtn = document.getElementById('executeCopyBtn');
+
+            if (!selectedMonth) {
+                previewDiv.style.display = 'none';
+                copyBtn.disabled = true;
+                return;
+            }
+
+            // Count rows for this month
+            const rowsToCopy = labourRows.filter(row => row.month === selectedMonth);
+            const rowCount = rowsToCopy.length;
+
+            // Calculate next month
+            const [year, month] = selectedMonth.split('-').map(Number);
+            let nextYear = year;
+            let nextMonth = month + 1;
+
+            if (nextMonth > 12) {
+                nextMonth = 1;
+                nextYear++;
+            }
+
+            const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+            const nextMonthName = new Date(nextYear, nextMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            // Show preview
+            previewText.innerHTML = `This will copy <strong>${rowCount} row(s)</strong> to <strong>${nextMonthName}</strong>`;
+            previewDiv.style.display = 'block';
+            copyBtn.disabled = false;
+        }
+
+        // Execute the copy operation
+        function executeCopyMonth() {
+            const selectedMonth = document.getElementById('copyMonthSelect').value;
+
+            if (!selectedMonth) {
+                return;
+            }
+
+            // Calculate next month
+            const [year, month] = selectedMonth.split('-').map(Number);
+            let nextYear = year;
+            let nextMonth = month + 1;
+
+            if (nextMonth > 12) {
+                nextMonth = 1;
+                nextYear++;
+            }
+
+            const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+
+            // Find all rows from the selected month
+            const rowsToCopy = labourRows.filter(row => row.month === selectedMonth);
+
+            if (rowsToCopy.length === 0) {
+                alert(`No rows found for ${selectedMonth}.`);
+                return;
+            }
+
+            // Create copies of the rows with the new month
+            const newRows = rowsToCopy.map(row => {
+                // Deep clone the row
+                const newRow = JSON.parse(JSON.stringify(row));
+                newRow.month = nextMonthStr;
+                return newRow;
+            });
+
+            // Add the new rows to the end of the labour rows array (below the last row)
+            labourRows.push(...newRows);
+
+            // Re-render and save
+            renderLabourRows();
+            saveLabourData();
+
+            // Close dialog
+            closeCopyMonthDialog();
+
+            // Show success message
+            const nextMonthName = new Date(nextYear, nextMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            alert(`✅ Copied ${newRows.length} row(s) to ${nextMonthName}`);
+        }
+
+        // Close copy month dialog
+        function closeCopyMonthDialog() {
+            document.getElementById('copyMonthDialog').style.display = 'none';
+            document.getElementById('copyMonthSelect').value = '';
+            document.getElementById('copyMonthPreview').style.display = 'none';
+        }
+
         // Add project
         function addProject() {
             const name = prompt('Enter project name:');
             if (name) {
                 const colors = ['#e3f2fd', '#f3e5f5', '#e8f5e9', '#fff3e0', '#fce4ec', '#e0f7fa'];
                 const color = colors[labourProjects.length % colors.length];
-                labourProjects.push({ name, color });
+                const id = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9); // Generate unique ID
+                labourProjects.push({ id, name, color });
 
                 // Add project to all existing rows
                 labourRows.forEach(row => {
@@ -3197,6 +4503,9 @@ Return JSON:
                     workingDaysPerYear = data.workingDaysPerYear || workingDaysPerYear;
                     hoursPerDay = data.hoursPerDay || hoursPerDay;
 
+                    // Migrate projects to add IDs if needed
+                    migrateProjectIds();
+
                     renderLabourTable();
                     showToast('☁️ Labour data loaded from cloud', 'success');
                     console.log('☁️ Labour data loaded from Supabase');
@@ -3217,6 +4526,9 @@ Return JSON:
                 staffDatabase = data.staff || staffDatabase;
                 workingDaysPerYear = data.workingDaysPerYear || workingDaysPerYear;
                 hoursPerDay = data.hoursPerDay || hoursPerDay;
+
+                // Migrate projects to add IDs if needed
+                migrateProjectIds();
 
                 renderLabourTable();
                 showToast('Labour data loaded from local storage', 'success');

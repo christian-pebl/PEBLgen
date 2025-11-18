@@ -918,10 +918,7 @@
 
         /* Saved Projects Dropdown */
         .projects-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            margin-top: 10px;
+            position: fixed;
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
@@ -929,7 +926,7 @@
             max-width: 700px;
             max-height: 500px;
             overflow-y: auto;
-            z-index: 1000;
+            z-index: 10000;
         }
 
         .projects-dropdown-content {
@@ -1403,6 +1400,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 // Add timeout to detect hanging requests
                 const timeout = setTimeout(() => {
+                console.log('🗑️ [DELETE] Setting up click-outside listener with 100ms delay');
                     console.warn('⚠️ [DB INIT] Database initialization timeout (10s) - continuing without DB');
                     if (!db) {
                         addLog('⚠️ Database initialization timeout - features may be limited');
@@ -1526,6 +1524,204 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             } catch (error) {
                 console.error('❌ [TRANSACTIONS] Failed to load transactions:', error);
                 return [];
+            }
+        }
+
+        // Migrate transaction refs from transaction level to assignment level
+        async function migrateTransactionRefs() {
+            if (!db) await initIndexedDB();
+            if (!db) return;
+
+            console.log('🔄 [MIGRATION] Checking for transaction refs to migrate...');
+
+            try {
+                const txn = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const store = txn.objectStore(CSV_STORE_NAME);
+                const allFiles = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                let migratedCount = 0;
+                let filesUpdated = 0;
+
+                for (const file of allFiles) {
+                    if (file.transactions && Array.isArray(file.transactions)) {
+                        let fileModified = false;
+
+                        for (const transaction of file.transactions) {
+                            // If transaction has a transactionRef but assignments don't
+                            if (transaction.transactionRef && transaction.assignments && Array.isArray(transaction.assignments)) {
+                                for (const assignment of transaction.assignments) {
+                                    // Only migrate if assignment doesn't already have a ref
+                                    if (!assignment.transactionRef) {
+                                        assignment.transactionRef = transaction.transactionRef;
+                                        migratedCount++;
+                                        fileModified = true;
+                                        console.log(`✅ [MIGRATION] Migrated ref "${transaction.transactionRef}" to assignment: ${assignment.category} - ${assignment.itemKey}`);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Save the file if we modified it
+                        if (fileModified) {
+                            await new Promise((resolve, reject) => {
+                                const updateRequest = store.put(file);
+                                updateRequest.onsuccess = () => resolve();
+                                updateRequest.onerror = () => reject(updateRequest.error);
+                            });
+                            filesUpdated++;
+                        }
+                    }
+                }
+
+                if (migratedCount > 0) {
+                    console.log(`✅ [MIGRATION] Successfully migrated ${migratedCount} transaction refs across ${filesUpdated} files`);
+                    addLog(`✅ Restored ${migratedCount} transaction references`);
+
+                    // Refresh cached transactions
+                    cachedTransactions = await loadAllTransactions();
+                } else {
+                    console.log('ℹ️ [MIGRATION] No transaction refs needed migration');
+                }
+
+            } catch (error) {
+                console.error('❌ [MIGRATION] Failed to migrate transaction refs:', error);
+            }
+        }
+
+        // Update transaction reference for a specific assignment in IndexedDB
+        async function updateTransactionRef(transactionDate, transactionDescription, projectId, category, itemKey, newRef) {
+            if (!db) await initIndexedDB();
+            if (!db) {
+                throw new Error('Database not initialized');
+            }
+
+            try {
+                console.log(`🔍 [TRANSACTION REF] Searching for assignment to update:`, {
+                    transactionDate,
+                    transactionDescription: transactionDescription?.substring(0, 50),
+                    projectId,
+                    category,
+                    itemKey,
+                    newRef
+                });
+
+                // Check if the new ref already exists in ANY assignment
+                const allTransactions = await loadAllTransactions();
+                for (const t of allTransactions) {
+                    if (t.assignments && Array.isArray(t.assignments)) {
+                        for (const assignment of t.assignments) {
+                            if (assignment.transactionRef === newRef) {
+                                // Skip if this is the same assignment we're updating
+                                if (t.date === transactionDate &&
+                                    t.description === transactionDescription &&
+                                    assignment.projectId === projectId &&
+                                    assignment.category === category &&
+                                    assignment.itemKey === itemKey) {
+                                    console.log(`ℹ️ [TRANSACTION REF] Same assignment - allowing update`);
+                                    continue;
+                                }
+                                throw new Error(`Transaction reference "${newRef}" already exists for another assignment`);
+                            }
+                        }
+                    }
+                }
+
+                // Get all CSV files
+                const txn = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const store = txn.objectStore(CSV_STORE_NAME);
+                const allFiles = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Find and update the specific assignment in the transaction
+                let updated = false;
+                for (const file of allFiles) {
+                    if (file.transactions && Array.isArray(file.transactions)) {
+                        const txIndex = file.transactions.findIndex(t =>
+                            t.date === transactionDate && t.description === transactionDescription
+                        );
+
+                        if (txIndex !== -1) {
+                            const transaction = file.transactions[txIndex];
+                            console.log(`✅ [TRANSACTION REF] Found transaction with ${transaction.assignments?.length || 0} assignments`);
+
+                            if (transaction.assignments && Array.isArray(transaction.assignments)) {
+                                // Try multiple matching strategies
+                                let assignmentIndex = -1;
+
+                                // Strategy 1: Exact match with all fields
+                                assignmentIndex = transaction.assignments.findIndex(a =>
+                                    a.projectId === projectId &&
+                                    a.category === category &&
+                                    a.itemKey === itemKey
+                                );
+
+                                // Strategy 2: Match with type conversion (projectId might be string vs number)
+                                if (assignmentIndex === -1) {
+                                    assignmentIndex = transaction.assignments.findIndex(a =>
+                                        String(a.projectId) === String(projectId) &&
+                                        a.category === category &&
+                                        String(a.itemKey || '') === String(itemKey || '')
+                                    );
+                                }
+
+                                // Strategy 3: If itemKey is null/undefined, match just category and project
+                                if (assignmentIndex === -1 && (!itemKey || itemKey === 'null' || itemKey === 'undefined')) {
+                                    console.log(`🔍 [TRANSACTION REF] Trying category-only match (no itemKey)`);
+                                    assignmentIndex = transaction.assignments.findIndex(a =>
+                                        String(a.projectId) === String(projectId) &&
+                                        a.category === category
+                                    );
+                                }
+
+                                if (assignmentIndex !== -1) {
+                                    console.log(`✅ [TRANSACTION REF] Found assignment at index ${assignmentIndex}:`, transaction.assignments[assignmentIndex]);
+
+                                    // Update the transactionRef for this specific assignment
+                                    transaction.assignments[assignmentIndex].transactionRef = newRef;
+
+                                    // Save the updated file back to IndexedDB
+                                    await new Promise((resolve, reject) => {
+                                        const updateRequest = store.put(file);
+                                        updateRequest.onsuccess = () => resolve();
+                                        updateRequest.onerror = () => reject(updateRequest.error);
+                                    });
+
+                                    updated = true;
+                                    console.log(`✅ [TRANSACTION REF] Updated reference to "${newRef}" for assignment: ${transactionDate} - ${category} - ${itemKey}`);
+                                    break;
+                                } else {
+                                    console.error(`❌ [TRANSACTION REF] No matching assignment found. Available assignments:`,
+                                        transaction.assignments.map(a => ({
+                                            projectId: a.projectId,
+                                            category: a.category,
+                                            itemKey: a.itemKey,
+                                            currentRef: a.transactionRef
+                                        }))
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!updated) {
+                    throw new Error('Assignment not found in database');
+                }
+
+                // Refresh cached transactions
+                cachedTransactions = await loadAllTransactions();
+
+                return true;
+            } catch (error) {
+                console.error('❌ [TRANSACTION REF] Failed to update transaction reference:', error);
+                throw error;
             }
         }
 
@@ -1810,18 +2006,23 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 // Create view in spend button
                 const viewInSpendBtn = `<button onclick="viewInSpend('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}'); event.stopPropagation();" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap;">👁️ View in Spend</button>`;
 
-                // Get transaction reference (will be generated in spend.html when assigned)
-                const transactionRef = transaction.transactionRef || '-';
+                // Get transaction reference from the assignment (each assignment has its own unique ref)
+                const transactionRef = assignment?.transactionRef || '-';
 
                 // Debug logging for first few transactions
                 if (transactions.indexOf(transaction) < 3) {
-                    console.log(`📝 [TRANSACTION REF] Transaction ${transactions.indexOf(transaction)}: ${transaction.date} - Ref: ${transactionRef}`);
+                    console.log(`📝 [TRANSACTION REF] Transaction ${transactions.indexOf(transaction)}: ${transaction.date} - Assignment Ref: ${transactionRef}`);
                 }
 
                 return `
                     <tr id="${transactionId}" data-transaction-date="${escapeHtml(transaction.date)}" data-transaction-description="${escapeHtml(transaction.description)}">
                         <td style="padding: 6px 10px; white-space: nowrap;">${escapeHtml(date)}</td>
-                        <td style="padding: 6px 10px; text-align: center; white-space: nowrap; font-weight: 600; color: #059669; font-family: monospace;">${escapeHtml(transactionRef)}</td>
+                        <td
+                            style="padding: 6px 10px; text-align: center; white-space: nowrap; font-weight: 600; color: #059669; font-family: monospace; cursor: pointer; transition: background-color 0.2s;"
+                            ondblclick="makeTransactionRefEditable(this, '${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey)}', '${escapeHtml(transactionRef)}'); event.stopPropagation();"
+                            onmouseover="this.style.backgroundColor='#f0fdf4'; this.title='Double-click to edit';"
+                            onmouseout="this.style.backgroundColor='transparent';"
+                        >${escapeHtml(transactionRef)}</td>
                         <td style="padding: 6px 10px; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(description)}${currencyNote}</td>
                         <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${currencySymbol}${valueExTax}</td>
                         <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${currencySymbol}${valueIncTax}</td>
@@ -2097,13 +2298,21 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         const percentage = parseFloat(assignment.percentage) || 0;
                         const assignedAmount = ((parseFloat(valueExTax) * percentage) / 100).toFixed(2);
 
-                        // Get transaction reference
-                        const transactionRef = transaction.transactionRef || '-';
+                        // Get transaction reference from the assignment (each assignment has its own unique ref)
+                        const transactionRef = assignment.transactionRef || '-';
+                        const assignmentProjectId = assignment.projectId || projectBudget.projectId;
+                        const assignmentCategory = assignment.category || 'Other Costs';
+                        const assignmentItemKey = assignment.itemKey || '';
 
                         html += `
                             <tr style="border-bottom: 1px solid #f1f5f9;">
                                 <td style="padding: 6px 8px;">${escapeHtml(date)}</td>
-                                <td style="padding: 6px 8px; text-align: center; font-weight: 600; color: #059669; font-family: monospace;">${escapeHtml(transactionRef)}</td>
+                                <td
+                                    style="padding: 6px 8px; text-align: center; font-weight: 600; color: #059669; font-family: monospace; cursor: pointer; transition: background-color 0.2s;"
+                                    ondblclick="makeTransactionRefEditable(this, '${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}', '${escapeHtml(assignmentProjectId)}', '${escapeHtml(assignmentCategory)}', '${escapeHtml(assignmentItemKey)}', '${escapeHtml(transactionRef)}'); event.stopPropagation();"
+                                    onmouseover="this.style.backgroundColor='#f0fdf4'; this.title='Double-click to edit';"
+                                    onmouseout="this.style.backgroundColor='transparent';"
+                                >${escapeHtml(transactionRef)}</td>
                                 <td style="padding: 6px 8px;">${escapeHtml(description)}</td>
                                 <td style="padding: 6px 8px; text-align: right;">${currencySymbol}${valueExTax}</td>
                                 <td style="padding: 6px 8px; text-align: right;">${currencySymbol}${valueIncTax}</td>
@@ -4060,6 +4269,10 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         // Pre-load transactions and invoices on page load
         async function preloadTransactionData() {
             console.log('[PRELOAD] Loading transaction data...');
+
+            // Run migration first to restore any existing transaction refs
+            await migrateTransactionRefs();
+
             cachedTransactions = await loadAllTransactions();
             cachedInvoices = await loadInvoiceAttachments();
             console.log(`✅ [PRELOAD] Cached ${cachedTransactions.length} transactions and ${cachedInvoices.length} invoices`);
@@ -4073,6 +4286,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             // Show loading notification
             addLog('🔄 Syncing spend data from database...');
+
+            // Run migration to ensure any new transaction refs are preserved
+            await migrateTransactionRefs();
 
             cachedTransactions = await loadAllTransactions();
             cachedInvoices = await loadInvoiceAttachments();
@@ -4141,6 +4357,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                         // Auto-load projects to check for existing data
                         loadProjectsOnStartup();
+
+                        // Migrate existing projects to Supabase (one-time background sync)
+                        migrateProjectsToSupabase().catch(err => console.warn('☁️ Migration failed:', err));
 
                         // Pre-load transactions and invoices from Spend tab
                         preloadTransactionData();
@@ -4316,6 +4535,140 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         }
 
         // IndexedDB Save/Load Functions
+        // Migrate all existing projects from IndexedDB to Supabase (one-time)
+        async function migrateProjectsToSupabase() {
+            console.log('🔄 [MIGRATION] Starting migration of projects to Supabase...');
+
+            try {
+                // Check if migration already done
+                const migrationKey = 'grants_migration_completed';
+                if (localStorage.getItem(migrationKey) === 'true') {
+                    console.log('✅ [MIGRATION] Already completed, skipping');
+                    return;
+                }
+
+                // Ensure user is authenticated
+                const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
+                if (authError || !user) {
+                    console.warn('☁️ [MIGRATION] User not authenticated, will retry later');
+                    return;
+                }
+
+                if (!db) {
+                    console.warn('☁️ [MIGRATION] IndexedDB not ready');
+                    return;
+                }
+
+                // Get all projects from IndexedDB
+                const transaction = db.transaction(['projects'], 'readonly');
+                const objectStore = transaction.objectStore('projects');
+                const getAllRequest = objectStore.getAll();
+
+                getAllRequest.onsuccess = async () => {
+                    const projects = getAllRequest.result;
+
+                    if (!projects || projects.length === 0) {
+                        console.log('📭 [MIGRATION] No projects to migrate');
+                        localStorage.setItem(migrationKey, 'true');
+                        return;
+                    }
+
+                    console.log(`🔄 [MIGRATION] Found ${projects.length} projects to migrate`);
+
+                    // Upload each project to Supabase
+                    let successCount = 0;
+                    let failCount = 0;
+
+                    for (const project of projects) {
+                        try {
+                            const { error } = await supabaseClient
+                                .from('grants')
+                                .upsert({
+                                    user_id: user.id,
+                                    project_id: String(project.projectId),
+                                    project_data: project
+                                }, {
+                                    onConflict: 'user_id,project_id'
+                                });
+
+                            if (error) {
+                                console.error(`❌ [MIGRATION] Failed to migrate project ${project.projectId}:`, error);
+                                failCount++;
+                            } else {
+                                console.log(`✅ [MIGRATION] Migrated project ${project.projectId}`);
+                                successCount++;
+                            }
+                        } catch (err) {
+                            console.error(`❌ [MIGRATION] Error migrating project ${project.projectId}:`, err);
+                            failCount++;
+                        }
+                    }
+
+                    console.log(`✅ [MIGRATION] Complete: ${successCount} succeeded, ${failCount} failed`);
+
+                    if (successCount > 0) {
+                        addLog(`☁️ Migrated ${successCount} project(s) to cloud`);
+                    }
+
+                    // Mark migration as complete (even if some failed)
+                    localStorage.setItem(migrationKey, 'true');
+                };
+
+                getAllRequest.onerror = () => {
+                    console.error('❌ [MIGRATION] Failed to read projects from IndexedDB:', getAllRequest.error);
+                };
+
+            } catch (error) {
+                console.error('❌ [MIGRATION] Migration error:', error);
+            }
+        }
+
+        // Save project to Supabase (cloud storage)
+        async function saveToSupabase() {
+            if (!projectBudget || !projectBudget.projectId) {
+                console.warn('☁️ [SUPABASE SYNC] No project to save');
+                return false;
+            }
+
+            try {
+                console.log(`☁️ [SUPABASE SYNC] Saving project ${projectBudget.projectId} to cloud...`);
+
+                // Ensure user is authenticated
+                const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
+                if (authError || !user) {
+                    console.warn('☁️ [SUPABASE SYNC] User not authenticated, skipping cloud save');
+                    return false;
+                }
+
+                // Upsert to Supabase grants table
+                const { data, error } = await supabaseClient
+                    .from('grants')
+                    .upsert({
+                        user_id: user.id,
+                        project_id: String(projectBudget.projectId),
+                        project_data: projectBudget
+                    }, {
+                        onConflict: 'user_id,project_id'
+                    });
+
+                if (error) {
+                    console.error('☁️ [SUPABASE SYNC] Save failed:', error);
+                    addLog(`⚠️ Cloud sync failed: ${error.message}`);
+                    return false;
+                }
+
+                console.log(`☁️ [SUPABASE SYNC] ✅ Project ${projectBudget.projectId} synced to cloud`);
+                addLog(`☁️ Synced to cloud: ${projectBudget.projectName || projectBudget.projectNumber || 'Project'}`);
+                return true;
+
+            } catch (error) {
+                console.error('☁️ [SUPABASE SYNC] Error:', error);
+                return false;
+            }
+        }
+
         async function saveToIndexedDB() {
             if (!db) {
                 addLog('⚠️ Database not initialized');
@@ -4340,7 +4693,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 }
 
                 return new Promise((resolve, reject) => {
-                    request.onsuccess = () => {
+                    request.onsuccess = async () => {
                         if (!projectBudget.projectId || projectBudget.projectId === null) {
                             projectBudget.projectId = request.result;
                         }
@@ -4353,6 +4706,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         if (currentProjectNameElement) {
                             currentProjectNameElement.textContent = projectName;
                         }
+
+                        // Also save to Supabase (cloud sync)
+                        saveToSupabase().catch(err => console.warn('☁️ Cloud sync failed:', err));
 
                         resolve(true);
                     };
@@ -4406,7 +4762,10 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         }
 
         async function listSavedProjects() {
+            console.log('📋 [LIST] listSavedProjects() called');
+
             if (!db) {
+                console.error('❌ [LIST] Database not initialized');
                 alert('Database not initialized');
                 return;
             }
@@ -4418,10 +4777,22 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 request.onsuccess = () => {
                     const projects = request.result;
+                    console.log(`📋 [LIST] Found ${projects.length} projects`);
+
                     const dropdownList = document.getElementById('projectsDropdownList');
                     const dropdown = document.getElementById('savedProjectsDropdown');
 
+                    if (!dropdownList) {
+                        console.error('❌ [LIST] projectsDropdownList element not found');
+                        return;
+                    }
+                    if (!dropdown) {
+                        console.error('❌ [LIST] savedProjectsDropdown element not found');
+                        return;
+                    }
+
                     if (projects.length === 0) {
+                        console.log('ℹ️ [LIST] No projects found, showing empty state');
                         dropdownList.innerHTML = `
                             <div class="dropdown-empty-state">
                                 <div style="font-size: 2em; margin-bottom: 10px;">📂</div>
@@ -4432,6 +4803,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     } else {
                         // Sort by last modified (most recent first)
                         projects.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+                        console.log(`📋 [LIST] Rendering ${projects.length} projects:`, projects.map(p => p.projectName || p.projectNumber));
 
                         dropdownList.innerHTML = projects.map(project => {
                             const projectId = project.id || project.projectId;
@@ -4461,10 +4833,24 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         }).join('');
                     }
 
+                    console.log('✅ [LIST] Setting dropdown display to block');
                     dropdown.style.display = 'block';
+
+                    // Position dropdown below the button (fixed positioning)
+                    const btn = document.getElementById('savedProjectsBtn');
+                    if (btn) {
+                        const rect = btn.getBoundingClientRect();
+                        dropdown.style.top = (rect.bottom + 10) + 'px';
+                        dropdown.style.left = rect.left + 'px';
+                        console.log('✅ [LIST] Positioned dropdown at:', { top: dropdown.style.top, left: dropdown.style.left });
+                    }
+
+                    console.log('✅ [LIST] Dropdown display is now:', dropdown.style.display);
+                    console.log('✅ [LIST] Dropdown element:', dropdown);
                 };
 
                 request.onerror = () => {
+                    console.error('❌ [LIST] Failed to list projects:', request.error);
                     alert('Failed to list projects: ' + request.error);
                 };
             } catch (error) {
@@ -4473,10 +4859,21 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         }
 
         function toggleSavedProjectsDropdown() {
+            console.log('🔽 [DROPDOWN] Toggle clicked');
             const dropdown = document.getElementById('savedProjectsDropdown');
+
+            if (!dropdown) {
+                console.error('❌ [DROPDOWN] Dropdown element not found');
+                return;
+            }
+
+            console.log('🔽 [DROPDOWN] Current display:', dropdown.style.display);
+
             if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+                console.log('🔽 [DROPDOWN] Opening dropdown, calling listSavedProjects()');
                 listSavedProjects(); // This will set display to 'block'
             } else {
+                console.log('🔽 [DROPDOWN] Closing dropdown');
                 dropdown.style.display = 'none';
             }
         }
@@ -4591,11 +4988,14 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         }
 
         async function handleProjectSelection(projectId) {
-            console.log(`📂 [LOAD] Loading project ID: ${projectId}`);
+            console.log(`📂 [LOAD] ===== LOADING PROJECT ID: ${projectId} =====`);
 
             // Close dropdown instead of modal
             const dropdown = document.getElementById('savedProjectsDropdown');
-            if (dropdown) dropdown.style.display = 'none';
+            if (dropdown) {
+                console.log('📂 [LOAD] Closing dropdown');
+                dropdown.style.display = 'none';
+            }
 
             // Clear all display sections first to prevent mixing IUK/Welsh Gov
             console.log(`🧹 [LOAD] Clearing all display sections...`);
@@ -4648,6 +5048,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             // Focus on first input
             setTimeout(() => {
+                console.log('🗑️ [DELETE] Setting up click-outside listener with 100ms delay');
                 document.getElementById('editProjectName').focus();
             }, 100);
         }
@@ -5590,6 +5991,7 @@ Rules:
                                     <th>Grant Rate</th>
                                     <th>Maximum Grant Value £</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th>Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -5598,26 +6000,33 @@ Rules:
                                     initializeQuarterlyCosts(item);
                                     const itemKey = `capitalNonStandard-${index}`;
                                     const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Capital Non-Standard', itemKey);
-                                    const remaining = item.maxGrantValue - costsClaimed;
-                                    const difference = item.maxGrantValue > 0 ? ((costsClaimed - item.maxGrantValue) / item.maxGrantValue) * 100 : 0;
-                                    const isOverBudget = costsClaimed > item.maxGrantValue;
+                                    const remaining = item.totalCost - costsClaimed;
+                                    const difference = item.totalCost > 0 ? ((costsClaimed - item.totalCost) / item.totalCost) * 100 : 0;
+                                    const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.itemCode}</td>
-                                            <td>${item.description}</td>
-                                            <td>£${item.totalCost.toLocaleString()}</td>
-                                            <td>${item.grantRate}%</td>
-                                            <td>£${item.maxGrantValue.toLocaleString()}</td>
+                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')">${item.itemCode}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')">${item.description}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')">£${item.totalCost.toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')">${item.grantRate}%</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')">£${item.maxGrantValue.toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="console.log('🗑️ [BUTTON CLICK] Capital Non-Standard trash clicked, index:', ${index}); event.stopPropagation(); deleteWelshGovItem(this, 'capital.nonStandard', ${index}, 'Capital Non-Standard');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-capital-ns-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
+                                            <td colspan="${hasQuarters ? '9' : '6'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -5688,15 +6097,16 @@ Rules:
                                     }
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('wg-capital-ns-summary')" style="cursor: pointer; background: #dbeafe; font-weight: 600; border-top: 3px solid #3b82f6; ${isSummaryOverBudget ? 'background: #ffebee;' : ''}">
+                                        <tr style="cursor: pointer; background: #dbeafe; font-weight: 600; border-top: 3px solid #3b82f6; ${isSummaryOverBudget ? 'background: #ffebee;' : ''}">
                                             <td colspan="4" style="text-align: right; padding-right: 15px;">CATEGORY TOTAL:</td>
                                             <td>£${summary.totalCosts.toLocaleString()}</td>
                                             <td ${isSummaryOverBudget ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>£${summary.totalClaimed.toLocaleString()}</td>
                                             <td ${summary.remaining < 0 ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>£${summary.remaining.toLocaleString()}</td>
                                             <td ${summary.difference > 0 ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>${summary.difference.toFixed(1)}%</td>
+                                            <td></td>
                                         </tr>
                                         <tr id="wg-capital-ns-summary-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: transparent;">
+                                            <td colspan="9" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Capital Non-Standard - Quarterly Breakdown</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -5788,6 +6198,7 @@ Rules:
                                     <th>Grant Rate</th>
                                     <th>Maximum Grant Value £</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th>Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -5796,26 +6207,33 @@ Rules:
                                     initializeQuarterlyCosts(item);
                                     const itemKey = `revenueNonStandard-${index}`;
                                     const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Revenue Non-Standard', itemKey);
-                                    const remaining = item.maxGrantValue - costsClaimed;
-                                    const difference = item.maxGrantValue > 0 ? ((costsClaimed - item.maxGrantValue) / item.maxGrantValue) * 100 : 0;
-                                    const isOverBudget = costsClaimed > item.maxGrantValue;
+                                    const remaining = item.totalCost - costsClaimed;
+                                    const difference = item.totalCost > 0 ? ((costsClaimed - item.totalCost) / item.totalCost) * 100 : 0;
+                                    const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.itemCode}</td>
-                                            <td>${item.description}</td>
-                                            <td>£${item.totalCost.toLocaleString()}</td>
-                                            <td>${item.grantRate}%</td>
-                                            <td>£${item.maxGrantValue.toLocaleString()}</td>
+                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')">${item.itemCode}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')">${item.description}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')">£${item.totalCost.toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')">${item.grantRate}%</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')">£${item.maxGrantValue.toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="console.log('🗑️ [BUTTON CLICK] Revenue Non-Standard trash clicked, index:', ${index}); event.stopPropagation(); deleteWelshGovItem(this, 'revenue.nonStandard', ${index}, 'Revenue Non-Standard');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-revenue-ns-${index}-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: transparent;">
+                                            <td colspan="9" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -5886,15 +6304,16 @@ Rules:
                                     }
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('wg-revenue-ns-summary')" style="cursor: pointer; background: #dcfce7; font-weight: 600; border-top: 3px solid #22c55e; ${isSummaryOverBudget ? 'background: #ffebee;' : ''}">
+                                        <tr style="cursor: pointer; background: #dcfce7; font-weight: 600; border-top: 3px solid #22c55e; ${isSummaryOverBudget ? 'background: #ffebee;' : ''}">
                                             <td colspan="4" style="text-align: right; padding-right: 15px;">CATEGORY TOTAL:</td>
                                             <td>£${summary.totalCosts.toLocaleString()}</td>
                                             <td ${isSummaryOverBudget ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>£${summary.totalClaimed.toLocaleString()}</td>
                                             <td ${summary.remaining < 0 ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>£${summary.remaining.toLocaleString()}</td>
                                             <td ${summary.difference > 0 ? 'style="color: #d32f2f; font-weight: 700;"' : ''}>${summary.difference.toFixed(1)}%</td>
+                                            <td></td>
                                         </tr>
                                         <tr id="wg-revenue-ns-summary-breakdown" style="display: none;">
-                                            <td colspan="8" style="padding: 0; background: transparent;">
+                                            <td colspan="9" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Revenue Non-Standard - Quarterly Breakdown</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -5987,6 +6406,7 @@ Rules:
                                     <th>Grant Rate</th>
                                     <th>Maximum Grant Value £</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th>Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -5997,27 +6417,34 @@ Rules:
                                     initializeQuarterlyCosts(item);
                                     const itemKey = `revenueStandard-${index}`;
                                     const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Revenue Standard', itemKey);
-                                    const remaining = item.maxGrantValue - costsClaimed;
-                                    const difference = item.maxGrantValue > 0 ? ((costsClaimed - item.maxGrantValue) / item.maxGrantValue) * 100 : 0;
-                                    const isOverBudget = costsClaimed > item.maxGrantValue;
+                                    const remaining = item.totalCost - costsClaimed;
+                                    const difference = item.totalCost > 0 ? ((costsClaimed - item.totalCost) / item.totalCost) * 100 : 0;
+                                    const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.itemCode}</td>
-                                            <td>${item.description}</td>
-                                            <td>${item.itemDetails}</td>
-                                            <td>${item.quantity} Hours</td>
-                                            <td>£${item.grantRate}/Hour</td>
-                                            <td>£${item.maxGrantValue.toLocaleString()}</td>
+                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')">${item.itemCode}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')">${item.description}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')">${item.itemDetails}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')">${item.quantity} Hours</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')">£${item.grantRate}/Hour</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')">£${item.maxGrantValue.toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-revenue-std-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="console.log('🗑️ [BUTTON CLICK] Revenue Standard Costs trash clicked, index:', ${index}); event.stopPropagation(); deleteWelshGovItem(this, 'revenue.standardCosts', ${index}, 'Revenue Standard Costs');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-revenue-std-${index}-breakdown" style="display: none;">
-                                            <td colspan="9" style="padding: 0; background: transparent;">
+                                            <td colspan="10" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -6103,6 +6530,7 @@ Rules:
                                     <th>Maximum Grant Approved £</th>
                                     <th>*Claimable</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th>Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -6118,23 +6546,30 @@ Rules:
                                     const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.itemCode}</td>
-                                            <td>${item.description}</td>
-                                            <td>${item.itemDetails}</td>
-                                            <td>£${item.totalCost.toLocaleString()}</td>
-                                            <td>${item.grantRate}%</td>
-                                            <td>£${item.maxGrantApproved.toLocaleString()}</td>
-                                            <td>${item.claimable ? 'Yes' : 'No'}</td>
+                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')">${item.itemCode}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')">${item.description}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')">${item.itemDetails}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')">£${item.totalCost.toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')">${item.grantRate}%</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')">£${item.maxGrantApproved.toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')">${item.claimable ? 'Yes' : 'No'}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-item-cap-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="console.log('🗑️ [BUTTON CLICK] Item Breakdown Capital trash clicked, index:', ${index}); event.stopPropagation(); deleteWelshGovItem(this, 'itemBreakdown.capital', ${index}, 'Item Breakdown Capital');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-item-cap-${index}-breakdown" style="display: none;">
-                                            <td colspan="10" style="padding: 0; background: transparent;">
+                                            <td colspan="11" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -6215,6 +6650,7 @@ Rules:
                                     <th>Maximum Grant Approved £</th>
                                     <th>*Claimable</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th>Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -6230,23 +6666,30 @@ Rules:
                                     const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.itemCode}</td>
-                                            <td>${item.description}</td>
-                                            <td>${item.itemDetails}</td>
-                                            <td>£${item.totalCost.toLocaleString()}</td>
-                                            <td>${item.grantRate}%</td>
-                                            <td>£${item.maxGrantApproved.toLocaleString()}</td>
-                                            <td>${item.claimable ? 'Yes' : 'No'}</td>
+                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')">${item.itemCode}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')">${item.description}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')">${item.itemDetails}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')">£${item.totalCost.toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')">${item.grantRate}%</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')">£${item.maxGrantApproved.toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')">${item.claimable ? 'Yes' : 'No'}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('wg-item-rev-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="console.log('🗑️ [BUTTON CLICK] Item Breakdown Revenue trash clicked, index:', ${index}); event.stopPropagation(); deleteWelshGovItem(this, 'itemBreakdown.revenue', ${index}, 'Item Breakdown Revenue');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-item-rev-${index}-breakdown" style="display: none;">
-                                            <td colspan="10" style="padding: 0; background: transparent;">
+                                            <td colspan="11" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -7183,7 +7626,7 @@ ${inputText}`
                                         <td style="background: #fff9e0;"><input type="number" value="${totalEligible}" onchange="updateItemAndRecalc(${item.id}, 'totalEligible', parseFloat(this.value) || 0)" style="font-weight: 600; background: #fff9e0; font-size: 0.9em;"></td>
                                         <td style="background: ${difference < 0 ? '#ffcdd2' : '#f3e5f5'}; font-weight: 600; color: ${difference < 0 ? '#c62828' : '#4a148c'}; text-align: right; padding-right: 8px; font-size: 0.9em;">£${difference.toLocaleString()}</td>
                                         <td><input type="text" value="${item.notes || ''}" onchange="updateItem(${item.id}, 'notes', this.value)" style="font-size: 0.9em;"></td>
-                                        <td><button class="btn-danger" onclick="deleteItem(${item.id})" style="font-size: 0.8em; padding: 4px;">🗑️</button></td>
+                                        <td><button class="btn-danger" onclick="deleteItemWithConfirmation(this, ${item.id}); event.stopPropagation();" style="font-size: 0.8em; padding: 4px;">🗑️</button></td>
                                     </tr>
                                 `}).join('')}
                             </tbody>
@@ -7213,6 +7656,7 @@ ${inputText}`
 
             // Use setTimeout to ensure DOM has been updated
             setTimeout(() => {
+                console.log('🗑️ [DELETE] Setting up click-outside listener with 100ms delay');
                 expandedSections.forEach(id => {
                     const row = document.getElementById(id);
                     if (row) {
@@ -7499,6 +7943,7 @@ ${inputText}`
                                     <th>Days</th>
                                     <th>Total</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th style="width: 60px;">Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -7527,21 +7972,28 @@ ${inputText}`
                     const isOverBudget = costsClaimed > staff.totalCost;
 
                     labourHTML += `
-                        <tr onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                            <td>${staff.role}</td>
-                            <td>£${staff.grossCost.toLocaleString()}</td>
-                            <td>£${staff.ratePerDay}</td>
-                            <td>${staff.days}</td>
-                            <td>£${staff.totalCost.toLocaleString()}</td>
+                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                            <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer;">${staff.role}</td>
+                            <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer;">£${staff.grossCost.toLocaleString()}</td>
+                            <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer;">£${staff.ratePerDay}</td>
+                            <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer;">${staff.days}</td>
+                            <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer;">£${staff.totalCost.toLocaleString()}</td>
                             ${hasQuarters ? `
-                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer; ${isOverBudget ? 'color: #d32f2f; font-weight: 600;' : ''}">£${costsClaimed.toLocaleString()}</td>
+                                <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer; ${remaining < 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">£${remaining.toLocaleString()}</td>
+                                <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer; ${difference > 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">${difference.toFixed(1)}%</td>
                             ` : ''}
+                            <td style="text-align: center;">
+                                <button onclick="event.stopPropagation(); deleteCategoryItem(this, 'labour.staff', ${index}, 'Labour');"
+                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                        title="Delete this item">
+                                    🗑️
+                                </button>
+                            </td>
                         </tr>
                         ${hasQuarters ? `
                         <tr id="labour-${index}-breakdown" style="display: none;">
-                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
+                            <td colspan="${hasQuarters ? '9' : '6'}" style="padding: 0; background: transparent;">
                                 <div class="quarterly-breakdown-container">
                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${staff.role}</h4>
                                     <table class="quarterly-breakdown-table">
@@ -7742,6 +8194,7 @@ ${inputText}`
                                     <th>Cost Per Item</th>
                                     <th>Total</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th style="width: 60px;">Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -7754,20 +8207,27 @@ ${inputText}`
                                     const isOverBudget = costsClaimed > item.total;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.item}</td>
-                                            <td>${item.quantity}</td>
-                                            <td>£${item.costPerItem.toLocaleString()}</td>
-                                            <td>£${item.total.toLocaleString()}</td>
+                                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer;">${item.item}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer;">${item.quantity}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer;">£${item.costPerItem.toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer;">£${item.total.toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer; ${isOverBudget ? 'color: #d32f2f; font-weight: 600;' : ''}">£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer; ${remaining < 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer; ${difference > 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="event.stopPropagation(); deleteCategoryItem(this, 'materials.items', ${index}, 'Materials');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="materials-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
+                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-materials-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.item}</h4>
@@ -7989,6 +8449,7 @@ ${inputText}`
                                     <th>Utilisation %</th>
                                     <th>Net Cost</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th style="width: 60px;">Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -8005,20 +8466,27 @@ ${inputText}`
                                     const isOverBudget = costsClaimed > item.netCost;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('capital-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.description}</td>
-                                            <td>${item.newOrExisting}</td>
-                                            <td>${item.utilisation}%</td>
-                                            <td>£${item.netCost.toLocaleString()}</td>
+                                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('capital-${index}')" style="cursor: pointer;">${item.description}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('capital-${index}')" style="cursor: pointer;">${item.newOrExisting}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('capital-${index}')" style="cursor: pointer;">${item.utilisation}%</td>
+                                            <td onclick="toggleQuarterlyBreakdown('capital-${index}')" style="cursor: pointer;">£${item.netCost.toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('capital-${index}')" style="cursor: pointer; ${isOverBudget ? 'color: #d32f2f; font-weight: 600;' : ''}">£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('capital-${index}')" style="cursor: pointer; ${remaining < 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('capital-${index}')" style="cursor: pointer; ${difference > 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="event.stopPropagation(); deleteCategoryItem(this, 'capitalUsage.items', ${index}, 'Capital Usage');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="capital-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
+                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-capitalUsage-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
@@ -8191,6 +8659,7 @@ ${inputText}`
                                     <th>Role</th>
                                     <th>Cost</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th style="width: 60px;">Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -8207,20 +8676,27 @@ ${inputText}`
                                     const isOverBudget = costsClaimed > contractor.cost;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${contractor.name}</td>
-                                            <td>${contractor.country}</td>
-                                            <td>${contractor.role}</td>
-                                            <td>£${contractor.cost.toLocaleString()}</td>
+                                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${contractor.name}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${contractor.country}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${contractor.role}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">£${contractor.cost.toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer; ${isOverBudget ? 'color: #d32f2f; font-weight: 600;' : ''}">£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer; ${remaining < 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer; ${difference > 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="event.stopPropagation(); deleteCategoryItem(this, 'subcontracting.contractors', ${index}, 'Subcontracting');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="subcontracting-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
+                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-subcontracting-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${contractor.name}</h4>
@@ -8424,6 +8900,7 @@ ${inputText}`
                                     <th>Cost Each</th>
                                     <th>Total</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th>Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -8442,19 +8919,26 @@ ${inputText}`
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${trip.purpose || 'General Travel'}</td>
-                                            <td>${trip.numberOfTimes || '-'}</td>
-                                            <td>${trip.costEach ? '£' + trip.costEach.toLocaleString() : '-'}</td>
-                                            <td>£${(trip.total || trip.totalCost).toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')">${trip.purpose || 'General Travel'}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')">${trip.numberOfTimes || '-'}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')">${trip.costEach ? '£' + trip.costEach.toLocaleString() : '-'}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')">£${(trip.total || trip.totalCost).toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="event.stopPropagation(); deleteCategoryItem(this, 'travel.trips', ${index}, 'Travel');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="travel-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '7' : '4'}" style="padding: 0; background: transparent;">
+                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-travel-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${trip.purpose || 'General Travel'}</h4>
@@ -8626,6 +9110,7 @@ ${inputText}`
                                     <th>Description and Justification</th>
                                     <th>Estimated Cost</th>
                                     ${hasQuarters ? '<th>Costs Claimed</th><th>Remaining</th><th>Difference (%)</th>' : ''}
+                                    <th>Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -8646,17 +9131,24 @@ ${inputText}`
 
                                     return `
                                         <tr onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td>${item.description || 'General Other Costs'}</td>
-                                            <td>£${(item.estimatedCost || item.totalCost).toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')">${item.description || 'General Other Costs'}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')">£${(item.estimatedCost || item.totalCost).toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
                                             ` : ''}
+                                            <td style="text-align: center;">
+                                                <button onclick="event.stopPropagation(); deleteCategoryItem(this, 'otherCosts.items', ${index}, 'Other Costs');"
+                                                        style="background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'"
+                                                        title="Delete this item">
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="othercosts-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '5' : '2'}" class="breakdown-row-cell">
+                                            <td colspan="${hasQuarters ? '6' : '3'}" class="breakdown-row-cell">
                                                 <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-otherCosts-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description || 'General Other Costs'}</h4>
@@ -8831,6 +9323,12 @@ ${inputText}`
                 item[field] = value;
                 addLog(`Updated ${field} for item ${id}`);
             }
+        }
+
+        function deleteItemWithConfirmation(buttonElement, id) {
+            showDeleteConfirmation(buttonElement, () => {
+                deleteItem(id);
+            });
         }
 
         function deleteItem(id) {
@@ -9401,6 +9899,121 @@ ${inputText}`
 
             // Auto-save after update
             saveToIndexedDB();
+        }
+
+        // Show delete confirmation popup - TEMPORARY: Using native confirm
+        function showDeleteConfirmation(buttonElement, onConfirm) {
+            console.log("🗑️ [DELETE] Using native confirm dialog");
+            const confirmed = confirm("Delete this item?");
+            console.log("🗑️ [DELETE] User response:", confirmed);
+            if (confirmed) {
+                console.log("🗑️ [DELETE] User confirmed, executing callback");
+                onConfirm();
+            } else {
+                console.log("🗑️ [DELETE] User cancelled");
+                deleteWelshGovItem.isDeleting = false;
+            }
+        }
+
+        // Delete item from a category
+        function deleteCategoryItem(buttonElement, categoryPath, index, categoryName) {
+            showDeleteConfirmation(buttonElement, () => {
+                // Navigate to the correct array based on category path
+            let itemsArray;
+            switch(categoryPath) {
+                case 'labour.staff':
+                    itemsArray = projectBudget.labour.staff;
+                    break;
+                case 'materials.items':
+                    itemsArray = projectBudget.materials.items;
+                    break;
+                case 'capitalUsage.items':
+                    itemsArray = projectBudget.capitalUsage.items;
+                    break;
+                case 'subcontracting.contractors':
+                    itemsArray = projectBudget.subcontracting.contractors;
+                    break;
+                case 'travel.trips':
+                    itemsArray = projectBudget.travel.trips;
+                    break;
+                case 'otherCosts.items':
+                    itemsArray = projectBudget.otherCosts.items;
+                    break;
+                default:
+                    console.error('Unknown category path:', categoryPath);
+                    return;
+            }
+
+            // Remove the item
+            if (itemsArray && index >= 0 && index < itemsArray.length) {
+                const deletedItem = itemsArray[index];
+                itemsArray.splice(index, 1);
+
+                console.log(`Deleted item from ${categoryName}:`, deletedItem);
+
+                // Re-render the budget display
+                displayDetailedBudget();
+
+                // Save to database
+                saveToIndexedDB();
+
+                addLog(`Deleted item from ${categoryName}`);
+            }
+            });
+        }
+
+        // Delete item from Welsh Gov categories
+        function deleteWelshGovItem(buttonElement, sectionPath, index, categoryName) {
+            // Debounce: prevent rapid multiple calls
+            if (deleteWelshGovItem.isDeleting) {
+                console.log('🗑️ [DELETE WELSH] BLOCKED - Already processing a delete');
+                return;
+            }
+            deleteWelshGovItem.isDeleting = true;
+            setTimeout(() => { deleteWelshGovItem.isDeleting = false; }, 1000);
+            console.log('🗑️ [DELETE WELSH] deleteWelshGovItem called');
+            console.log('🗑️ [DELETE WELSH] Parameters:', { buttonElement, sectionPath, index, categoryName });
+            console.log('🗑️ [DELETE WELSH] Button element:', buttonElement);
+            showDeleteConfirmation(buttonElement, () => {
+                // Navigate to the correct array based on section path
+            let itemsArray;
+            switch(sectionPath) {
+                case 'capital.nonStandard':
+                    itemsArray = projectBudget.welshGovData.sections.capital.nonStandard;
+                    break;
+                case 'revenue.nonStandard':
+                    itemsArray = projectBudget.welshGovData.sections.revenue.nonStandard;
+                    break;
+                case 'revenue.standardCosts':
+                    itemsArray = projectBudget.welshGovData.sections.revenue.standardCosts;
+                    break;
+                case 'itemBreakdown.capital':
+                    itemsArray = projectBudget.welshGovData.sections.itemBreakdown.capital;
+                    break;
+                case 'itemBreakdown.revenue':
+                    itemsArray = projectBudget.welshGovData.sections.itemBreakdown.revenue;
+                    break;
+                default:
+                    console.error('Unknown Welsh Gov section path:', sectionPath);
+                    return;
+            }
+
+            // Remove the item
+            if (itemsArray && index >= 0 && index < itemsArray.length) {
+                const deletedItem = itemsArray[index];
+                itemsArray.splice(index, 1);
+
+                console.log(`Deleted Welsh Gov item from ${categoryName}:`, deletedItem);
+
+                // Re-render the Welsh Gov budget display
+                displayWelshGovBudget(projectBudget.welshGovData);
+
+                // Save to database
+                saveToIndexedDB();
+
+                addLog(`Deleted item from ${categoryName}`);
+            }
+            });
         }
 
         // Update quarterly cost at category level - distributes value across all items
@@ -10183,6 +10796,7 @@ ${inputText}`
 
                     // Remove highlight after animation completes
                     setTimeout(() => {
+                console.log('🗑️ [DELETE] Setting up click-outside listener with 100ms delay');
                         foundRow.classList.remove('transaction-highlight');
                     }, 6500);
 
@@ -10216,6 +10830,126 @@ ${inputText}`
 
             // Navigate to spend.html with parameters
             window.location.href = `spend.html?${params.toString()}`;
+        }
+
+        /**
+         * Make transaction reference editable on double-click
+         */
+        function makeTransactionRefEditable(cell, transactionDate, transactionDescription, projectId, category, itemKey, currentRef) {
+            // Prevent multiple edit sessions
+            if (cell.querySelector('input')) return;
+
+            const originalContent = cell.innerHTML;
+            const originalValue = currentRef === '-' ? '' : currentRef;
+
+            // Create input with save/cancel buttons
+            cell.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 4px; justify-content: center;">
+                    <input
+                        type="text"
+                        value="${escapeHtml(originalValue)}"
+                        id="ref-input-${transactionDate}"
+                        style="width: 120px; padding: 4px 6px; border: 2px solid #3b82f6; border-radius: 4px; font-family: monospace; font-weight: 600; font-size: 0.9em; text-align: center;"
+                        placeholder="Enter ref"
+                        maxlength="30"
+                    />
+                    <button
+                        onclick="saveTransactionRef('${escapeHtml(transactionDate)}', '${escapeHtml(transactionDescription)}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey)}', this); event.stopPropagation();"
+                        style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; transition: background 0.2s;"
+                        onmouseover="this.style.background='#059669'"
+                        onmouseout="this.style.background='#10b981'"
+                        title="Save changes"
+                    >✓</button>
+                    <button
+                        onclick="cancelTransactionRefEdit(this, \`${originalContent.replace(/`/g, '\\`')}\`); event.stopPropagation();"
+                        style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; transition: background 0.2s;"
+                        onmouseover="this.style.background='#dc2626'"
+                        onmouseout="this.style.background='#ef4444'"
+                        title="Cancel"
+                    >✕</button>
+                </div>
+            `;
+
+            // Focus the input and select all
+            const input = cell.querySelector('input');
+            input.focus();
+            input.select();
+
+            // Save on Enter key, cancel on Escape
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const saveBtn = cell.querySelector('button');
+                    saveBtn.click();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    const cancelBtn = cell.querySelectorAll('button')[1];
+                    cancelBtn.click();
+                }
+            });
+        }
+
+        /**
+         * Save the updated transaction reference for a specific assignment
+         */
+        async function saveTransactionRef(transactionDate, transactionDescription, projectId, category, itemKey, button) {
+            const cell = button.closest('td');
+            const input = cell.querySelector('input');
+            const newRef = input.value.trim();
+
+            // Validate input
+            if (!newRef) {
+                alert('❌ Transaction reference cannot be empty');
+                input.focus();
+                return;
+            }
+
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '⏳';
+            input.disabled = true;
+
+            try {
+                // Update in database (for this specific assignment)
+                await updateTransactionRef(transactionDate, transactionDescription, projectId, category, itemKey, newRef);
+
+                // Update the cell with the new value
+                cell.innerHTML = `<span style="color: #059669; font-weight: 600; font-family: monospace;">${escapeHtml(newRef)}</span>`;
+                cell.style.padding = '6px 10px';
+                cell.style.textAlign = 'center';
+                cell.style.whiteSpace = 'nowrap';
+
+                // Re-enable double-click editing
+                cell.ondblclick = function() {
+                    makeTransactionRefEditable(this, transactionDate, transactionDescription, projectId, category, itemKey, newRef);
+                };
+
+                // Show success message
+                addLog(`✅ Transaction reference updated to: ${newRef}`);
+                console.log(`✅ [TRANSACTION REF] Successfully updated to: ${newRef} for assignment: ${category} - ${itemKey}`);
+
+            } catch (error) {
+                // Show error message
+                alert(`❌ Failed to update transaction reference:\n${error.message}`);
+                console.error('❌ [TRANSACTION REF] Update failed:', error);
+
+                // Re-enable the button
+                button.disabled = false;
+                button.innerHTML = '✓';
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        /**
+         * Cancel transaction reference editing
+         */
+        function cancelTransactionRefEdit(button, originalContent) {
+            const cell = button.closest('td');
+            cell.innerHTML = originalContent;
+            cell.style.padding = '6px 10px';
+            cell.style.textAlign = 'center';
+            cell.style.whiteSpace = 'nowrap';
         }
     </script>
 
