@@ -805,48 +805,54 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                     <button class="btn btn-info" onclick="addProject()">+ Project</button>
                     <button class="btn btn-primary" onclick="showGrantLinkModal()" style="background: #2196F3; color: white;">🔗 Link Grant</button>
                     <button class="btn btn-warning" onclick="showCopyMonthDialog()" style="background: #ff9800; color: white;">📋 Copy Month</button>
+                    <button class="btn btn-warning" onclick="showHideMonthDialog()" style="background: #9c27b0; color: white;">👁️ Hide Month</button>
                     <button class="btn btn-secondary" onclick="showAllProjects()" style="background: #607D8B;">Show All</button>
                 </div>
 
                 <!-- Labour Budget Section -->
-                <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
-                    <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 16px;">💼 Labour Budget</h3>
-
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #374151;">Select Grant Project:</label>
-                        <select id="budgetProjectSelect" onchange="loadProjectBudgetData()" style="width: 100%; max-width: 400px; padding: 8px; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 4px;">
-                            <option value="">-- Select a project --</option>
-                        </select>
+                <div style="margin-bottom: 12px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <h3 style="margin: 0; color: #1e40af; font-size: 14px;">💼 Labour Budget</h3>
+                        <button onclick="toggleLabourBudgetCollapse()" id="labourBudgetCollapseBtn" style="background: none; border: none; color: #64748b; cursor: pointer; font-size: 18px; padding: 0; line-height: 1;" title="Collapse/Expand">▼</button>
                     </div>
 
-                    <div id="budgetTableContainer" style="display: none;">
-                        <table id="labourBudgetTable" style="width: 100%; max-width: 800px; border-collapse: collapse; margin-bottom: 15px;">
-                            <thead>
-                                <tr style="background: #f1f5f9;">
-                                    <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0; font-size: 13px;">Role</th>
-                                    <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0; font-size: 13px; width: 150px;">Day Rate (£/day)</th>
-                                    <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0; font-size: 13px; width: 120px;">Days</th>
-                                    <th style="padding: 8px; text-align: right; border: 1px solid #e2e8f0; font-size: 13px; width: 150px;">Total (£)</th>
-                                    <th style="padding: 8px; text-align: center; border: 1px solid #e2e8f0; font-size: 13px; width: 60px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="labourBudgetTableBody">
-                                <tr>
-                                    <td colspan="5" style="text-align: center; padding: 20px; color: #999;">Click "+ Add Row" to get started</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                            <button onclick="addBudgetRowNew()" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">+ Add Row</button>
-                            <button onclick="saveBudgetData()" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">💾 Save</button>
+                    <div id="labourBudgetContent">
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 12px; color: #374151;">Select Grant Project:</label>
+                            <select id="budgetProjectSelect" onchange="loadProjectBudgetData()" style="width: 100%; max-width: 350px; padding: 6px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                <option value="">-- Select a project --</option>
+                            </select>
                         </div>
 
-                        <!-- Labour Allocation Breakdown -->
-                        <div id="labourAllocationBreakdown" style="margin-top: 20px; padding: 15px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px;">
-                            <h4 style="margin: 0 0 15px 0; color: #166534; font-size: 14px;">📊 Allocation Breakdown (from Labour Table)</h4>
-                            <div id="allocationBreakdownContent">
-                                <!-- Breakdown will be populated here -->
+                        <div id="budgetTableContainer" style="display: none;">
+                            <table id="labourBudgetTable" style="width: 100%; max-width: 800px; border-collapse: collapse; margin-bottom: 10px;">
+                                <thead>
+                                    <tr style="background: #f1f5f9;">
+                                        <th style="padding: 6px; text-align: left; border: 1px solid #e2e8f0; font-size: 12px;">Role</th>
+                                        <th style="padding: 6px; text-align: left; border: 1px solid #e2e8f0; font-size: 12px; width: 130px;">Day Rate (£/day)</th>
+                                        <th style="padding: 6px; text-align: left; border: 1px solid #e2e8f0; font-size: 12px; width: 100px;">Days</th>
+                                        <th style="padding: 6px; text-align: right; border: 1px solid #e2e8f0; font-size: 12px; width: 130px;">Total (£)</th>
+                                        <th style="padding: 6px; text-align: center; border: 1px solid #e2e8f0; font-size: 12px; width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="labourBudgetTableBody">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 15px; color: #999; font-size: 12px;">Click "+ Add Row" to get started</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                <button onclick="addBudgetRowNew()" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">+ Add Row</button>
+                                <button onclick="saveBudgetData()" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">💾 Save</button>
+                            </div>
+
+                            <!-- Labour Allocation Breakdown -->
+                            <div id="labourAllocationBreakdown" style="margin-top: 12px; padding: 10px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px;">
+                                <h4 style="margin: 0 0 10px 0; color: #166534; font-size: 13px;">📊 Allocation Breakdown (from Labour Table)</h4>
+                                <div id="allocationBreakdownContent">
+                                    <!-- Breakdown will be populated here -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -872,6 +878,25 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                         <div style="display: flex; gap: 10px; justify-content: flex-end;">
                             <button onclick="closeCopyMonthDialog()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>
                             <button id="executeCopyBtn" onclick="executeCopyMonth()" disabled style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hide Month Dialog -->
+                <div id="hideMonthDialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-top: 0; color: #1e40af;">👁️ Hide or Grey Out Months</h3>
+
+                        <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
+                            Choose to grey out (show as completed) or hide (completely hidden from view) each month.
+                        </p>
+
+                        <div id="hideMonthList" style="margin-bottom: 20px;">
+                            <!-- Month list will be populated here -->
+                        </div>
+
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="closeHideMonthDialog()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Close</button>
                         </div>
                     </div>
                 </div>
@@ -2378,6 +2403,32 @@ Return JSON:
             }
         }
 
+        // Toggle Labour Budget section collapse/expand
+        function toggleLabourBudgetCollapse() {
+            const content = document.getElementById('labourBudgetContent');
+            const btn = document.getElementById('labourBudgetCollapseBtn');
+            const isCollapsed = content.style.display === 'none';
+
+            if (isCollapsed) {
+                content.style.display = 'block';
+                btn.textContent = '▼';
+                localStorage.setItem('labourBudgetCollapsed', 'false');
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▶';
+                localStorage.setItem('labourBudgetCollapsed', 'true');
+            }
+        }
+
+        // Initialize Labour Budget collapse state on page load
+        function initializeLabourBudgetCollapseState() {
+            const isCollapsed = localStorage.getItem('labourBudgetCollapsed') === 'true';
+            if (isCollapsed) {
+                document.getElementById('labourBudgetContent').style.display = 'none';
+                document.getElementById('labourBudgetCollapseBtn').textContent = '▶';
+            }
+        }
+
         // Load budget data for the selected project
         async function loadProjectBudgetData() {
             const select = document.getElementById('budgetProjectSelect');
@@ -2449,7 +2500,7 @@ Return JSON:
 
             if (linkedProjectIdx === -1) {
                 breakdownContent.innerHTML = `
-                    <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+                    <p style="color: #9ca3af; font-size: 11px; margin: 0;">
                         ℹ️ No labour allocation project is linked to this grant. Use "🔗 Link Grant" to connect them.
                     </p>
                 `;
@@ -2488,7 +2539,7 @@ Return JSON:
             // Build the breakdown HTML
             if (Object.keys(allocationsByRate).length === 0) {
                 breakdownContent.innerHTML = `
-                    <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+                    <p style="color: #9ca3af; font-size: 11px; margin: 0;">
                         No allocations found for "${linkedProject.name}" in the labour table.
                     </p>
                 `;
@@ -2496,17 +2547,18 @@ Return JSON:
             }
 
             let breakdownHTML = `
-                <div style="margin-bottom: 10px;">
+                <div style="margin-bottom: 6px; font-size: 12px;">
                     <strong style="color: #166534;">Linked Labour Project:</strong> ${linkedProject.name}
                 </div>
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                     <thead>
                         <tr style="background: #dcfce7;">
-                            <th style="padding: 6px; text-align: left; border: 1px solid #86efac;">Rate (£/day)</th>
-                            <th style="padding: 6px; text-align: right; border: 1px solid #86efac;">Allocated Days</th>
-                            <th style="padding: 6px; text-align: right; border: 1px solid #86efac;">Allocated Cost</th>
-                            <th style="padding: 6px; text-align: right; border: 1px solid #86efac;">Budgeted Days</th>
-                            <th style="padding: 6px; text-align: right; border: 1px solid #86efac;">Budget Status</th>
+                            <th style="padding: 4px; text-align: left; border: 1px solid #86efac;">Rate (£/day)</th>
+                            <th style="padding: 4px; text-align: right; border: 1px solid #86efac;">Allocated Days</th>
+                            <th style="padding: 4px; text-align: right; border: 1px solid #86efac;">Allocated Cost</th>
+                            <th style="padding: 4px; text-align: right; border: 1px solid #86efac;">Budgeted Days</th>
+                            <th style="padding: 4px; text-align: right; border: 1px solid #86efac;">Budget Status</th>
+                            <th style="padding: 4px; text-align: right; border: 1px solid #86efac;">% Remaining</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2543,11 +2595,12 @@ Return JSON:
 
                 breakdownHTML += `
                     <tr>
-                        <td style="padding: 6px; border: 1px solid #86efac; font-weight: 600;">£${allocation.rate.toFixed(2)}</td>
-                        <td style="padding: 6px; border: 1px solid #86efac; text-align: right;">${allocation.totalDays.toFixed(1)}</td>
-                        <td style="padding: 6px; border: 1px solid #86efac; text-align: right;">£${allocation.totalCost.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</td>
-                        <td style="padding: 6px; border: 1px solid #86efac; text-align: right;">${budgetedDays > 0 ? budgetedDays.toFixed(1) : 'N/A'}</td>
-                        <td style="padding: 6px; border: 1px solid #86efac; text-align: right; color: ${statusColor}; font-weight: 600;">${budgetedDays > 0 ? statusText : 'No budget set'}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; font-weight: 600;">£${allocation.rate.toFixed(2)}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right;">${allocation.totalDays.toFixed(1)}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right;">£${allocation.totalCost.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right;">${budgetedDays > 0 ? budgetedDays.toFixed(1) : 'N/A'}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right; color: ${statusColor}; font-weight: 600;">${budgetedDays > 0 ? statusText : 'No budget set'}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right; color: ${statusColor}; font-weight: 600;">${budgetedDays > 0 ? (100 - percentUsed).toFixed(1) + '%' : 'N/A'}</td>
                     </tr>
                 `;
             });
@@ -2560,12 +2613,15 @@ Return JSON:
 
             breakdownHTML += `
                     <tr style="background: #d1fae5; font-weight: 600;">
-                        <td style="padding: 6px; border: 1px solid #86efac;">TOTAL</td>
-                        <td style="padding: 6px; border: 1px solid #86efac; text-align: right;">${totalAllocatedDays.toFixed(1)}</td>
-                        <td style="padding: 6px; border: 1px solid #86efac; text-align: right;">£${totalAllocatedCost.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</td>
-                        <td style="padding: 6px; border: 1px solid #86efac; text-align: right;">${totalBudgetedDays.toFixed(1)}</td>
-                        <td style="padding: 6px; border: 1px solid #86efac; text-align: right; color: ${totalAllocatedCost > totalBudgetedCost ? '#dc2626' : '#16a34a'};">
+                        <td style="padding: 4px; border: 1px solid #86efac;">TOTAL</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right;">${totalAllocatedDays.toFixed(1)}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right;">£${totalAllocatedCost.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right;">${totalBudgetedDays.toFixed(1)}</td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right; color: ${totalAllocatedCost > totalBudgetedCost ? '#dc2626' : '#16a34a'};">
                             ${totalBudgetedCost > 0 ? `£${(totalBudgetedCost - totalAllocatedCost).toLocaleString('en-GB', { minimumFractionDigits: 2 })} remaining` : 'N/A'}
+                        </td>
+                        <td style="padding: 4px; border: 1px solid #86efac; text-align: right; color: ${totalAllocatedCost > totalBudgetedCost ? '#dc2626' : '#16a34a'};">
+                            ${totalBudgetedDays > 0 ? ((totalBudgetedDays - totalAllocatedDays) / totalBudgetedDays * 100).toFixed(1) + '%' : 'N/A'}
                         </td>
                     </tr>
                 </tbody>
@@ -2723,6 +2779,7 @@ Return JSON:
         // Initialize budget dropdown on page load
         document.addEventListener('DOMContentLoaded', () => {
             populateBudgetProjectDropdown();
+            initializeLabourBudgetCollapseState();
         });
 
         // ============================================
@@ -4315,6 +4372,7 @@ Return JSON:
         function renderLabourTable() {
             renderProjectHeaders();
             renderLabourRows();
+            applyMonthStates(); // Apply month visibility states
         }
 
         // Render project headers
@@ -5078,6 +5136,7 @@ Return JSON:
 
             // Re-render the table to ensure all calculations are updated
             renderLabourRows();
+            applyMonthStates();
         }
 
         // Trigger cell update to sync with underlying data
@@ -5477,6 +5536,7 @@ Return JSON:
             });
 
             renderLabourRows();
+            applyMonthStates();
             saveLabourData();
         }
 
@@ -5484,6 +5544,7 @@ Return JSON:
         function addStaffRow() {
             labourRows.push(createDefaultRow());
             renderLabourRows();
+            applyMonthStates();
             saveLabourData();
         }
 
@@ -5492,6 +5553,7 @@ Return JSON:
             if (confirm('Delete this row?')) {
                 labourRows.splice(rowIdx, 1);
                 renderLabourRows();
+                applyMonthStates();
                 saveLabourData();
             }
         }
@@ -5610,6 +5672,7 @@ Return JSON:
 
             // Re-render and save
             renderLabourRows();
+            applyMonthStates();
             saveLabourData();
 
             // Close dialog
@@ -5626,6 +5689,190 @@ Return JSON:
             document.getElementById('copyMonthSelect').value = '';
             document.getElementById('copyMonthPreview').style.display = 'none';
         }
+
+        // ============================================
+        // HIDE MONTH FUNCTIONS
+        // ============================================
+
+        // Get month states from localStorage
+        function getMonthStates() {
+            const stored = localStorage.getItem('monthStates');
+            return stored ? JSON.parse(stored) : {};
+        }
+
+        // Save month states to localStorage
+        function saveMonthStates(states) {
+            localStorage.setItem('monthStates', JSON.stringify(states));
+        }
+
+        // Show hide month dialog
+        function showHideMonthDialog() {
+            if (labourRows.length === 0) {
+                alert('No data found. Please add some rows first.');
+                return;
+            }
+
+            // Get unique months from the data, sorted
+            const uniqueMonths = [...new Set(labourRows.map(row => row.month))].sort();
+
+            if (uniqueMonths.length === 0) {
+                alert('No valid month data found.');
+                return;
+            }
+
+            // Get current month states
+            const monthStates = getMonthStates();
+
+            // Build the month list HTML
+            const monthList = document.getElementById('hideMonthList');
+            monthList.innerHTML = '';
+
+            uniqueMonths.forEach(month => {
+                // Format: "2025-09" -> "September 2025"
+                const [year, monthNum] = month.split('-');
+                const monthName = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+                // Get current state (normal, greyed, hidden)
+                const currentState = monthStates[month] || 'normal';
+
+                // Create month row
+                const monthRow = document.createElement('div');
+                monthRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 10px; background: #f9fafb;';
+
+                // Month name and status
+                const monthInfo = document.createElement('div');
+                monthInfo.style.cssText = 'flex: 1;';
+
+                const monthTitle = document.createElement('div');
+                monthTitle.style.cssText = 'font-weight: 600; color: #1f2937; margin-bottom: 4px;';
+                monthTitle.textContent = monthName;
+
+                const statusBadge = document.createElement('div');
+                statusBadge.style.cssText = 'font-size: 12px; display: inline-block; padding: 2px 8px; border-radius: 4px;';
+                statusBadge.id = `status-${month}`;
+
+                if (currentState === 'greyed') {
+                    statusBadge.style.background = '#9ca3af';
+                    statusBadge.style.color = 'white';
+                    statusBadge.textContent = '✓ Completed';
+                } else if (currentState === 'hidden') {
+                    statusBadge.style.background = '#dc2626';
+                    statusBadge.style.color = 'white';
+                    statusBadge.textContent = '👁️ Hidden';
+                } else {
+                    statusBadge.style.background = '#10b981';
+                    statusBadge.style.color = 'white';
+                    statusBadge.textContent = '✓ Active';
+                }
+
+                monthInfo.appendChild(monthTitle);
+                monthInfo.appendChild(statusBadge);
+
+                // Buttons container
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.style.cssText = 'display: flex; gap: 8px;';
+
+                // Grey Out button
+                const greyBtn = document.createElement('button');
+                greyBtn.textContent = currentState === 'greyed' ? 'Undo Grey' : 'Grey Out';
+                greyBtn.style.cssText = `padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; background: ${currentState === 'greyed' ? '#10b981' : '#9ca3af'}; color: white;`;
+                greyBtn.onclick = () => toggleMonthGrey(month);
+
+                // Hide button
+                const hideBtn = document.createElement('button');
+                hideBtn.textContent = currentState === 'hidden' ? 'Unhide' : 'Hide';
+                hideBtn.style.cssText = `padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; background: ${currentState === 'hidden' ? '#10b981' : '#dc2626'}; color: white;`;
+                hideBtn.onclick = () => toggleMonthHide(month);
+
+                buttonsDiv.appendChild(greyBtn);
+                buttonsDiv.appendChild(hideBtn);
+
+                monthRow.appendChild(monthInfo);
+                monthRow.appendChild(buttonsDiv);
+
+                monthList.appendChild(monthRow);
+            });
+
+            // Show dialog
+            document.getElementById('hideMonthDialog').style.display = 'flex';
+        }
+
+        // Toggle month grey state
+        function toggleMonthGrey(month) {
+            const monthStates = getMonthStates();
+            const currentState = monthStates[month] || 'normal';
+
+            if (currentState === 'greyed') {
+                delete monthStates[month];
+            } else {
+                monthStates[month] = 'greyed';
+            }
+
+            saveMonthStates(monthStates);
+            applyMonthStates();
+            showHideMonthDialog(); // Refresh the dialog
+        }
+
+        // Toggle month hide state
+        function toggleMonthHide(month) {
+            const monthStates = getMonthStates();
+            const currentState = monthStates[month] || 'normal';
+
+            if (currentState === 'hidden') {
+                delete monthStates[month];
+            } else {
+                monthStates[month] = 'hidden';
+            }
+
+            saveMonthStates(monthStates);
+            applyMonthStates();
+            showHideMonthDialog(); // Refresh the dialog
+        }
+
+        // Apply month states to the table
+        function applyMonthStates() {
+            const monthStates = getMonthStates();
+            const table = document.getElementById('labourTable');
+            if (!table) return;
+
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+
+            // Get all rows
+            const rows = tbody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                const monthCell = row.cells[0];
+                if (!monthCell) return;
+
+                const month = monthCell.textContent.trim();
+                const state = monthStates[month] || 'normal';
+
+                // Apply state styling
+                if (state === 'hidden') {
+                    row.style.display = 'none';
+                } else if (state === 'greyed') {
+                    row.style.display = '';
+                    row.style.opacity = '0.4';
+                    row.style.background = '#f3f4f6';
+                    row.style.pointerEvents = 'none';
+                } else {
+                    row.style.display = '';
+                    row.style.opacity = '';
+                    row.style.background = '';
+                    row.style.pointerEvents = '';
+                }
+            });
+        }
+
+        // Close hide month dialog
+        function closeHideMonthDialog() {
+            document.getElementById('hideMonthDialog').style.display = 'none';
+        }
+
+        // ============================================
+        // END HIDE MONTH FUNCTIONS
+        // ============================================
 
         // Add project (manual - not linked to grant)
         function addProject() {
@@ -6085,6 +6332,7 @@ Return JSON:
 
             renderProjectHeaders();
             renderLabourRows();
+            applyMonthStates();
             saveLabourData();
 
             showToast(`Showing all ${hiddenCount} hidden project(s)`, 'success');
@@ -6410,6 +6658,7 @@ Return JSON:
                 // Re-render table
                 console.log('🎨 Re-rendering labour table');
                 renderLabourRows();
+                applyMonthStates();
                 console.log('✅ PASTE COMPLETE');
                 showToast(`Pasted ${rows.length} row(s) successfully`, 'success');
             });
