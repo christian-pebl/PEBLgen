@@ -1,5 +1,11 @@
 # Backup files
 *_backup.html
+*.backup
+*.backup_*
+*.bak*
+*_temp.html
+*_working.html
+*.today_changes
 
 # Large PDF files
 *.pdf
@@ -15,3 +21,23 @@ SECURITY_NOTICE.txt
 
 # Claude files
 .claude/
+
+# Node modules and dependencies
+node_modules/
+package-lock.json
+
+# Test files
+test-*.html
+test-*.js
+
+# Logs
+*.log
+nul
+
+# OS files
+desktop.ini
+.DS_Store
+
+# Screenshots
+*.png
+!pebl-logo.png

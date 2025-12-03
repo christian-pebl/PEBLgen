@@ -459,6 +459,37 @@
             border-bottom: none;
         }
 
+        /* Drag and Drop Styling */
+        .drag-handle {
+            cursor: grab;
+            padding: 4px 8px;
+            color: #9ca3af;
+            font-size: 14px;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .drag-handle:hover {
+            color: #6b7280;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .item-table tbody tr.dragging {
+            opacity: 0.5;
+            background: #dbeafe !important;
+        }
+
+        .item-table tbody tr.drag-over {
+            border-top: 3px solid #3b82f6;
+        }
+
+        .item-table tbody tr.drag-over-bottom {
+            border-bottom: 3px solid #3b82f6;
+        }
+
         /* Quarterly Breakdown Table Styling */
         .breakdown-row-cell {
             padding: 0 !important;
@@ -1108,8 +1139,11 @@
             <a href="grants.html" class="nav-btn active">Grants</a>
             <a href="spend.html" class="nav-btn">Spend</a>
             <a href="gantt.html" class="nav-btn">Gantt</a>
-            <a href="timesheet.html" class="nav-btn">Timesheet</a>
+            <a href="timesheet.html" class="nav-btn">Labour</a>
             <a href="index.html" class="nav-btn">Sketcher</a>
+            <a href="exploit.html" class="nav-btn">Exploit</a>
+            <a href="risks.html" class="nav-btn">Risks</a>
+            <a href="quote.html" class="nav-btn">Quote</a>
             <button onclick="refreshTransactionData()" class="nav-btn" style="background-color: rgba(76, 175, 80, 0.8); margin-left: auto;" title="Refresh transactions and PDFs from Spend page">🔄 Sync Spend Data</button>
             <button onclick="resetBackupAuth()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Reset cloud backup authentication">🔄 Reset Backup</button>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
@@ -1279,6 +1313,205 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             <!-- Travel & Other Costs Section -->
             <div id="travelOtherSection"></div>
+
+            <!-- Add Item Button and Undo Controls -->
+            <div id="addItemButtonContainer" style="display: none; margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #f0fdfa 0%, #e0f7f6 100%); border-radius: 8px; border: 2px dashed #3AAFA9;">
+                <div style="display: flex; gap: 10px; align-items: stretch;">
+                    <!-- Add Item Button -->
+                    <button onclick="openAddItemModal()" style="flex: 1; padding: 15px 20px; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(58,175,169,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <span style="font-size: 1.3em;">➕</span>
+                        <span>Add New Budget Item</span>
+                    </button>
+
+                    <!-- Undo Button -->
+                    <button id="undoButton" onclick="undoLastAction()" disabled style="padding: 15px 20px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: not-allowed; font-size: 1em; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 120px; transition: all 0.2s;" title="Undo last action (Ctrl+Z)">
+                        <span style="font-size: 1.2em;">↶</span>
+                        <span>Undo</span>
+                    </button>
+
+                    <!-- History Button -->
+                    <button onclick="toggleHistoryPanel()" style="padding: 15px 20px; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 120px; transition: all 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'" title="View action history">
+                        <span style="font-size: 1.2em;">📜</span>
+                        <span>History</span>
+                        <span id="historyCount" style="background: white; color: #f59e0b; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 700;">0</span>
+                    </button>
+                </div>
+
+                <!-- History Panel (collapsible) -->
+                <div id="historyPanel" style="display: none; margin-top: 15px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto;">
+                    <div style="padding: 12px 15px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0;">
+                        <span style="font-weight: 600; color: #334155;">📜 Action History</span>
+                        <button onclick="clearHistory()" style="background: #ef4444; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 500;" title="Clear all history">Clear All</button>
+                    </div>
+                    <div id="historyList" style="padding: 10px;">
+                        <p style="color: #94a3b8; text-align: center; margin: 20px 0; font-style: italic;">No actions recorded yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="addItemModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 12px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <!-- Modal Header -->
+            <div style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; padding: 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.2em;">➕ Add Budget Item</h3>
+                <button onclick="closeAddItemModal()" style="background: transparent; border: none; color: white; font-size: 1.5em; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='transparent'">✕</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div style="padding: 20px;">
+                <!-- Step 1: Select Category -->
+                <div id="addItemStep1">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #334155;">Select Category:</label>
+                    <select id="addItemCategory" onchange="showAddItemFields()" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1em; margin-bottom: 15px; cursor: pointer;">
+                        <option value="">-- Choose a category --</option>
+                        <option value="labour">👷 Labour (Staff)</option>
+                        <option value="materials">📦 Materials</option>
+                        <option value="capitalUsage">🏭 Capital Usage</option>
+                        <option value="subcontracting">🤝 Subcontracting</option>
+                        <option value="travel">✈️ Travel & Subsistence</option>
+                        <option value="otherCosts">📋 Other Costs</option>
+                    </select>
+                </div>
+
+                <!-- Step 2: Item Fields (shown based on category) -->
+                <div id="addItemStep2" style="display: none;">
+                    <!-- Labour Fields -->
+                    <div id="labourFields" style="display: none;">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Role/Position:</label>
+                            <input type="text" id="addLabourRole" placeholder="e.g., Project Manager" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Gross Cost (£):</label>
+                                <input type="number" id="addLabourGrossCost" placeholder="0" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Days:</label>
+                                <input type="number" id="addLabourDays" placeholder="0" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Materials / Capital / Subcontracting / Other Costs Fields -->
+                    <div id="genericItemFields" style="display: none;">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Item Description:</label>
+                            <input type="text" id="addItemDescription" placeholder="e.g., Lab Equipment" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Quantity:</label>
+                                <input type="number" id="addItemQuantity" value="1" min="1" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Cost Per Item (£):</label>
+                                <input type="number" id="addItemCostPerItem" placeholder="0" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px; padding: 10px; background: #f8fafc; border-radius: 6px;">
+                            <span style="color: #64748b; font-size: 0.9em;">Total: </span>
+                            <span id="addItemTotal" style="font-weight: 600; color: #1e293b;">£0</span>
+                        </div>
+                    </div>
+
+                    <!-- Travel Fields -->
+                    <div id="travelFields" style="display: none;">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Description:</label>
+                            <input type="text" id="addTravelDescription" placeholder="e.g., Conference in London" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Trips:</label>
+                                <input type="number" id="addTravelTrips" value="1" min="1" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Cost/Trip (£):</label>
+                                <input type="number" id="addTravelCostPerTrip" placeholder="0" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">S&S/Trip (£):</label>
+                                <input type="number" id="addTravelSubsistence" placeholder="0" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px; padding: 10px; background: #f8fafc; border-radius: 6px;">
+                            <span style="color: #64748b; font-size: 0.9em;">Total: </span>
+                            <span id="addTravelTotal" style="font-weight: 600; color: #1e293b;">£0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding: 15px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeAddItemModal()" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Cancel</button>
+                <button onclick="saveNewItem()" id="saveNewItemBtn" style="padding: 10px 20px; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: none;">
+                    ✓ Add Item
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welsh Gov Add Item Modal -->
+    <div id="addWelshGovItemModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 12px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <!-- Modal Header -->
+            <div style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: white; padding: 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.2em;">➕ Add Welsh Gov Item</h3>
+                <button onclick="closeAddWelshGovItemModal()" style="background: transparent; border: none; color: white; font-size: 1.5em; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='transparent'">✕</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div style="padding: 20px;">
+                <!-- Select Category -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #334155;">Select Category:</label>
+                    <select id="addWelshGovCategory" style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1em; cursor: pointer;">
+                        <option value="capital.nonStandard">🏗️ Capital - Non Standard Costs</option>
+                        <option value="revenue.nonStandard">📊 Revenue - Non Standard Costs</option>
+                        <option value="revenue.standardCosts">📋 Revenue - Standard Costs</option>
+                    </select>
+                </div>
+
+                <!-- Item Fields -->
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Item Code:</label>
+                    <input type="text" id="addWelshGovItemCode" placeholder="e.g., GF030" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Description:</label>
+                    <textarea id="addWelshGovDescription" rows="3" placeholder="Enter item description" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Total Cost (£):</label>
+                        <input type="number" id="addWelshGovTotalCost" placeholder="0" onchange="updateWelshGovMaxGrant()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #475569;">Grant Rate (%):</label>
+                        <input type="number" id="addWelshGovGrantRate" value="80" min="0" max="100" onchange="updateWelshGovMaxGrant()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95em;">
+                    </div>
+                </div>
+
+                <div style="padding: 12px; background: #f0fdf4; border-radius: 6px; border-left: 3px solid #10b981;">
+                    <span style="color: #64748b; font-size: 0.9em;">Maximum Grant Value: </span>
+                    <span id="addWelshGovMaxGrant" style="font-weight: 600; color: #059669; font-size: 1.1em;">£0</span>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding: 15px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeAddWelshGovItemModal()" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Cancel</button>
+                <button onclick="saveNewWelshGovItem()" style="padding: 10px 20px; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    ✓ Add Item
+                </button>
+            </div>
         </div>
     </div>
 
@@ -2006,6 +2239,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 // Create view in spend button
                 const viewInSpendBtn = `<button onclick="viewInSpend('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}'); event.stopPropagation();" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap;">👁️ View in Spend</button>`;
 
+                // Create unassign button
+                const unassignBtn = `<button onclick="unassignTransaction('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey)}'); event.stopPropagation();" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap; margin-left: 4px;" title="Remove this assignment">✕</button>`;
+
                 // Get transaction reference from the assignment (each assignment has its own unique ref)
                 const transactionRef = assignment?.transactionRef || '-';
 
@@ -2032,7 +2268,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">Q${assignedQuarter}</td>
                         <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">${splitPercentage}</td>
                         <td style="padding: 6px 10px; text-align: right; font-weight: 600; white-space: nowrap;">${currencySymbol}${assignedAmount}</td>
-                        <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${viewInSpendBtn}</td>
+                        <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${viewInSpendBtn}${unassignBtn}</td>
                     </tr>
                 `;
             }).join('');
@@ -5151,12 +5387,37 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             }
 
             try {
+                // Delete from IndexedDB
                 const transaction = db.transaction(['projects'], 'readwrite');
                 const objectStore = transaction.objectStore('projects');
                 const deleteRequest = objectStore.delete(currentEditProjectId);
 
-                deleteRequest.onsuccess = () => {
-                    addLog(`🗑️ Deleted: ${projectName || 'Project'}`);
+                deleteRequest.onsuccess = async () => {
+                    addLog(`🗑️ Deleted from local: ${projectName || 'Project'}`);
+
+                    // Also delete from Supabase (cloud)
+                    try {
+                        if (typeof supabaseClient !== 'undefined') {
+                            const { data: { user } } = await supabaseClient.auth.getUser();
+                            if (user) {
+                                const { error } = await supabaseClient
+                                    .from('grants')
+                                    .delete()
+                                    .eq('user_id', user.id)
+                                    .eq('project_id', String(currentEditProjectId));
+
+                                if (error) {
+                                    console.error('❌ [DELETE] Supabase delete failed:', error);
+                                    addLog(`⚠️ Cloud delete failed: ${error.message}`);
+                                } else {
+                                    console.log(`✅ [DELETE] Project ${currentEditProjectId} deleted from Supabase`);
+                                    addLog(`☁️ Deleted from cloud: ${projectName || 'Project'}`);
+                                }
+                            }
+                        }
+                    } catch (cloudError) {
+                        console.error('❌ [DELETE] Cloud delete error:', cloudError);
+                    }
 
                     // Close modal
                     closeProjectEditModal();
@@ -5422,6 +5683,1213 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             saveCategoryOrder();
 
             addLog(`🗑️ Deleted category: ${categoryKey}`);
+        }
+
+        // ============================================================================
+        // DRAG AND DROP REORDERING
+        // ============================================================================
+
+        let draggedRow = null;
+        let draggedCategoryPath = null;
+        let draggedIndex = null;
+
+        /**
+         * Initialize drag for a row
+         */
+        function handleDragStart(e, categoryPath, index) {
+            draggedRow = e.target.closest('tr');
+            draggedCategoryPath = categoryPath;
+            draggedIndex = index;
+
+            draggedRow.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', index);
+
+            console.log(`🔀 [DRAG] Started dragging item ${index} from ${categoryPath}`);
+        }
+
+        /**
+         * Handle drag over event
+         */
+        function handleDragOver(e, categoryPath, index) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            // Only allow reordering within the same category
+            if (categoryPath !== draggedCategoryPath) {
+                return;
+            }
+
+            const row = e.target.closest('tr');
+            if (!row || row === draggedRow) return;
+
+            // Clear previous indicators
+            document.querySelectorAll('.drag-over, .drag-over-bottom').forEach(el => {
+                el.classList.remove('drag-over', 'drag-over-bottom');
+            });
+
+            // Determine if dropping above or below
+            const rect = row.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+
+            if (e.clientY < midpoint) {
+                row.classList.add('drag-over');
+            } else {
+                row.classList.add('drag-over-bottom');
+            }
+        }
+
+        /**
+         * Handle drag leave event
+         */
+        function handleDragLeave(e) {
+            const row = e.target.closest('tr');
+            if (row) {
+                row.classList.remove('drag-over', 'drag-over-bottom');
+            }
+        }
+
+        /**
+         * Handle drop event
+         */
+        async function handleDrop(e, categoryPath, targetIndex) {
+            e.preventDefault();
+
+            // Only allow reordering within the same category
+            if (categoryPath !== draggedCategoryPath) {
+                console.log('🚫 [DRAG] Cannot move items between different categories');
+                return;
+            }
+
+            // Clear all indicators
+            document.querySelectorAll('.drag-over, .drag-over-bottom, .dragging').forEach(el => {
+                el.classList.remove('drag-over', 'drag-over-bottom', 'dragging');
+            });
+
+            if (draggedIndex === targetIndex || draggedIndex === null) {
+                return;
+            }
+
+            // Determine if dropping above or below the target
+            const targetRow = e.target.closest('tr');
+            const rect = targetRow.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            const dropBelow = e.clientY > midpoint;
+
+            console.log(`🔀 [DRAG] Dropping item ${draggedIndex} ${dropBelow ? 'below' : 'above'} item ${targetIndex}`);
+
+            // Reorder the array
+            await reorderCategoryItems(categoryPath, draggedIndex, targetIndex, dropBelow);
+
+            // Reset drag state
+            draggedRow = null;
+            draggedCategoryPath = null;
+            draggedIndex = null;
+        }
+
+        /**
+         * Handle drag end event
+         */
+        function handleDragEnd(e) {
+            // Clear all indicators
+            document.querySelectorAll('.drag-over, .drag-over-bottom, .dragging').forEach(el => {
+                el.classList.remove('drag-over', 'drag-over-bottom', 'dragging');
+            });
+
+            draggedRow = null;
+            draggedCategoryPath = null;
+            draggedIndex = null;
+        }
+
+        /**
+         * Reorder items in a category
+         */
+        async function reorderCategoryItems(categoryPath, fromIndex, toIndex, dropBelow) {
+            let itemsArray;
+
+            switch(categoryPath) {
+                case 'labour.staff':
+                    itemsArray = projectBudget.labour.staff;
+                    break;
+                case 'materials.items':
+                    itemsArray = projectBudget.materials.items;
+                    break;
+                case 'capitalUsage.items':
+                    itemsArray = projectBudget.capitalUsage.items;
+                    break;
+                case 'subcontracting.contractors':
+                    itemsArray = projectBudget.subcontracting.contractors;
+                    break;
+                case 'travel.trips':
+                    itemsArray = projectBudget.travel.trips;
+                    break;
+                case 'travel.items':
+                    itemsArray = projectBudget.travel.items;
+                    break;
+                case 'otherCosts.items':
+                    itemsArray = projectBudget.otherCosts.items;
+                    break;
+                // Welsh Gov categories
+                case 'welshGov.capital.nonStandard':
+                    itemsArray = projectBudget.welshGovData?.sections?.capital?.nonStandard;
+                    break;
+                case 'welshGov.revenue.nonStandard':
+                    itemsArray = projectBudget.welshGovData?.sections?.revenue?.nonStandard;
+                    break;
+                case 'welshGov.revenue.standardCosts':
+                    itemsArray = projectBudget.welshGovData?.sections?.revenue?.standardCosts;
+                    break;
+                default:
+                    console.error('Unknown category path for reordering:', categoryPath);
+                    return;
+            }
+
+            if (!itemsArray || itemsArray.length === 0) {
+                console.error('No items array found for:', categoryPath);
+                return;
+            }
+
+            // Record action for undo
+            const previousOrder = [...itemsArray];
+
+            // Remove the item from its original position
+            const [movedItem] = itemsArray.splice(fromIndex, 1);
+
+            // Calculate the new position
+            let newIndex = toIndex;
+            if (fromIndex < toIndex) {
+                // Moving down: account for the removed item
+                newIndex = dropBelow ? toIndex : toIndex - 1;
+            } else {
+                // Moving up
+                newIndex = dropBelow ? toIndex + 1 : toIndex;
+            }
+
+            // Ensure newIndex is within bounds
+            newIndex = Math.max(0, Math.min(newIndex, itemsArray.length));
+
+            // Insert at the new position
+            itemsArray.splice(newIndex, 0, movedItem);
+
+            console.log(`🔀 [REORDER] Moved item from index ${fromIndex} to ${newIndex} in ${categoryPath}`);
+
+            // Record action for undo
+            const itemDescription = movedItem.role || movedItem.destination || movedItem.item || movedItem.name || movedItem.description || movedItem.itemCode || 'Unknown';
+            recordAction(
+                'reorder_items',
+                categoryPath,
+                { previousOrder: previousOrder, categoryPath: categoryPath },
+                `Reordered "${itemDescription}" in ${categoryPath.split('.')[0]}`
+            );
+
+            // Save to database
+            await saveToIndexedDB();
+            await saveToSupabase();
+
+            // Re-render the display - use appropriate function based on category
+            if (categoryPath.startsWith('welshGov.')) {
+                displayWelshGovBudget(projectBudget.welshGovData);
+            } else {
+                displayDetailedBudget();
+            }
+
+            addLog(`🔀 Reordered items in ${categoryPath}`);
+        }
+
+        // ============================================================================
+        // UNDO / ACTION HISTORY SYSTEM
+        // ============================================================================
+
+        // Action history stack
+        const actionHistory = [];
+        const MAX_HISTORY_SIZE = 50; // Maximum number of actions to keep
+
+        // Action types
+        const ACTION_TYPES = {
+            ADD_ITEM: 'add_item',
+            DELETE_ITEM: 'delete_item',
+            EDIT_ITEM: 'edit_item',
+            DELETE_PROJECT: 'delete_project',
+            REORDER_ITEMS: 'reorder_items'
+        };
+
+        /**
+         * Record an action to the history stack
+         * @param {string} type - Action type from ACTION_TYPES
+         * @param {string} category - Category affected (labour, materials, etc.)
+         * @param {object} data - Data needed to undo the action
+         * @param {string} description - Human-readable description
+         */
+        function recordAction(type, category, data, description) {
+            const action = {
+                id: Date.now(),
+                type: type,
+                category: category,
+                data: JSON.parse(JSON.stringify(data)), // Deep clone
+                description: description,
+                timestamp: new Date().toISOString(),
+                projectId: projectBudget.projectId
+            };
+
+            // Add to beginning of array (most recent first)
+            actionHistory.unshift(action);
+
+            // Limit history size
+            if (actionHistory.length > MAX_HISTORY_SIZE) {
+                actionHistory.pop();
+            }
+
+            console.log(`📝 [HISTORY] Recorded action: ${description}`, action);
+
+            // Update UI
+            updateHistoryUI();
+        }
+
+        /**
+         * Undo the last action
+         */
+        async function undoLastAction() {
+            if (actionHistory.length === 0) {
+                alert('No actions to undo.');
+                return;
+            }
+
+            const action = actionHistory[0];
+
+            // Verify we're on the same project
+            if (action.projectId !== projectBudget.projectId) {
+                alert('Cannot undo: Action was performed on a different project.');
+                return;
+            }
+
+            console.log(`↶ [UNDO] Undoing action: ${action.description}`, action);
+
+            try {
+                switch (action.type) {
+                    case ACTION_TYPES.ADD_ITEM:
+                        await undoAddItem(action);
+                        break;
+                    case ACTION_TYPES.DELETE_ITEM:
+                        await undoDeleteItem(action);
+                        break;
+                    case ACTION_TYPES.EDIT_ITEM:
+                        await undoEditItem(action);
+                        break;
+                    case ACTION_TYPES.DELETE_PROJECT:
+                        await undoDeleteProject(action);
+                        break;
+                    case ACTION_TYPES.REORDER_ITEMS:
+                        await undoReorderItems(action);
+                        break;
+                    default:
+                        console.error('Unknown action type:', action.type);
+                        alert('Cannot undo this action type.');
+                        return;
+                }
+
+                // Remove the action from history
+                actionHistory.shift();
+
+                // Save changes
+                await saveToIndexedDB();
+                await saveToSupabase();
+
+                // Refresh display
+                displayDetailedBudget();
+
+                // Update UI
+                updateHistoryUI();
+
+                addLog(`↶ Undone: ${action.description}`);
+                alert(`✅ Undone: ${action.description}`);
+
+            } catch (error) {
+                console.error('Error undoing action:', error);
+                alert('❌ Error undoing action: ' + error.message);
+            }
+        }
+
+        /**
+         * Undo an add item action (remove the item)
+         */
+        async function undoAddItem(action) {
+            const { category, data } = action;
+            const categoryPath = data.categoryPath || category;
+
+            // Handle Welsh Gov items
+            if (categoryPath.startsWith('welshGov.')) {
+                const sectionPath = categoryPath.replace('welshGov.', '');
+                let itemsArray;
+                switch(sectionPath) {
+                    case 'capital.nonStandard':
+                        itemsArray = projectBudget.welshGovData?.sections?.capital?.nonStandard;
+                        break;
+                    case 'revenue.nonStandard':
+                        itemsArray = projectBudget.welshGovData?.sections?.revenue?.nonStandard;
+                        break;
+                    case 'revenue.standardCosts':
+                        itemsArray = projectBudget.welshGovData?.sections?.revenue?.standardCosts;
+                        break;
+                    default:
+                        console.error('Unknown Welsh Gov section path for undo:', sectionPath);
+                        return;
+                }
+                if (itemsArray) {
+                    const index = itemsArray.findIndex(i =>
+                        i.itemCode === data.item.itemCode &&
+                        i.description === data.item.description
+                    );
+                    if (index !== -1) {
+                        itemsArray.splice(index, 1);
+                        updateWelshGovFinanceSummary();
+                        displayWelshGovBudget(projectBudget.welshGovData);
+                    }
+                }
+                return;
+            }
+
+            if (categoryPath === 'labour.staff' || category === 'labour') {
+                // Find and remove the item from labour.staff
+                const index = projectBudget.labour.staff.findIndex(s =>
+                    s.role === data.item.role &&
+                    s.grossCost === data.item.grossCost &&
+                    s.days === data.item.days
+                );
+                if (index !== -1) {
+                    projectBudget.labour.staff.splice(index, 1);
+                    projectBudget.labour.totalCost = projectBudget.labour.staff.reduce((sum, s) => sum + (s.totalCost || 0), 0);
+                }
+            } else if (categoryPath === 'travel.items' || category === 'travel') {
+                const index = projectBudget.travel.items.findIndex(i =>
+                    i.destination === data.item.destination &&
+                    i.total === data.item.total
+                );
+                if (index !== -1) {
+                    projectBudget.travel.items.splice(index, 1);
+                    projectBudget.travel.totalCost = projectBudget.travel.items.reduce((sum, i) => sum + (i.total || 0), 0);
+                }
+            } else {
+                // Materials, Capital Usage, Subcontracting, Other Costs - extract category from path
+                const baseCat = categoryPath.split('.')[0] || category;
+                const categoryArray = projectBudget[baseCat]?.items;
+                if (categoryArray) {
+                    const index = categoryArray.findIndex(i =>
+                        i.item === data.item.item &&
+                        i.total === data.item.total
+                    );
+                    if (index !== -1) {
+                        categoryArray.splice(index, 1);
+                        projectBudget[baseCat].totalCost = categoryArray.reduce((sum, i) => sum + (i.total || 0), 0);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Undo a delete item action (restore the item)
+         */
+        async function undoDeleteItem(action) {
+            const { category, data } = action;
+            const categoryPath = data.categoryPath || category;
+
+            // Handle Welsh Gov items
+            if (categoryPath.startsWith('welshGov.')) {
+                const sectionPath = data.sectionPath || categoryPath.replace('welshGov.', '');
+                let itemsArray;
+                switch(sectionPath) {
+                    case 'capital.nonStandard':
+                        if (!projectBudget.welshGovData.sections.capital.nonStandard) {
+                            projectBudget.welshGovData.sections.capital.nonStandard = [];
+                        }
+                        itemsArray = projectBudget.welshGovData.sections.capital.nonStandard;
+                        break;
+                    case 'revenue.nonStandard':
+                        if (!projectBudget.welshGovData.sections.revenue.nonStandard) {
+                            projectBudget.welshGovData.sections.revenue.nonStandard = [];
+                        }
+                        itemsArray = projectBudget.welshGovData.sections.revenue.nonStandard;
+                        break;
+                    case 'revenue.standardCosts':
+                        if (!projectBudget.welshGovData.sections.revenue.standardCosts) {
+                            projectBudget.welshGovData.sections.revenue.standardCosts = [];
+                        }
+                        itemsArray = projectBudget.welshGovData.sections.revenue.standardCosts;
+                        break;
+                    case 'itemBreakdown.capital':
+                        if (!projectBudget.welshGovData.sections.itemBreakdown.capital) {
+                            projectBudget.welshGovData.sections.itemBreakdown.capital = [];
+                        }
+                        itemsArray = projectBudget.welshGovData.sections.itemBreakdown.capital;
+                        break;
+                    case 'itemBreakdown.revenue':
+                        if (!projectBudget.welshGovData.sections.itemBreakdown.revenue) {
+                            projectBudget.welshGovData.sections.itemBreakdown.revenue = [];
+                        }
+                        itemsArray = projectBudget.welshGovData.sections.itemBreakdown.revenue;
+                        break;
+                    default:
+                        console.error('Unknown Welsh Gov section path for undo:', sectionPath);
+                        return;
+                }
+                if (data.index !== undefined && data.index <= itemsArray.length) {
+                    itemsArray.splice(data.index, 0, data.item);
+                } else {
+                    itemsArray.push(data.item);
+                }
+                displayWelshGovBudget(projectBudget.welshGovData);
+                return;
+            }
+
+            // Handle standard categories using categoryPath
+            if (categoryPath === 'labour.staff' || category === 'labour') {
+                if (!projectBudget.labour.staff) {
+                    projectBudget.labour.staff = [];
+                }
+                // Restore at original index if possible
+                if (data.index !== undefined && data.index <= projectBudget.labour.staff.length) {
+                    projectBudget.labour.staff.splice(data.index, 0, data.item);
+                } else {
+                    projectBudget.labour.staff.push(data.item);
+                }
+                projectBudget.labour.totalCost = projectBudget.labour.staff.reduce((sum, s) => sum + (s.totalCost || 0), 0);
+            } else if (categoryPath === 'travel.items' || category === 'travel') {
+                if (!projectBudget.travel.items) {
+                    projectBudget.travel.items = [];
+                }
+                if (data.index !== undefined && data.index <= projectBudget.travel.items.length) {
+                    projectBudget.travel.items.splice(data.index, 0, data.item);
+                } else {
+                    projectBudget.travel.items.push(data.item);
+                }
+                projectBudget.travel.totalCost = projectBudget.travel.items.reduce((sum, i) => sum + (i.total || 0), 0);
+            } else {
+                // Materials, Capital Usage, Subcontracting, Other Costs - extract category from path
+                const baseCat = categoryPath.split('.')[0] || category;
+                if (!projectBudget[baseCat]) {
+                    projectBudget[baseCat] = { items: [], totalCost: 0 };
+                }
+                if (!projectBudget[baseCat].items) {
+                    projectBudget[baseCat].items = [];
+                }
+                if (data.index !== undefined && data.index <= projectBudget[baseCat].items.length) {
+                    projectBudget[baseCat].items.splice(data.index, 0, data.item);
+                } else {
+                    projectBudget[baseCat].items.push(data.item);
+                }
+                projectBudget[baseCat].totalCost = projectBudget[baseCat].items.reduce((sum, i) => sum + (i.total || 0), 0);
+            }
+        }
+
+        /**
+         * Undo an edit item action (restore previous values)
+         */
+        async function undoEditItem(action) {
+            const { category, data } = action;
+
+            if (category === 'labour') {
+                if (projectBudget.labour.staff[data.index]) {
+                    projectBudget.labour.staff[data.index] = data.previousValue;
+                    projectBudget.labour.totalCost = projectBudget.labour.staff.reduce((sum, s) => sum + (s.totalCost || 0), 0);
+                }
+            } else if (category === 'travel') {
+                if (projectBudget.travel.items[data.index]) {
+                    projectBudget.travel.items[data.index] = data.previousValue;
+                    projectBudget.travel.totalCost = projectBudget.travel.items.reduce((sum, i) => sum + (i.total || 0), 0);
+                }
+            } else {
+                if (projectBudget[category].items[data.index]) {
+                    projectBudget[category].items[data.index] = data.previousValue;
+                    projectBudget[category].totalCost = projectBudget[category].items.reduce((sum, i) => sum + (i.total || 0), 0);
+                }
+            }
+        }
+
+        /**
+         * Undo a delete project action (restore the project)
+         */
+        async function undoDeleteProject(action) {
+            const { data } = action;
+
+            // Restore to IndexedDB
+            if (db) {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const objectStore = transaction.objectStore(STORE_NAME);
+                await new Promise((resolve, reject) => {
+                    const request = objectStore.add(data.project);
+                    request.onsuccess = resolve;
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            // Restore to Supabase
+            if (typeof supabaseClient !== 'undefined') {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (user) {
+                    await supabaseClient
+                        .from('grants')
+                        .upsert({
+                            user_id: user.id,
+                            project_id: String(data.project.projectId),
+                            project_data: data.project
+                        }, {
+                            onConflict: 'user_id,project_id'
+                        });
+                }
+            }
+
+            // Refresh project list
+            listSavedProjects();
+
+            addLog(`✅ Restored project: ${data.project.projectName || 'Unnamed'}`);
+        }
+
+        /**
+         * Undo a reorder items action (restore previous order)
+         */
+        async function undoReorderItems(action) {
+            const { data } = action;
+            const categoryPath = data.categoryPath;
+
+            // Restore the previous order
+            switch(categoryPath) {
+                case 'labour.staff':
+                    projectBudget.labour.staff = data.previousOrder;
+                    break;
+                case 'materials.items':
+                    projectBudget.materials.items = data.previousOrder;
+                    break;
+                case 'capitalUsage.items':
+                    projectBudget.capitalUsage.items = data.previousOrder;
+                    break;
+                case 'subcontracting.contractors':
+                    projectBudget.subcontracting.contractors = data.previousOrder;
+                    break;
+                case 'travel.trips':
+                    projectBudget.travel.trips = data.previousOrder;
+                    break;
+                case 'travel.items':
+                    projectBudget.travel.items = data.previousOrder;
+                    break;
+                case 'otherCosts.items':
+                    projectBudget.otherCosts.items = data.previousOrder;
+                    break;
+                // Welsh Gov categories
+                case 'welshGov.capital.nonStandard':
+                    if (projectBudget.welshGovData?.sections?.capital) {
+                        projectBudget.welshGovData.sections.capital.nonStandard = data.previousOrder;
+                    }
+                    break;
+                case 'welshGov.revenue.nonStandard':
+                    if (projectBudget.welshGovData?.sections?.revenue) {
+                        projectBudget.welshGovData.sections.revenue.nonStandard = data.previousOrder;
+                    }
+                    break;
+                case 'welshGov.revenue.standardCosts':
+                    if (projectBudget.welshGovData?.sections?.revenue) {
+                        projectBudget.welshGovData.sections.revenue.standardCosts = data.previousOrder;
+                    }
+                    break;
+                default:
+                    console.error('Unknown category path for undo reorder:', categoryPath);
+                    return;
+            }
+
+            console.log(`↶ [UNDO REORDER] Restored previous order for ${categoryPath}`);
+        }
+
+        /**
+         * Update the history UI (button state, count, list)
+         */
+        function updateHistoryUI() {
+            const undoButton = document.getElementById('undoButton');
+            const historyCount = document.getElementById('historyCount');
+            const historyList = document.getElementById('historyList');
+
+            // Update undo button state
+            if (undoButton) {
+                if (actionHistory.length > 0) {
+                    undoButton.disabled = false;
+                    undoButton.style.background = '#3b82f6';
+                    undoButton.style.cursor = 'pointer';
+                    undoButton.title = `Undo: ${actionHistory[0].description}`;
+                } else {
+                    undoButton.disabled = true;
+                    undoButton.style.background = '#6b7280';
+                    undoButton.style.cursor = 'not-allowed';
+                    undoButton.title = 'No actions to undo';
+                }
+            }
+
+            // Update history count
+            if (historyCount) {
+                historyCount.textContent = actionHistory.length;
+            }
+
+            // Update history list
+            if (historyList) {
+                if (actionHistory.length === 0) {
+                    historyList.innerHTML = '<p style="color: #94a3b8; text-align: center; margin: 20px 0; font-style: italic;">No actions recorded yet</p>';
+                } else {
+                    let html = '';
+                    actionHistory.forEach((action, index) => {
+                        const timeAgo = getTimeAgo(new Date(action.timestamp));
+                        const icon = getActionIcon(action.type);
+                        const isFirst = index === 0;
+
+                        html += `
+                            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px; border-bottom: 1px solid #f1f5f9; ${isFirst ? 'background: #fffbeb;' : ''}">
+                                <span style="font-size: 1.2em;">${icon}</span>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500; color: #334155; font-size: 0.9em;">${action.description}</div>
+                                    <div style="font-size: 0.75em; color: #94a3b8;">${timeAgo}</div>
+                                </div>
+                                ${isFirst ? `
+                                    <button onclick="undoLastAction()" style="background: #3b82f6; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75em; font-weight: 500;">
+                                        ↶ Undo
+                                    </button>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                    historyList.innerHTML = html;
+                }
+            }
+        }
+
+        /**
+         * Get an icon for an action type
+         */
+        function getActionIcon(type) {
+            switch (type) {
+                case ACTION_TYPES.ADD_ITEM: return '➕';
+                case ACTION_TYPES.DELETE_ITEM: return '🗑️';
+                case ACTION_TYPES.EDIT_ITEM: return '✏️';
+                case ACTION_TYPES.DELETE_PROJECT: return '📁';
+                default: return '📝';
+            }
+        }
+
+        /**
+         * Get human-readable time ago string
+         */
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+            return `${Math.floor(seconds / 86400)} days ago`;
+        }
+
+        /**
+         * Toggle the history panel visibility
+         */
+        function toggleHistoryPanel() {
+            const panel = document.getElementById('historyPanel');
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        /**
+         * Clear all action history
+         */
+        function clearHistory() {
+            if (actionHistory.length === 0) {
+                alert('History is already empty.');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to clear all ${actionHistory.length} action(s) from history?\n\nThis cannot be undone.`)) {
+                actionHistory.length = 0;
+                updateHistoryUI();
+                addLog('🗑️ Action history cleared');
+            }
+        }
+
+        // Keyboard shortcut for undo (Ctrl+Z)
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                // Only trigger if not in an input field
+                if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                    e.preventDefault();
+                    if (actionHistory.length > 0) {
+                        undoLastAction();
+                    }
+                }
+            }
+        });
+
+        // ============================================================================
+        // ADD ITEM MODAL FUNCTIONS
+        // ============================================================================
+
+        // Open the Add Item modal (optionally pre-select a category)
+        function openAddItemModal(preselectedCategory = null) {
+            if (!projectBudget.projectId) {
+                alert('Please load or create a project first.');
+                return;
+            }
+
+            // Reset form
+            document.getElementById('addItemCategory').value = '';
+            document.getElementById('addItemStep2').style.display = 'none';
+            document.getElementById('saveNewItemBtn').style.display = 'none';
+
+            // Hide all field sections
+            document.getElementById('labourFields').style.display = 'none';
+            document.getElementById('genericItemFields').style.display = 'none';
+            document.getElementById('travelFields').style.display = 'none';
+
+            // Clear all inputs
+            clearAddItemInputs();
+
+            // If a category is pre-selected, set it and show fields
+            if (preselectedCategory) {
+                document.getElementById('addItemCategory').value = preselectedCategory;
+                showAddItemFields();
+            }
+
+            // Show modal
+            document.getElementById('addItemModal').style.display = 'flex';
+        }
+
+        // Close the Add Item modal
+        function closeAddItemModal() {
+            document.getElementById('addItemModal').style.display = 'none';
+        }
+
+        // ============================================================================
+        // WELSH GOV ADD ITEM MODAL FUNCTIONS
+        // ============================================================================
+
+        // Open the Welsh Gov Add Item modal
+        function openAddWelshGovItemModal(preselectedCategory = null) {
+            if (!projectBudget.welshGovData) {
+                alert('This feature is only available for Welsh Gov grants.');
+                return;
+            }
+
+            // Reset form
+            document.getElementById('addWelshGovItemCode').value = '';
+            document.getElementById('addWelshGovDescription').value = '';
+            document.getElementById('addWelshGovTotalCost').value = '';
+            document.getElementById('addWelshGovGrantRate').value = projectBudget.welshGovData.financeSummary.fundingLevel || 80;
+            document.getElementById('addWelshGovMaxGrant').textContent = '£0';
+
+            // Pre-select category if provided
+            if (preselectedCategory) {
+                document.getElementById('addWelshGovCategory').value = preselectedCategory;
+            }
+
+            // Show modal
+            document.getElementById('addWelshGovItemModal').style.display = 'flex';
+        }
+
+        // Close the Welsh Gov Add Item modal
+        function closeAddWelshGovItemModal() {
+            document.getElementById('addWelshGovItemModal').style.display = 'none';
+        }
+
+        // Update the max grant value display
+        function updateWelshGovMaxGrant() {
+            const totalCost = parseFloat(document.getElementById('addWelshGovTotalCost').value) || 0;
+            const grantRate = parseFloat(document.getElementById('addWelshGovGrantRate').value) || 0;
+            const maxGrant = (totalCost * grantRate / 100).toFixed(2);
+            document.getElementById('addWelshGovMaxGrant').textContent = '£' + parseFloat(maxGrant).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        // Save a new Welsh Gov item
+        async function saveNewWelshGovItem() {
+            const category = document.getElementById('addWelshGovCategory').value;
+            const itemCode = document.getElementById('addWelshGovItemCode').value.trim();
+            const description = document.getElementById('addWelshGovDescription').value.trim();
+            const totalCost = parseFloat(document.getElementById('addWelshGovTotalCost').value) || 0;
+            const grantRate = parseFloat(document.getElementById('addWelshGovGrantRate').value) || 80;
+            const maxGrantValue = totalCost * grantRate / 100;
+
+            // Validation
+            if (!itemCode) {
+                alert('Please enter an item code.');
+                return;
+            }
+            if (!description) {
+                alert('Please enter a description.');
+                return;
+            }
+            if (totalCost <= 0) {
+                alert('Please enter a valid total cost.');
+                return;
+            }
+
+            // Create the new item
+            const newItem = {
+                itemCode: itemCode,
+                description: description,
+                totalCost: totalCost,
+                grantRate: grantRate,
+                maxGrantValue: maxGrantValue,
+                quarterlyCosts: { q1: 0, q2: 0, q3: 0, q4: 0 }
+            };
+
+            // Add to the appropriate array
+            let itemsArray;
+            let categoryName;
+            switch(category) {
+                case 'capital.nonStandard':
+                    if (!projectBudget.welshGovData.sections.capital.nonStandard) {
+                        projectBudget.welshGovData.sections.capital.nonStandard = [];
+                    }
+                    itemsArray = projectBudget.welshGovData.sections.capital.nonStandard;
+                    categoryName = 'Capital Non-Standard';
+                    break;
+                case 'revenue.nonStandard':
+                    if (!projectBudget.welshGovData.sections.revenue.nonStandard) {
+                        projectBudget.welshGovData.sections.revenue.nonStandard = [];
+                    }
+                    itemsArray = projectBudget.welshGovData.sections.revenue.nonStandard;
+                    categoryName = 'Revenue Non-Standard';
+                    break;
+                case 'revenue.standardCosts':
+                    if (!projectBudget.welshGovData.sections.revenue.standardCosts) {
+                        projectBudget.welshGovData.sections.revenue.standardCosts = [];
+                    }
+                    itemsArray = projectBudget.welshGovData.sections.revenue.standardCosts;
+                    categoryName = 'Revenue Standard Costs';
+                    break;
+                default:
+                    alert('Unknown category: ' + category);
+                    return;
+            }
+
+            itemsArray.push(newItem);
+
+            // Record action for undo
+            recordAction(
+                ACTION_TYPES.ADD_ITEM,
+                'welshGov.' + category,
+                { item: newItem, categoryPath: 'welshGov.' + category },
+                `Added "${itemCode}" to ${categoryName}`
+            );
+
+            // Update finance summary totals
+            updateWelshGovFinanceSummary();
+
+            // Save to IndexedDB
+            await saveToIndexedDB();
+
+            // Save to Supabase
+            await saveToSupabase();
+
+            // Close modal
+            closeAddWelshGovItemModal();
+
+            // Refresh display
+            displayWelshGovBudget(projectBudget.welshGovData);
+
+            // Log and notify
+            addLog(`➕ Added Welsh Gov item: ${itemCode} to ${categoryName}`);
+        }
+
+        // Update Welsh Gov finance summary totals after adding/removing items
+        function updateWelshGovFinanceSummary() {
+            if (!projectBudget.welshGovData || !projectBudget.welshGovData.sections) return;
+
+            const sections = projectBudget.welshGovData.sections;
+
+            // Calculate capital total
+            let capitalTotal = 0;
+            if (sections.capital && sections.capital.nonStandard) {
+                capitalTotal = sections.capital.nonStandard.reduce((sum, item) => sum + (item.maxGrantValue || 0), 0);
+            }
+
+            // Calculate revenue total
+            let revenueTotal = 0;
+            if (sections.revenue) {
+                if (sections.revenue.nonStandard) {
+                    revenueTotal += sections.revenue.nonStandard.reduce((sum, item) => sum + (item.maxGrantValue || 0), 0);
+                }
+                if (sections.revenue.standardCosts) {
+                    revenueTotal += sections.revenue.standardCosts.reduce((sum, item) => sum + (item.maxGrantValue || 0), 0);
+                }
+            }
+
+            // Update finance summary
+            projectBudget.welshGovData.financeSummary.capitalTotal = capitalTotal;
+            projectBudget.welshGovData.financeSummary.revenueTotal = revenueTotal;
+            projectBudget.welshGovData.financeSummary.totalCosts = capitalTotal + revenueTotal;
+        }
+
+        // Clear all input fields in the Add Item modal
+        function clearAddItemInputs() {
+            // Labour fields
+            document.getElementById('addLabourRole').value = '';
+            document.getElementById('addLabourGrossCost').value = '';
+            document.getElementById('addLabourDays').value = '';
+
+            // Generic item fields
+            document.getElementById('addItemDescription').value = '';
+            document.getElementById('addItemQuantity').value = '1';
+            document.getElementById('addItemCostPerItem').value = '';
+
+            // Travel fields
+            document.getElementById('addTravelDescription').value = '';
+            document.getElementById('addTravelTrips').value = '1';
+            document.getElementById('addTravelCostPerTrip').value = '';
+            document.getElementById('addTravelSubsistence').value = '';
+        }
+
+        // Show fields based on selected category
+        function showAddItemFields() {
+            const category = document.getElementById('addItemCategory').value;
+
+            // Hide all field sections first
+            document.getElementById('labourFields').style.display = 'none';
+            document.getElementById('genericItemFields').style.display = 'none';
+            document.getElementById('travelFields').style.display = 'none';
+
+            if (!category) {
+                document.getElementById('addItemStep2').style.display = 'none';
+                document.getElementById('saveNewItemBtn').style.display = 'none';
+                return;
+            }
+
+            // Show step 2 and save button
+            document.getElementById('addItemStep2').style.display = 'block';
+            document.getElementById('saveNewItemBtn').style.display = 'inline-block';
+
+            // Show appropriate fields based on category
+            if (category === 'labour') {
+                document.getElementById('labourFields').style.display = 'block';
+            } else if (category === 'travel') {
+                document.getElementById('travelFields').style.display = 'block';
+                setupTravelCalculation();
+            } else {
+                // Materials, Capital Usage, Subcontracting, Other Costs
+                document.getElementById('genericItemFields').style.display = 'block';
+                setupGenericCalculation();
+            }
+        }
+
+        // Setup live calculation for generic items
+        function setupGenericCalculation() {
+            const quantityInput = document.getElementById('addItemQuantity');
+            const costInput = document.getElementById('addItemCostPerItem');
+            const totalSpan = document.getElementById('addItemTotal');
+
+            const updateTotal = () => {
+                const quantity = parseFloat(quantityInput.value) || 0;
+                const costPerItem = parseFloat(costInput.value) || 0;
+                const total = quantity * costPerItem;
+                totalSpan.textContent = '£' + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            };
+
+            quantityInput.addEventListener('input', updateTotal);
+            costInput.addEventListener('input', updateTotal);
+        }
+
+        // Setup live calculation for travel items
+        function setupTravelCalculation() {
+            const tripsInput = document.getElementById('addTravelTrips');
+            const costPerTripInput = document.getElementById('addTravelCostPerTrip');
+            const subsistenceInput = document.getElementById('addTravelSubsistence');
+            const totalSpan = document.getElementById('addTravelTotal');
+
+            const updateTotal = () => {
+                const trips = parseFloat(tripsInput.value) || 0;
+                const costPerTrip = parseFloat(costPerTripInput.value) || 0;
+                const subsistence = parseFloat(subsistenceInput.value) || 0;
+                const total = trips * (costPerTrip + subsistence);
+                totalSpan.textContent = '£' + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            };
+
+            tripsInput.addEventListener('input', updateTotal);
+            costPerTripInput.addEventListener('input', updateTotal);
+            subsistenceInput.addEventListener('input', updateTotal);
+        }
+
+        // Save the new item
+        async function saveNewItem() {
+            const category = document.getElementById('addItemCategory').value;
+
+            if (!category) {
+                alert('Please select a category.');
+                return;
+            }
+
+            let newItem = null;
+            let categoryName = '';
+
+            try {
+                if (category === 'labour') {
+                    const role = document.getElementById('addLabourRole').value.trim();
+                    const grossCost = parseFloat(document.getElementById('addLabourGrossCost').value) || 0;
+                    const days = parseFloat(document.getElementById('addLabourDays').value) || 0;
+
+                    if (!role) {
+                        alert('Please enter a role/position.');
+                        return;
+                    }
+
+                    const ratePerDay = days > 0 ? grossCost / days : 0;
+                    const totalCost = grossCost;
+
+                    newItem = {
+                        role: role,
+                        grossCost: grossCost,
+                        ratePerDay: ratePerDay,
+                        days: days,
+                        totalCost: totalCost,
+                        quarterlyCosts: {}
+                    };
+
+                    // Add to labour staff array
+                    if (!projectBudget.labour.staff) {
+                        projectBudget.labour.staff = [];
+                    }
+                    projectBudget.labour.staff.push(newItem);
+
+                    // Update total
+                    projectBudget.labour.totalCost = projectBudget.labour.staff.reduce((sum, s) => sum + (s.totalCost || 0), 0);
+
+                    categoryName = 'Labour';
+
+                } else if (category === 'travel') {
+                    const description = document.getElementById('addTravelDescription').value.trim();
+                    const trips = parseInt(document.getElementById('addTravelTrips').value) || 1;
+                    const costPerTrip = parseFloat(document.getElementById('addTravelCostPerTrip').value) || 0;
+                    const subsistence = parseFloat(document.getElementById('addTravelSubsistence').value) || 0;
+
+                    if (!description) {
+                        alert('Please enter a description.');
+                        return;
+                    }
+
+                    const totalTravel = trips * costPerTrip;
+                    const totalSubsistence = trips * subsistence;
+                    const total = totalTravel + totalSubsistence;
+
+                    newItem = {
+                        destination: description,
+                        trips: trips,
+                        travelCostPerTrip: costPerTrip,
+                        subsistencePerTrip: subsistence,
+                        totalTravel: totalTravel,
+                        totalSubsistence: totalSubsistence,
+                        total: total,
+                        quarterlyCosts: {}
+                    };
+
+                    // Add to travel items array
+                    if (!projectBudget.travel.items) {
+                        projectBudget.travel.items = [];
+                    }
+                    projectBudget.travel.items.push(newItem);
+
+                    // Update total
+                    projectBudget.travel.totalCost = projectBudget.travel.items.reduce((sum, i) => sum + (i.total || 0), 0);
+
+                    categoryName = 'Travel';
+
+                } else {
+                    // Materials, Capital Usage, Subcontracting, Other Costs
+                    const description = document.getElementById('addItemDescription').value.trim();
+                    const quantity = parseInt(document.getElementById('addItemQuantity').value) || 1;
+                    const costPerItem = parseFloat(document.getElementById('addItemCostPerItem').value) || 0;
+
+                    if (!description) {
+                        alert('Please enter a description.');
+                        return;
+                    }
+
+                    const total = quantity * costPerItem;
+
+                    newItem = {
+                        item: description,
+                        quantity: quantity,
+                        costPerItem: costPerItem,
+                        total: total,
+                        quarterlyCosts: {}
+                    };
+
+                    // Determine which array to add to
+                    const categoryMap = {
+                        'materials': { array: 'materials', name: 'Materials' },
+                        'capitalUsage': { array: 'capitalUsage', name: 'Capital Usage' },
+                        'subcontracting': { array: 'subcontracting', name: 'Subcontracting' },
+                        'otherCosts': { array: 'otherCosts', name: 'Other Costs' }
+                    };
+
+                    const catInfo = categoryMap[category];
+                    if (catInfo) {
+                        if (!projectBudget[catInfo.array].items) {
+                            projectBudget[catInfo.array].items = [];
+                        }
+                        projectBudget[catInfo.array].items.push(newItem);
+
+                        // Update total
+                        projectBudget[catInfo.array].totalCost = projectBudget[catInfo.array].items.reduce((sum, i) => sum + (i.total || 0), 0);
+
+                        categoryName = catInfo.name;
+                    }
+                }
+
+                // Determine the category path for undo
+                const categoryPathMap = {
+                    'labour': 'labour.staff',
+                    'travel': 'travel.items',
+                    'materials': 'materials.items',
+                    'capitalUsage': 'capitalUsage.items',
+                    'subcontracting': 'subcontracting.items',
+                    'otherCosts': 'otherCosts.items'
+                };
+                const categoryPath = categoryPathMap[category] || category;
+
+                // Record action for undo
+                const itemDescription = newItem.role || newItem.destination || newItem.item || 'Unknown';
+                recordAction(
+                    ACTION_TYPES.ADD_ITEM,
+                    categoryPath,
+                    { item: newItem, categoryPath: categoryPath },
+                    `Added "${itemDescription}" to ${categoryName}`
+                );
+
+                // Save to IndexedDB
+                await saveToIndexedDB();
+
+                // Save to Supabase
+                await saveToSupabase();
+
+                // Close modal
+                closeAddItemModal();
+
+                // Refresh display
+                displayDetailedBudget();
+
+                // Log and notify
+                addLog(`➕ Added item to ${categoryName}: ${newItem.role || newItem.destination || newItem.item}`);
+                alert(`✅ Item added to ${categoryName} successfully!`);
+
+            } catch (error) {
+                console.error('Error adding item:', error);
+                alert('❌ Error adding item: ' + error.message);
+            }
+        }
+
+        // Show the Add Item button when a project is loaded
+        function showAddItemButton() {
+            const container = document.getElementById('addItemButtonContainer');
+            if (container) {
+                container.style.display = 'block';
+            }
+        }
+
+        // Hide the Add Item button
+        function hideAddItemButton() {
+            const container = document.getElementById('addItemButtonContainer');
+            if (container) {
+                container.style.display = 'none';
+            }
         }
 
         // Get current categories from the UI
@@ -5982,11 +7450,12 @@ Rules:
                 financeHTML += `
                     <div class="card">
                         <h3>🏗️ Capital - Non Standard Costs</h3>
-                        <table>
+                        <table class="item-table">
                             <thead>
                                 <tr>
-                                    <th>Item Code</th>
-                                    <th>Item Description</th>
+                                    <th style="width: 20px;"></th>
+                                    <th style="width: 70px;">Item Code</th>
+                                    <th style="min-width: 400px; width: 35%;">Item Description</th>
                                     <th>Total Cost</th>
                                     <th>Grant Rate</th>
                                     <th>Maximum Grant Value £</th>
@@ -6005,7 +7474,14 @@ Rules:
                                     const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
-                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}"
+                                            draggable="true"
+                                            ondragstart="handleDragStart(event, 'welshGov.capital.nonStandard', ${index})"
+                                            ondragover="handleDragOver(event, 'welshGov.capital.nonStandard', ${index})"
+                                            ondragleave="handleDragLeave(event)"
+                                            ondrop="handleDrop(event, 'welshGov.capital.nonStandard', ${index})"
+                                            ondragend="handleDragEnd(event)">
+                                            <td class="drag-handle" title="Drag to reorder">⋮⋮</td>
                                             <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')">${item.itemCode}</td>
                                             <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')">${item.description}</td>
                                             <td onclick="toggleQuarterlyBreakdown('wg-capital-ns-${index}')">£${item.totalCost.toLocaleString()}</td>
@@ -6026,7 +7502,7 @@ Rules:
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-capital-ns-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '9' : '6'}" style="padding: 0; background: transparent;">
+                                            <td colspan="${hasQuarters ? '10' : '7'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -6180,6 +7656,28 @@ Rules:
                                 })() : ''}
                             </tbody>
                         </table>
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddWelshGovItemModal('capital.nonStandard')"
+                                    style="background: #7c3aed; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                                ➕ Add Capital Item
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show Add Item button even if no items exist
+                financeHTML += `
+                    <div class="card">
+                        <h3>🏗️ Capital - Non Standard Costs</h3>
+                        <p style="color: #94a3b8; font-style: italic;">No capital items</p>
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddWelshGovItemModal('capital.nonStandard')"
+                                    style="background: #7c3aed; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                                ➕ Add Capital Item
+                            </button>
+                        </div>
                     </div>
                 `;
             }
@@ -6188,12 +7686,13 @@ Rules:
             if (sections.revenue.nonStandard.length > 0) {
                 financeHTML += `
                     <div class="card">
-                        <h3>Revenue - Non Standard Costs</h3>
-                        <table>
+                        <h3>📊 Revenue - Non Standard Costs</h3>
+                        <table class="item-table">
                             <thead>
                                 <tr>
-                                    <th>Item Code</th>
-                                    <th>Item Description</th>
+                                    <th style="width: 20px;"></th>
+                                    <th style="width: 70px;">Item Code</th>
+                                    <th style="min-width: 400px; width: 35%;">Item Description</th>
                                     <th>Total Cost</th>
                                     <th>Grant Rate</th>
                                     <th>Maximum Grant Value £</th>
@@ -6212,7 +7711,14 @@ Rules:
                                     const isOverBudget = costsClaimed > item.totalCost;
 
                                     return `
-                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                        <tr style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}"
+                                            draggable="true"
+                                            ondragstart="handleDragStart(event, 'welshGov.revenue.nonStandard', ${index})"
+                                            ondragover="handleDragOver(event, 'welshGov.revenue.nonStandard', ${index})"
+                                            ondragleave="handleDragLeave(event)"
+                                            ondrop="handleDrop(event, 'welshGov.revenue.nonStandard', ${index})"
+                                            ondragend="handleDragEnd(event)">
+                                            <td class="drag-handle" title="Drag to reorder">⋮⋮</td>
                                             <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')">${item.itemCode}</td>
                                             <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')">${item.description}</td>
                                             <td onclick="toggleQuarterlyBreakdown('wg-revenue-ns-${index}')">£${item.totalCost.toLocaleString()}</td>
@@ -6233,7 +7739,7 @@ Rules:
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="wg-revenue-ns-${index}-breakdown" style="display: none;">
-                                            <td colspan="9" style="padding: 0; background: transparent;">
+                                            <td colspan="10" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description}</h4>
                                                     <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -6387,6 +7893,28 @@ Rules:
                                 })() : ''}
                             </tbody>
                         </table>
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddWelshGovItemModal('revenue.nonStandard')"
+                                    style="background: #7c3aed; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                                ➕ Add Revenue Item
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show Add Item button even if no items exist
+                financeHTML += `
+                    <div class="card">
+                        <h3>📊 Revenue - Non Standard Costs</h3>
+                        <p style="color: #94a3b8; font-style: italic;">No revenue non-standard items</p>
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddWelshGovItemModal('revenue.nonStandard')"
+                                    style="background: #7c3aed; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                                ➕ Add Revenue Item
+                            </button>
+                        </div>
                     </div>
                 `;
             }
@@ -6630,6 +8158,28 @@ Rules:
                                 }).join('')}
                             </tbody>
                         </table>
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddWelshGovItemModal('revenue.standardCosts')"
+                                    style="background: #7c3aed; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                                ➕ Add Standard Cost Item
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show Add Item button even if no items exist
+                financeHTML += `
+                    <div class="card">
+                        <h3>👥 Revenue - Standard Costs</h3>
+                        <p style="color: #94a3b8; font-style: italic;">No revenue standard cost items</p>
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddWelshGovItemModal('revenue.standardCosts')"
+                                    style="background: #7c3aed; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                                ➕ Add Standard Cost Item
+                            </button>
+                        </div>
                     </div>
                 `;
             }
@@ -7937,6 +9487,7 @@ ${inputText}`
                             <table class="item-table">
                             <thead>
                                 <tr>
+                                    <th style="width: 30px;"></th>
                                     <th>Role</th>
                                     <th>Gross Cost</th>
                                     <th>Rate/Day</th>
@@ -7972,7 +9523,14 @@ ${inputText}`
                     const isOverBudget = costsClaimed > staff.totalCost;
 
                     labourHTML += `
-                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}"
+                            draggable="true"
+                            ondragstart="handleDragStart(event, 'labour.staff', ${index})"
+                            ondragover="handleDragOver(event, 'labour.staff', ${index})"
+                            ondragleave="handleDragLeave(event)"
+                            ondrop="handleDrop(event, 'labour.staff', ${index})"
+                            ondragend="handleDragEnd(event)">
+                            <td class="drag-handle" title="Drag to reorder">⋮⋮</td>
                             <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer;">${staff.role}</td>
                             <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer;">£${staff.grossCost.toLocaleString()}</td>
                             <td onclick="toggleQuarterlyBreakdown('labour-${index}')" style="cursor: pointer;">£${staff.ratePerDay}</td>
@@ -7993,7 +9551,7 @@ ${inputText}`
                         </tr>
                         ${hasQuarters ? `
                         <tr id="labour-${index}-breakdown" style="display: none;">
-                            <td colspan="${hasQuarters ? '9' : '6'}" style="padding: 0; background: transparent;">
+                            <td colspan="${hasQuarters ? '10' : '7'}" style="padding: 0; background: transparent;">
                                 <div class="quarterly-breakdown-container">
                                     <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${staff.role}</h4>
                                     <table class="quarterly-breakdown-table">
@@ -8145,6 +9703,13 @@ ${inputText}`
                             </tbody>
                         </table>
                         </div>
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddItemModal('labour')"
+                                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                                ➕ Add Labour Item
+                            </button>
+                        </div>
                         </div>
                     </div>
                 `;
@@ -8189,6 +9754,7 @@ ${inputText}`
                         <table class="item-table">
                             <thead>
                                 <tr>
+                                    <th style="width: 30px;"></th>
                                     <th>Item</th>
                                     <th>Quantity</th>
                                     <th>Cost Per Item</th>
@@ -8207,7 +9773,14 @@ ${inputText}`
                                     const isOverBudget = costsClaimed > item.total;
 
                                     return `
-                                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}"
+                                            draggable="true"
+                                            ondragstart="handleDragStart(event, 'materials.items', ${index})"
+                                            ondragover="handleDragOver(event, 'materials.items', ${index})"
+                                            ondragleave="handleDragLeave(event)"
+                                            ondrop="handleDrop(event, 'materials.items', ${index})"
+                                            ondragend="handleDragEnd(event)">
+                                            <td class="drag-handle" title="Drag to reorder">⋮⋮</td>
                                             <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer;">${item.item}</td>
                                             <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer;">${item.quantity}</td>
                                             <td onclick="toggleQuarterlyBreakdown('materials-${index}')" style="cursor: pointer;">£${item.costPerItem.toLocaleString()}</td>
@@ -8227,7 +9800,7 @@ ${inputText}`
                                         </tr>
                                         ${hasQuarters ? `
                                         <tr id="materials-${index}-breakdown" style="display: none;">
-                                            <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
+                                            <td colspan="${hasQuarters ? '9' : '6'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-materials-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.item}</h4>
@@ -8424,6 +9997,13 @@ ${inputText}`
                             }
                             return '';
                         })()}
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddItemModal('materials')"
+                                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                                ➕ Add Materials Item
+                            </button>
+                        </div>
                         </div>
                     </div>
                 `;
@@ -8641,6 +10221,13 @@ ${inputText}`
                         </table>
                         </div>
                         ` : '<p style="color: #94a3b8; font-style: italic;">No capital usage items</p>'}
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddItemModal('capitalUsage')"
+                                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                                ➕ Add Capital Usage Item
+                            </button>
+                        </div>
                         </div>
                     </div>
 
@@ -8875,6 +10462,13 @@ ${inputText}`
                             }
                             return '';
                         })()}
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddItemModal('subcontracting')"
+                                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                                ➕ Add Subcontracting Item
+                            </button>
+                        </div>
                         </div>
                     </div>
                 `;
@@ -9094,6 +10688,13 @@ ${inputText}`
                         </table>
                         </div>
                         ` : '<p style="color: #94a3b8; font-style: italic;">No travel items</p>'}
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddItemModal('travel')"
+                                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                                ➕ Add Travel Item
+                            </button>
+                        </div>
                         </div>
                     </div>
 
@@ -9304,6 +10905,13 @@ ${inputText}`
                         </table>
                         </div>
                         ` : '<p style="color: #94a3b8; font-style: italic;">No other cost items</p>'}
+                        <div style="margin-top: 12px; text-align: left;">
+                            <button onclick="openAddItemModal('otherCosts')"
+                                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px;"
+                                    onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                                ➕ Add Other Costs Item
+                            </button>
+                        </div>
                         </div>
                     </div>
                 `;
@@ -9312,6 +10920,9 @@ ${inputText}`
 
             addLog('✅ Detailed budget displayed');
             detailedResults.style.display = 'block';
+
+            // Show the Add Item button
+            showAddItemButton();
 
             // Restore expanded state
             restoreExpandedState(expandedSections);
@@ -9947,6 +11558,16 @@ ${inputText}`
             // Remove the item
             if (itemsArray && index >= 0 && index < itemsArray.length) {
                 const deletedItem = itemsArray[index];
+
+                // Record action for undo BEFORE deleting
+                const itemDescription = deletedItem.role || deletedItem.destination || deletedItem.item || deletedItem.name || 'Unknown';
+                recordAction(
+                    ACTION_TYPES.DELETE_ITEM,
+                    categoryPath,
+                    { item: deletedItem, index: index, categoryPath: categoryPath },
+                    `Deleted "${itemDescription}" from ${categoryName}`
+                );
+
                 itemsArray.splice(index, 1);
 
                 console.log(`Deleted item from ${categoryName}:`, deletedItem);
@@ -10001,6 +11622,16 @@ ${inputText}`
             // Remove the item
             if (itemsArray && index >= 0 && index < itemsArray.length) {
                 const deletedItem = itemsArray[index];
+
+                // Record action for undo BEFORE deleting
+                const itemDescription = deletedItem.description || deletedItem.item || deletedItem.name || 'Unknown';
+                recordAction(
+                    ACTION_TYPES.DELETE_ITEM,
+                    'welshGov.' + sectionPath,
+                    { item: deletedItem, index: index, categoryPath: 'welshGov.' + sectionPath, sectionPath: sectionPath },
+                    `Deleted "${itemDescription}" from ${categoryName}`
+                );
+
                 itemsArray.splice(index, 1);
 
                 console.log(`Deleted Welsh Gov item from ${categoryName}:`, deletedItem);
@@ -10440,15 +12071,40 @@ ${inputText}`
             console.log(`🗑️ [DELETE] Database OK, creating transaction...`);
 
             try {
+                // Delete from IndexedDB
                 const transaction = db.transaction([STORE_NAME], 'readwrite');
                 const objectStore = transaction.objectStore(STORE_NAME);
                 const request = objectStore.delete(projectId);
 
                 console.log(`🗑️ [DELETE] Delete request sent for ID: ${projectId}`);
 
-                request.onsuccess = () => {
+                request.onsuccess = async () => {
                     console.log(`✅ [DELETE] Project ${projectId} successfully deleted from IndexedDB`);
-                    addLog(`🗑️ Deleted: ${projectName} (ID: ${projectId})`);
+                    addLog(`🗑️ Deleted from local: ${projectName} (ID: ${projectId})`);
+
+                    // Also delete from Supabase (cloud)
+                    try {
+                        if (typeof supabaseClient !== 'undefined') {
+                            const { data: { user } } = await supabaseClient.auth.getUser();
+                            if (user) {
+                                const { error } = await supabaseClient
+                                    .from('grants')
+                                    .delete()
+                                    .eq('user_id', user.id)
+                                    .eq('project_id', String(projectId));
+
+                                if (error) {
+                                    console.error('❌ [DELETE] Supabase delete failed:', error);
+                                    addLog(`⚠️ Cloud delete failed: ${error.message}`);
+                                } else {
+                                    console.log(`✅ [DELETE] Project ${projectId} deleted from Supabase`);
+                                    addLog(`☁️ Deleted from cloud: ${projectName}`);
+                                }
+                            }
+                        }
+                    } catch (cloudError) {
+                        console.error('❌ [DELETE] Cloud delete error:', cloudError);
+                    }
 
                     // If this was the current project, clear it
                     if (projectBudget.projectId === projectId) {
@@ -10472,7 +12128,7 @@ ${inputText}`
                         console.warn(`⚠️ [DELETE] Dropdown element not found`);
                     }
 
-                    console.log(`✅ [DELETE] Deletion complete! NO updateProjectCount() call.`);
+                    console.log(`✅ [DELETE] Deletion complete from local AND cloud!`);
                 };
 
                 request.onerror = (event) => {
@@ -10830,6 +12486,135 @@ ${inputText}`
 
             // Navigate to spend.html with parameters
             window.location.href = `spend.html?${params.toString()}`;
+        }
+
+        /**
+         * Unassign a transaction from a grant item
+         */
+        async function unassignTransaction(transactionDate, transactionDescription, projectId, category, itemKey) {
+            console.log('🔄 [UNASSIGN] Starting unassignment:', { transactionDate, transactionDescription, projectId, category, itemKey });
+
+            // Confirm with user
+            if (!confirm(`Remove this transaction assignment?\n\nTransaction: ${transactionDescription}\nDate: ${transactionDate}\n\nThe transaction will remain in your spend data but won't be linked to this grant item.`)) {
+                return;
+            }
+
+            try {
+                if (!db) await initIndexedDB();
+                if (!db) throw new Error('Database not available');
+
+                // Get all CSV files from SpendDB
+                const txn = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const store = txn.objectStore(CSV_STORE_NAME);
+                const allFiles = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                let updated = false;
+                let removedAssignment = null;
+
+                for (const file of allFiles) {
+                    if (file.transactions && Array.isArray(file.transactions)) {
+                        const txIndex = file.transactions.findIndex(t =>
+                            t.date === transactionDate && t.description === transactionDescription
+                        );
+
+                        if (txIndex !== -1) {
+                            const transaction = file.transactions[txIndex];
+                            console.log(`✅ [UNASSIGN] Found transaction with ${transaction.assignments?.length || 0} assignments`);
+                            console.log(`🔍 [UNASSIGN] Looking for: projectId=${projectId}, category=${category}, itemKey=${itemKey}`);
+                            console.log(`🔍 [UNASSIGN] Available assignments:`, transaction.assignments?.map(a => ({
+                                projectId: a.projectId,
+                                projectIdType: typeof a.projectId,
+                                category: a.category,
+                                itemKey: a.itemKey,
+                                itemKeyType: typeof a.itemKey
+                            })));
+
+                            if (transaction.assignments && Array.isArray(transaction.assignments)) {
+                                // Find the assignment to remove using same logic as renderTransactionDetails
+                                const assignmentIndex = transaction.assignments.findIndex(a => {
+                                    // Project match - try both direct and string comparison
+                                    const projectMatch = a.projectId === projectId ||
+                                                        String(a.projectId) === String(projectId) ||
+                                                        a.projectId == projectId;
+
+                                    // Category match
+                                    const categoryMatch = a.category === category;
+
+                                    // Item key match with backwards compatibility
+                                    let itemMatch = false;
+                                    if (itemKey === null || itemKey === undefined || itemKey === 'null' || itemKey === 'undefined' || itemKey.endsWith('-all')) {
+                                        // Category-level: match any assignment in this category
+                                        itemMatch = true;
+                                    } else {
+                                        // Item-level match
+                                        if (a.itemKey === itemKey) {
+                                            itemMatch = true;
+                                        } else if (!a.itemKey || a.itemKey === null || a.itemKey === undefined) {
+                                            // Old assignment without itemKey - match if same category
+                                            itemMatch = true;
+                                        } else if (String(a.itemKey) === String(itemKey)) {
+                                            itemMatch = true;
+                                        }
+                                    }
+
+                                    console.log(`🔍 [UNASSIGN] Checking assignment:`, {
+                                        aProjectId: a.projectId,
+                                        aCategory: a.category,
+                                        aItemKey: a.itemKey,
+                                        projectMatch,
+                                        categoryMatch,
+                                        itemMatch
+                                    });
+
+                                    return projectMatch && categoryMatch && itemMatch;
+                                });
+
+                                if (assignmentIndex !== -1) {
+                                    // Store the removed assignment for logging
+                                    removedAssignment = transaction.assignments[assignmentIndex];
+                                    console.log(`✅ [UNASSIGN] Removing assignment at index ${assignmentIndex}:`, removedAssignment);
+
+                                    // Remove the assignment from the array
+                                    transaction.assignments.splice(assignmentIndex, 1);
+
+                                    // Save the updated file back to IndexedDB
+                                    await new Promise((resolve, reject) => {
+                                        const updateRequest = store.put(file);
+                                        updateRequest.onsuccess = () => resolve();
+                                        updateRequest.onerror = () => reject(updateRequest.error);
+                                    });
+
+                                    updated = true;
+                                    console.log(`✅ [UNASSIGN] Assignment removed. Remaining assignments: ${transaction.assignments.length}`);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!updated) {
+                    throw new Error('Assignment not found in database');
+                }
+
+                // Refresh cached transactions
+                cachedTransactions = await loadAllTransactions();
+
+                // Re-render the grants page to reflect the change
+                if (typeof renderBudgetBreakdown === 'function') {
+                    renderBudgetBreakdown();
+                }
+
+                console.log(`✅ [UNASSIGN] Successfully unassigned transaction: ${transactionDescription}`);
+
+            } catch (error) {
+                console.error('❌ [UNASSIGN] Failed to unassign transaction:', error);
+                alert(`Failed to unassign transaction: ${error.message}`);
+            }
         }
 
         /**

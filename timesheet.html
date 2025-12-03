@@ -526,6 +526,7 @@
             <a href="index.html" class="nav-btn">Sketcher</a>
             <a href="exploit.html" class="nav-btn">Exploit</a>
             <a href="risks.html" class="nav-btn">Risks</a>
+            <a href="quote.html" class="nav-btn">Quote</a>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Scroll to top">↑ Top</button>
         </div>
     </div>
@@ -854,6 +855,14 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                                     <!-- Breakdown will be populated here -->
                                 </div>
                             </div>
+
+                            <!-- Quarterly Spend Breakdown -->
+                            <div id="quarterlySpendBreakdown" style="margin-top: 12px; padding: 10px; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 4px;">
+                                <h4 style="margin: 0 0 10px 0; color: #1e40af; font-size: 13px;">📅 Quarterly Spend Breakdown</h4>
+                                <div id="quarterlyBreakdownContent">
+                                    <!-- Quarterly breakdown will be populated here -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -979,8 +988,9 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                     <table id="labourTable" style="border-collapse: collapse; font-size: 11px; width: 100%; min-width: 1400px;" tabindex="0">
                         <thead style="position: sticky; top: 0; z-index: 10; background: white;">
                             <tr id="columnLetterRow" style="background: #f5f5f5;">
-                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; position: sticky; left: 0; z-index: 12; background: #f5f5f5;">A</th>
-                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; position: sticky; left: 50px; z-index: 12; background: #f5f5f5;">B</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; position: sticky; left: 0; z-index: 12; background: #f5f5f5; width: 24px; min-width: 24px;"></th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; position: sticky; left: 24px; z-index: 12; background: #f5f5f5;">A</th>
+                                <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; position: sticky; left: 74px; z-index: 12; background: #f5f5f5;">B</th>
                                 <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">C</th>
                                 <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">D</th>
                                 <th style="border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;">E</th>
@@ -990,10 +1000,10 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                                 <!-- Project column letters will be added dynamically here -->
                             </tr>
                             <tr id="projectHeaderRow">
-                                <th rowspan="2" style="border: 1px solid #ddd; padding: 2px; background: #2B7A78; color: white; min-width: 50px; width: 50px; max-width: 50px; position: sticky; left: 0; z-index: 12; font-size: 10px;">Month</th>
-                                <th rowspan="2" style="border: 1px solid #ddd; padding: 2px; background: #2B7A78; color: white; min-width: 80px; width: 80px; max-width: 80px; position: sticky; left: 50px; z-index: 12; font-size: 10px;">Staff</th>
-                                <th colspan="1" style="border: 1px solid #ddd; padding: 4px; background: #3AAFA9; color: white;">Payslip</th>
-                                <th colspan="5" style="border: 1px solid #ddd; padding: 4px; background: #3AAFA9; color: white;">Pay Details</th>
+                                <th rowspan="2" style="border: 1px solid #ddd; padding: 2px; background: #2B7A78; color: white; min-width: 24px; width: 24px; max-width: 24px; position: sticky; left: 0; z-index: 12; font-size: 16px; cursor: move; user-select: none;" title="Drag to reorder rows">⠿</th>
+                                <th rowspan="2" style="border: 1px solid #ddd; padding: 2px; background: #2B7A78; color: white; min-width: 50px; width: 50px; max-width: 50px; position: sticky; left: 24px; z-index: 12; font-size: 10px;">Month</th>
+                                <th rowspan="2" style="border: 1px solid #ddd; padding: 2px; background: #2B7A78; color: white; min-width: 80px; width: 80px; max-width: 80px; position: sticky; left: 74px; z-index: 12; font-size: 10px;">Staff</th>
+                                <th colspan="6" style="border: 1px solid #ddd; padding: 4px; background: #3AAFA9; color: white;">Payslip</th>
                                 <!-- Projects will be added dynamically here -->
                             </tr>
                             <tr id="columnHeaderRow">
@@ -2504,6 +2514,8 @@ Return JSON:
                         ℹ️ No labour allocation project is linked to this grant. Use "🔗 Link Grant" to connect them.
                     </p>
                 `;
+                // Still show quarterly breakdown info
+                calculateQuarterlyBreakdown(grantProjectId, -1);
                 return;
             }
 
@@ -2629,6 +2641,374 @@ Return JSON:
             `;
 
             breakdownContent.innerHTML = breakdownHTML;
+
+            // Also calculate quarterly breakdown
+            calculateQuarterlyBreakdown(grantProjectId, linkedProjectIdx);
+        }
+
+        // Calculate quarterly spend breakdown based on project duration
+        async function calculateQuarterlyBreakdown(grantProjectId, linkedProjectIdx) {
+            const quarterlyContent = document.getElementById('quarterlyBreakdownContent');
+            if (!quarterlyContent) return;
+
+            // Get the grant project data to get project duration
+            let grantProject = null;
+            try {
+                const allProjects = await loadGrantsData();
+                // Check both id and projectId fields for match
+                grantProject = allProjects.find(p =>
+                    p.id == grantProjectId || p.projectId == grantProjectId
+                );
+                console.log('[QUARTERLY] Found project:', grantProject?.projectName || 'not found',
+                    'financeSummary:', grantProject?.financeSummary);
+            } catch (error) {
+                console.error('Error loading grant for quarterly breakdown:', error);
+            }
+
+            // Render the breakdown with the loaded project
+            renderQuarterlyBreakdownTable(grantProject, linkedProjectIdx, grantProjectId);
+        }
+
+        // Render quarterly breakdown table (shared by calculateQuarterlyBreakdown and saveQuarterlyProjectDuration)
+        function renderQuarterlyBreakdownTable(grantProject, linkedProjectIdx, grantProjectId) {
+            const quarterlyContent = document.getElementById('quarterlyBreakdownContent');
+            if (!quarterlyContent) return;
+
+            // Get existing values or defaults
+            const fs = grantProject?.financeSummary || {};
+            const startMonth = fs.projectStartMonth || null;
+            const startYear = fs.projectStartYear || null;
+            const durationMonths = fs.projectDurationMonths || null;
+
+            if (!startMonth || !startYear || !durationMonths) {
+                // Show inline form to set project duration
+                const currentYear = new Date().getFullYear();
+                const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+                let monthOptions = '<option value="">Month</option>';
+                months.forEach((m, i) => {
+                    const selected = startMonth === (i + 1) ? 'selected' : '';
+                    monthOptions += `<option value="${i + 1}" ${selected}>${m}</option>`;
+                });
+
+                let yearOptions = '<option value="">Year</option>';
+                for (let y = currentYear - 3; y <= currentYear + 5; y++) {
+                    const selected = startYear === y ? 'selected' : '';
+                    yearOptions += `<option value="${y}" ${selected}>${y}</option>`;
+                }
+
+                const projectId = grantProjectId || grantProject?.id || 'null';
+
+                quarterlyContent.innerHTML = `
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                        <span style="font-size: 11px; color: #64748b;">Project Start:</span>
+                        <select id="qbStartMonth" style="padding: 4px 8px; border: 1px solid #93c5fd; border-radius: 4px; font-size: 11px;">
+                            ${monthOptions}
+                        </select>
+                        <select id="qbStartYear" style="padding: 4px 8px; border: 1px solid #93c5fd; border-radius: 4px; font-size: 11px;">
+                            ${yearOptions}
+                        </select>
+                        <span style="font-size: 11px; color: #64748b; margin-left: 10px;">Duration:</span>
+                        <input type="number" id="qbDuration" value="${durationMonths || ''}" min="1" max="120" placeholder="12"
+                               style="width: 60px; padding: 4px 8px; border: 1px solid #93c5fd; border-radius: 4px; font-size: 11px;">
+                        <span style="font-size: 11px; color: #64748b;">months</span>
+                        <button onclick="saveQuarterlyProjectDuration(${projectId})"
+                                style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                            Set Duration
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Calculate quarters based on project start
+            const quarters = [];
+            const numQuarters = Math.ceil(durationMonths / 3);
+
+            for (let q = 0; q < numQuarters; q++) {
+                const qStartMonth = ((startMonth - 1) + (q * 3)) % 12 + 1;
+                const qStartYear = startYear + Math.floor(((startMonth - 1) + (q * 3)) / 12);
+                const qEndMonth = ((startMonth - 1) + (q * 3) + 2) % 12 + 1;
+                const qEndYear = startYear + Math.floor(((startMonth - 1) + (q * 3) + 2) / 12);
+
+                quarters.push({
+                    index: q + 1,
+                    startMonth: qStartMonth,
+                    startYear: qStartYear,
+                    endMonth: qEndMonth,
+                    endYear: qEndYear,
+                    totalCost: 0,
+                    totalDays: 0
+                });
+            }
+
+            // Scan labour rows and sum costs per quarter
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+            // Only scan if there's a linked project
+            if (linkedProjectIdx >= 0) {
+                labourRows.forEach(row => {
+                    const projectAllocation = row.projects[linkedProjectIdx];
+                    if (!projectAllocation) return;
+
+                    const days = parseFloat(projectAllocation.days) || 0;
+                    const rate = parseFloat(projectAllocation.rate) || 0;
+                    const cost = days * rate;
+
+                    if (days <= 0 || rate <= 0) return;
+
+                    // Parse row month (YYYY-MM format)
+                    const monthStr = row.month;
+                    if (!monthStr || typeof monthStr !== 'string') return;
+
+                    const parts = monthStr.split('-');
+                    if (parts.length !== 2) return;
+
+                    const rowYear = parseInt(parts[0]);
+                    const rowMonth = parseInt(parts[1]);
+
+                    // Find which quarter this month belongs to
+                    for (const quarter of quarters) {
+                        // Calculate if this month falls within the quarter
+                        const qStartDate = new Date(quarter.startYear, quarter.startMonth - 1, 1);
+                        const qEndDate = new Date(quarter.endYear, quarter.endMonth - 1, 28); // End of quarter month
+                        const rowDate = new Date(rowYear, rowMonth - 1, 15); // Middle of row month
+
+                        if (rowDate >= qStartDate && rowDate <= qEndDate) {
+                            quarter.totalCost += cost;
+                            quarter.totalDays += days;
+                            break;
+                        }
+                    }
+                });
+            }
+
+            // Build quarterly breakdown HTML
+            const projectId = grantProjectId || grantProject?.id || 'null';
+            let quarterlyHTML = `
+                <div style="margin-bottom: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>
+                        <strong style="color: #1e40af;">Project Duration:</strong>
+                        ${monthNames[startMonth - 1]} ${startYear} - ${durationMonths} months (${numQuarters} quarters)
+                    </span>
+                    <button onclick="editQuarterlyDuration(${projectId})"
+                            style="padding: 2px 8px; background: #e0e7ff; color: #3730a3; border: 1px solid #93c5fd; border-radius: 4px; font-size: 10px; cursor: pointer;">
+                        ✏️ Edit
+                    </button>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                    <thead>
+                        <tr style="background: #dbeafe;">
+                            <th style="padding: 4px; text-align: left; border: 1px solid #93c5fd;">Quarter</th>
+                            <th style="padding: 4px; text-align: left; border: 1px solid #93c5fd;">Period</th>
+                            <th style="padding: 4px; text-align: right; border: 1px solid #93c5fd;">Days</th>
+                            <th style="padding: 4px; text-align: right; border: 1px solid #93c5fd;">Labour Spend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            let grandTotalCost = 0;
+            let grandTotalDays = 0;
+
+            quarters.forEach(quarter => {
+                grandTotalCost += quarter.totalCost;
+                grandTotalDays += quarter.totalDays;
+
+                const periodStr = `${monthNames[quarter.startMonth - 1]} ${quarter.startYear} - ${monthNames[quarter.endMonth - 1]} ${quarter.endYear}`;
+
+                quarterlyHTML += `
+                    <tr>
+                        <td style="padding: 4px; border: 1px solid #93c5fd; font-weight: 600;">Q${quarter.index}</td>
+                        <td style="padding: 4px; border: 1px solid #93c5fd;">${periodStr}</td>
+                        <td style="padding: 4px; border: 1px solid #93c5fd; text-align: right;">${quarter.totalDays.toFixed(1)}</td>
+                        <td style="padding: 4px; border: 1px solid #93c5fd; text-align: right; font-weight: 600;">£${quarter.totalCost.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `;
+            });
+
+            quarterlyHTML += `
+                    <tr style="background: #bfdbfe; font-weight: 600;">
+                        <td style="padding: 4px; border: 1px solid #93c5fd;" colspan="2">TOTAL</td>
+                        <td style="padding: 4px; border: 1px solid #93c5fd; text-align: right;">${grandTotalDays.toFixed(1)}</td>
+                        <td style="padding: 4px; border: 1px solid #93c5fd; text-align: right;">£${grandTotalCost.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                </tbody>
+                </table>
+            `;
+
+            quarterlyContent.innerHTML = quarterlyHTML;
+        }
+
+        // Edit quarterly duration - show the form again
+        function editQuarterlyDuration(grantProjectId) {
+            const quarterlyContent = document.getElementById('quarterlyBreakdownContent');
+            if (!quarterlyContent) return;
+
+            const currentYear = new Date().getFullYear();
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+            // Get current values from currentBudgetProject
+            const fs = currentBudgetProject?.financeSummary || {};
+            const startMonth = fs.projectStartMonth || null;
+            const startYear = fs.projectStartYear || null;
+            const durationMonths = fs.projectDurationMonths || null;
+
+            let monthOptions = '<option value="">Month</option>';
+            months.forEach((m, i) => {
+                const selected = startMonth === (i + 1) ? 'selected' : '';
+                monthOptions += `<option value="${i + 1}" ${selected}>${m}</option>`;
+            });
+
+            let yearOptions = '<option value="">Year</option>';
+            for (let y = currentYear - 3; y <= currentYear + 5; y++) {
+                const selected = startYear === y ? 'selected' : '';
+                yearOptions += `<option value="${y}" ${selected}>${y}</option>`;
+            }
+
+            quarterlyContent.innerHTML = `
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                    <span style="font-size: 11px; color: #64748b;">Project Start:</span>
+                    <select id="qbStartMonth" style="padding: 4px 8px; border: 1px solid #93c5fd; border-radius: 4px; font-size: 11px;">
+                        ${monthOptions}
+                    </select>
+                    <select id="qbStartYear" style="padding: 4px 8px; border: 1px solid #93c5fd; border-radius: 4px; font-size: 11px;">
+                        ${yearOptions}
+                    </select>
+                    <span style="font-size: 11px; color: #64748b; margin-left: 10px;">Duration:</span>
+                    <input type="number" id="qbDuration" value="${durationMonths || ''}" min="1" max="120" placeholder="12"
+                           style="width: 60px; padding: 4px 8px; border: 1px solid #93c5fd; border-radius: 4px; font-size: 11px;">
+                    <span style="font-size: 11px; color: #64748b;">months</span>
+                    <button onclick="saveQuarterlyProjectDuration(${grantProjectId})"
+                            style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                        Save
+                    </button>
+                    <button onclick="cancelEditQuarterlyDuration(${grantProjectId})"
+                            style="padding: 4px 12px; background: #6b7280; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                        Cancel
+                    </button>
+                </div>
+            `;
+        }
+
+        // Cancel editing and show the table again
+        function cancelEditQuarterlyDuration(grantProjectId) {
+            const linkedProjectIdx = labourProjects.findIndex(p => p.grantProjectId == grantProjectId);
+            renderQuarterlyBreakdownTable(currentBudgetProject, linkedProjectIdx, grantProjectId);
+        }
+
+        // Save project duration from quarterly breakdown inline form
+        async function saveQuarterlyProjectDuration(grantProjectId) {
+            const startMonth = parseInt(document.getElementById('qbStartMonth').value);
+            const startYear = parseInt(document.getElementById('qbStartYear').value);
+            const durationMonths = parseInt(document.getElementById('qbDuration').value);
+
+            if (!startMonth || !startYear || !durationMonths) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                // Load the grant project
+                const allProjects = await loadGrantsData();
+                // Check both id and projectId fields for match
+                let project = allProjects.find(p =>
+                    p.id == grantProjectId || p.projectId == grantProjectId
+                );
+
+                // If project not found, try to create/update based on current budget project
+                if (!project && currentBudgetProject) {
+                    console.log('Project not found in grants, using currentBudgetProject');
+                    project = { ...currentBudgetProject }; // Clone to avoid mutating original
+                }
+
+                if (!project) {
+                    // Still no project - create a minimal one
+                    console.log('Creating new project entry for quarterly breakdown');
+                    const newId = grantProjectId || Date.now();
+                    project = {
+                        id: newId,
+                        projectId: newId, // Ensure both fields are set
+                        projectName: 'Labour Project',
+                        financeSummary: {}
+                    };
+                }
+
+                // Ensure project has both id and projectId for consistent lookups
+                if (!project.projectId && project.id) {
+                    project.projectId = project.id;
+                }
+                if (!project.id && project.projectId) {
+                    project.id = project.projectId;
+                }
+
+                // Update finance summary
+                if (!project.financeSummary) {
+                    project.financeSummary = {};
+                }
+                project.financeSummary.projectStartMonth = startMonth;
+                project.financeSummary.projectStartYear = startYear;
+                project.financeSummary.projectDurationMonths = durationMonths;
+
+                console.log('[QUARTERLY SAVE] Saving project:', project.projectName,
+                    'id:', project.id, 'projectId:', project.projectId,
+                    'financeSummary:', project.financeSummary);
+
+                // Save to IndexedDB
+                try {
+                    const db = await openDB('GrantsDB', 2);
+                    const tx = db.transaction('projects', 'readwrite');
+                    const store = tx.objectStore('projects');
+                    await store.put(project);
+                    db.close();
+                    console.log('Saved project duration to IndexedDB');
+                } catch (dbError) {
+                    console.warn('IndexedDB save error:', dbError);
+                }
+
+                // Also save to Supabase if logged in
+                if (typeof supabaseClient !== 'undefined' && currentUser) {
+                    try {
+                        // Get the project ID - use projectId if available, fall back to id
+                        const projectIdStr = String(project.projectId || project.id);
+
+                        // Use proper upsert pattern (same as saveBudget function)
+                        const { error } = await supabaseClient
+                            .from('grants')
+                            .upsert({
+                                user_id: currentUser.id,
+                                project_id: projectIdStr,
+                                project_data: project,
+                                updated_at: new Date().toISOString()
+                            }, {
+                                onConflict: 'user_id,project_id'
+                            });
+
+                        if (error) {
+                            console.warn('Supabase save error:', error);
+                        } else {
+                            console.log('✅ Project duration saved to Supabase');
+                        }
+                    } catch (e) {
+                        console.warn('Cloud sync error:', e);
+                    }
+                }
+
+                // Update currentBudgetProject reference
+                if (currentBudgetProject) {
+                    currentBudgetProject.financeSummary = project.financeSummary;
+                }
+
+                showToast('Project duration saved', 'success');
+
+                // Recalculate the breakdown with the saved data directly
+                const linkedProjectIdx = labourProjects.findIndex(p => p.grantProjectId == grantProjectId);
+                renderQuarterlyBreakdownTable(project, linkedProjectIdx, grantProjectId);
+
+            } catch (error) {
+                console.error('Error saving project duration:', error);
+                showToast('Failed to save: ' + error.message, 'error');
+            }
         }
 
         // Render the budget table
@@ -4382,12 +4762,15 @@ Return JSON:
             const columnHeaderRow = document.getElementById('columnHeaderRow');
 
             // Remove existing project headers
-            while (columnLetterRow.children.length > 8) {
+            // Keep: empty, A, B, C, D, E, F, G, H = 9 fixed column letters
+            while (columnLetterRow.children.length > 9) {
                 columnLetterRow.removeChild(columnLetterRow.lastChild);
             }
+            // Keep: drag handle, Month, Staff, Payslip = 4 fixed project headers
             while (projectHeaderRow.children.length > 4) {
                 projectHeaderRow.removeChild(projectHeaderRow.lastChild);
             }
+            // Keep: Gross, FTE, £/yr full time, £/yr as paid, £/day, £/hr = 6 fixed column headers
             while (columnHeaderRow.children.length > 6) {
                 columnHeaderRow.removeChild(columnHeaderRow.lastChild);
             }
@@ -4397,11 +4780,12 @@ Return JSON:
                 const isHidden = hiddenProjects.has(idx);
                 const baseColIndex = 8 + (idx * 4); // 8 fixed columns + 4 columns per project
 
-                // Column letters (row 0)
+                // Column letters (row 0) - with fixed widths to match data columns
+                const colWidths = ['40px', '55px', '65px', '55px']; // Days, £/rate, Total, Remain
                 for (let i = 0; i < 4; i++) {
                     const letterTh = document.createElement('th');
                     const colLetter = columnIndexToLetter(baseColIndex + i);
-                    letterTh.style.cssText = `border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5;`;
+                    letterTh.style.cssText = `border: 1px solid #ddd; padding: 2px; font-size: 9px; color: #666; background: #f5f5f5; width: ${colWidths[i]}; min-width: ${colWidths[i]}; max-width: ${colWidths[i]};`;
                     // Add visual separator to first column of each project
                     if (idx > 0 && i === 0) {
                         letterTh.style.borderLeft = '3px solid #90a4ae';
@@ -4473,11 +4857,12 @@ Return JSON:
 
                 projectHeaderRow.appendChild(projectTh);
 
-                // Column headers (row 2)
+                // Column headers (row 2) - with fixed widths to match data columns
                 const headers = ['Days', '£/rate', 'Total', 'Remain'];
+                const headerWidths = ['40px', '55px', '65px', '55px'];
                 headers.forEach((header, headerIdx) => {
                     const th = document.createElement('th');
-                    th.style.cssText = `border: 1px solid #ddd; padding: 4px; background: ${project.color}; color: #333; font-size: 10px; opacity: 0.9;`;
+                    th.style.cssText = `border: 1px solid #ddd; padding: 2px 4px; background: ${project.color}; color: #333; font-size: 10px; opacity: 0.9; width: ${headerWidths[headerIdx]}; min-width: ${headerWidths[headerIdx]}; max-width: ${headerWidths[headerIdx]}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
                     // Add visual separator to first column of each project
                     if (idx > 0 && headerIdx === 0) {
                         th.style.borderLeft = '3px solid #90a4ae';
@@ -4492,6 +4877,88 @@ Return JSON:
                     columnHeaderRow.appendChild(th);
                 });
             });
+        }
+
+        // Drag-and-drop variables for row reordering
+        let draggedRow = null;
+        let draggedRowIndex = null;
+
+        // Drag-and-drop event handlers for labour table rows
+        function handleDragStart(e) {
+            const row = e.target.closest('tr');
+            draggedRow = row;
+            draggedRowIndex = Array.from(row.parentNode.children).indexOf(row);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', row.innerHTML);
+            row.style.opacity = '0.4';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+
+            const targetRow = e.target.closest('tr');
+            if (targetRow && targetRow !== draggedRow && targetRow.parentNode.id === 'labourTableBody') {
+                const tbody = targetRow.parentNode;
+                const targetIndex = Array.from(tbody.children).indexOf(targetRow);
+
+                // Visual feedback: add border to show where row will be dropped
+                tbody.querySelectorAll('tr').forEach(tr => {
+                    tr.style.borderTop = '';
+                    tr.style.borderBottom = '';
+                });
+
+                if (draggedRowIndex < targetIndex) {
+                    targetRow.style.borderBottom = '2px solid #2B7A78';
+                } else {
+                    targetRow.style.borderTop = '2px solid #2B7A78';
+                }
+            }
+
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            const targetRow = e.target.closest('tr');
+            if (draggedRow && targetRow && draggedRow !== targetRow && targetRow.parentNode.id === 'labourTableBody') {
+                const tbody = targetRow.parentNode;
+                const targetIndex = Array.from(tbody.children).indexOf(targetRow);
+
+                // Reorder the data array
+                const [movedItem] = labourRows.splice(draggedRowIndex, 1);
+                labourRows.splice(targetIndex, 0, movedItem);
+
+                // Save and re-render
+                saveLabourData();
+                renderLabourRows();
+            }
+
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            const row = e.target.closest('tr');
+            if (row) {
+                row.style.opacity = '1';
+            }
+
+            // Clear visual feedback
+            const tbody = document.getElementById('labourTableBody');
+            if (tbody) {
+                tbody.querySelectorAll('tr').forEach(tr => {
+                    tr.style.borderTop = '';
+                    tr.style.borderBottom = '';
+                });
+            }
+
+            draggedRow = null;
+            draggedRowIndex = null;
         }
 
         // Render labour rows
@@ -4532,21 +4999,120 @@ Return JSON:
                     tr.style.borderTop = '3px solid #2B7A78';
                 }
 
+                // Drag handle cell - STICKY at left edge
+                const dragCell = document.createElement('td');
+                dragCell.style.border = '1px solid #ddd';
+                dragCell.style.padding = '2px';
+                dragCell.style.textAlign = 'center';
+                dragCell.style.cursor = 'move';
+                dragCell.style.userSelect = 'none';
+                dragCell.style.position = 'sticky';
+                dragCell.style.left = '0';
+                dragCell.style.zIndex = '5';
+                dragCell.style.backgroundColor = monthColors[monthGroupIndex];
+                dragCell.style.fontSize = '14px';
+                dragCell.style.color = '#666';
+                dragCell.style.minWidth = '24px';
+                dragCell.style.width = '24px';
+                dragCell.style.maxWidth = '24px';
+                dragCell.innerHTML = '<span style="font-size: 8px; color: #999; display: block;">' + displayRowNum + '</span>⠿';
+                dragCell.title = 'Drag to reorder • Double-click for options';
+                dragCell.draggable = true;
+                if (isNewMonth) {
+                    dragCell.style.borderTop = '3px solid #2B7A78';
+                }
+
+                // Add drag event listeners
+                dragCell.addEventListener('dragstart', handleDragStart);
+                dragCell.addEventListener('dragover', handleDragOver);
+                dragCell.addEventListener('drop', handleDrop);
+                dragCell.addEventListener('dragend', handleDragEnd);
+
+                // Double-click to show row options menu
+                dragCell.addEventListener('dblclick', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Remove any existing menu
+                    const existingMenu = document.querySelector('.row-options-menu');
+                    if (existingMenu) {
+                        existingMenu.remove();
+                    }
+
+                    // Create dropdown menu
+                    const menu = document.createElement('div');
+                    menu.className = 'row-options-menu';
+                    menu.style.cssText = `
+                        position: absolute;
+                        background: white;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                        z-index: 1000;
+                        min-width: 120px;
+                        padding: 4px 0;
+                    `;
+
+                    // Delete row option
+                    const deleteOption = document.createElement('div');
+                    deleteOption.innerHTML = '🗑️ Delete Row';
+                    deleteOption.style.cssText = `
+                        padding: 8px 12px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        color: #d32f2f;
+                    `;
+                    deleteOption.addEventListener('mouseenter', () => {
+                        deleteOption.style.backgroundColor = '#ffebee';
+                    });
+                    deleteOption.addEventListener('mouseleave', () => {
+                        deleteOption.style.backgroundColor = '';
+                    });
+                    deleteOption.addEventListener('click', function() {
+                        menu.remove();
+                        // Confirm deletion
+                        if (confirm(`Delete row ${displayRowNum}? This cannot be undone.`)) {
+                            labourRows.splice(rowIdx, 1);
+                            saveLabourData();
+                            renderLabourRows();
+                        }
+                    });
+                    menu.appendChild(deleteOption);
+
+                    // Position menu near the cell
+                    const rect = dragCell.getBoundingClientRect();
+                    menu.style.left = rect.left + 'px';
+                    menu.style.top = (rect.bottom + 2) + 'px';
+                    menu.style.position = 'fixed';
+
+                    document.body.appendChild(menu);
+
+                    // Close menu when clicking outside
+                    const closeMenu = function(evt) {
+                        if (!menu.contains(evt.target)) {
+                            menu.remove();
+                            document.removeEventListener('click', closeMenu);
+                        }
+                    };
+                    setTimeout(() => {
+                        document.addEventListener('click', closeMenu);
+                    }, 0);
+                });
+
+                tr.appendChild(dragCell);
+
                 // Month (dropdown) - STICKY with row number
                 const monthCell = createMonthDropdownCell(row.month, (val) => {
                     labourRows[rowIdx].month = val;
                     saveLabourData();
                 });
                 monthCell.style.position = 'sticky';
-                monthCell.style.left = '0';
+                monthCell.style.left = '24px';
                 monthCell.style.zIndex = '5';
                 monthCell.style.backgroundColor = monthColors[monthGroupIndex];
                 if (isNewMonth) {
                     monthCell.style.borderTop = '3px solid #2B7A78';
                 }
-                // Add row number as a small prefix
-                const originalContent = monthCell.textContent;
-                monthCell.innerHTML = `<span style="font-size: 8px; color: #999; margin-right: 4px;">${displayRowNum}</span>${originalContent}`;
                 monthCell.dataset.colIdx = colIdx;
                 monthCell.title = `Cell: ${columnIndexToLetter(colIdx)}${displayRowNum}`;
                 colIdx++;
@@ -4558,7 +5124,7 @@ Return JSON:
                     saveLabourData();
                 });
                 staffCell.style.position = 'sticky';
-                staffCell.style.left = '50px';
+                staffCell.style.left = '74px';
                 staffCell.style.zIndex = '5';
                 staffCell.style.backgroundColor = monthColors[monthGroupIndex];
                 if (isNewMonth) {
@@ -4663,6 +5229,11 @@ Return JSON:
                         saveLabourData();
                     }, proj.daysFormula);
                     daysCell.style.background = '#fffde7';
+                    daysCell.style.width = '40px';
+                    daysCell.style.minWidth = '40px';
+                    daysCell.style.maxWidth = '40px';
+                    daysCell.style.overflow = 'hidden';
+                    daysCell.style.textOverflow = 'ellipsis';
                     // Add visual separator between projects
                     if (projIdx > 0) {
                         daysCell.style.borderLeft = '3px solid #90a4ae';
@@ -4688,6 +5259,11 @@ Return JSON:
                         saveLabourData();
                     }, proj.rateFormula);
                     rateCell.style.background = '#fffde7';
+                    rateCell.style.width = '55px';
+                    rateCell.style.minWidth = '55px';
+                    rateCell.style.maxWidth = '55px';
+                    rateCell.style.overflow = 'hidden';
+                    rateCell.style.textOverflow = 'ellipsis';
                     // Apply dimming if project comes after a fully allocated one
                     if (shouldDimCells) {
                         rateCell.style.opacity = '0.25';
@@ -4702,6 +5278,11 @@ Return JSON:
                     // Total (calculated)
                     const totalCell = createCalculatedCell(proj.total || 0);
                     totalCell.style.background = '#e8f5e9';
+                    totalCell.style.width = '65px';
+                    totalCell.style.minWidth = '65px';
+                    totalCell.style.maxWidth = '65px';
+                    totalCell.style.overflow = 'hidden';
+                    totalCell.style.textOverflow = 'ellipsis';
                     // Apply dimming if project comes after a fully allocated one
                     if (shouldDimCells) {
                         totalCell.style.opacity = '0.25';
@@ -4713,6 +5294,11 @@ Return JSON:
 
                     // Remaining (calculated)
                     const remainCell = createCalculatedCell(proj.remaining || 0);
+                    remainCell.style.width = '55px';
+                    remainCell.style.minWidth = '55px';
+                    remainCell.style.maxWidth = '55px';
+                    remainCell.style.overflow = 'hidden';
+                    remainCell.style.textOverflow = 'ellipsis';
 
                     // Special styling for fully allocated projects (remaining = 0)
                     if (isFullyAllocated) {
@@ -5300,26 +5886,63 @@ Return JSON:
                 // Don't open editor if clicking drag handle
                 if (e.target.classList.contains('cell-drag-handle')) return;
 
+                // Capture cell dimensions before editing to prevent resize
+                const cellWidth = td.offsetWidth;
+                const cellHeight = td.offsetHeight;
+                td.style.width = cellWidth + 'px';
+                td.style.minWidth = cellWidth + 'px';
+                td.style.maxWidth = cellWidth + 'px';
+                td.style.height = cellHeight + 'px';
+                td.style.overflow = 'hidden';
+
                 const input = document.createElement('input');
                 input.type = 'text'; // Always use text to allow formulas
                 input.value = formulaValue || value || '';
-                input.style.cssText = 'width: 100%; border: 2px solid #2196F3; padding: 2px; font-size: 11px;';
+                input.style.cssText = `width: ${cellWidth - 8}px; max-width: ${cellWidth - 8}px; border: 2px solid #2196F3; padding: 2px; font-size: 11px; box-sizing: border-box;`;
                 input.dataset.isFormula = input.value.startsWith('=');
 
                 // Enable cell click to add reference mode
                 let cellClickHandler = null;
 
+                // Track if we're clicking a cell for reference (to prevent blur)
+                let isClickingForReference = false;
+
                 input.addEventListener('input', function() {
                     const isFormula = input.value.startsWith('=');
                     if (isFormula && !cellClickHandler) {
-                        // Add cell click listener
+                        // Add visual feedback for formula mode
+                        input.style.borderColor = '#4CAF50';
+                        input.style.boxShadow = '0 0 4px rgba(76, 175, 80, 0.5)';
+                        input.placeholder = 'Click cells to add references...';
+
+                        // Highlight all clickable cells
+                        document.querySelectorAll('td[data-col-idx]').forEach(cell => {
+                            if (cell !== td && cell.dataset.colIdx !== undefined) {
+                                cell.classList.add('formula-mode-clickable');
+                                cell.style.outline = '1px dashed #4CAF50';
+                                cell.style.cursor = 'crosshair';
+                            }
+                        });
+
+                        // Use mousedown to catch before blur fires
                         cellClickHandler = function(e) {
                             const clickedCell = e.target.closest('td');
                             if (clickedCell && clickedCell !== td && clickedCell.dataset.colIdx !== undefined) {
+                                // Prevent blur from closing the editor
+                                e.preventDefault();
+                                isClickingForReference = true;
+
                                 const row = clickedCell.parentElement;
                                 const rowNum = row.dataset.rowNumber;
                                 const colIdx = parseInt(clickedCell.dataset.colIdx);
                                 const cellRef = columnIndexToLetter(colIdx) + rowNum;
+
+                                // Flash the clicked cell
+                                const originalBg = clickedCell.style.backgroundColor;
+                                clickedCell.style.backgroundColor = '#C8E6C9';
+                                setTimeout(() => {
+                                    clickedCell.style.backgroundColor = originalBg;
+                                }, 200);
 
                                 // Insert cell reference at cursor position
                                 const cursorPos = input.selectionStart;
@@ -5329,27 +5952,60 @@ Return JSON:
 
                                 // Move cursor after inserted reference
                                 const newPos = cursorPos + cellRef.length;
-                                input.setSelectionRange(newPos, newPos);
-                                input.focus();
+                                setTimeout(() => {
+                                    input.focus();
+                                    input.setSelectionRange(newPos, newPos);
+                                    isClickingForReference = false;
+                                }, 0);
 
-                                e.preventDefault();
                                 e.stopPropagation();
                             }
                         };
-                        document.addEventListener('click', cellClickHandler, true);
+                        document.addEventListener('mousedown', cellClickHandler, true);
                     } else if (!isFormula && cellClickHandler) {
+                        // Remove visual feedback
+                        input.style.borderColor = '#2196F3';
+                        input.style.boxShadow = '';
+                        input.placeholder = '';
+
+                        // Remove highlighting from cells
+                        document.querySelectorAll('.formula-mode-clickable').forEach(cell => {
+                            cell.classList.remove('formula-mode-clickable');
+                            cell.style.outline = '';
+                            cell.style.cursor = '';
+                        });
+
                         // Remove cell click listener if formula is deleted
-                        document.removeEventListener('click', cellClickHandler, true);
+                        document.removeEventListener('mousedown', cellClickHandler, true);
                         cellClickHandler = null;
                     }
                 });
 
                 input.addEventListener('blur', function() {
+                    // If clicking for reference, don't process blur yet
+                    if (isClickingForReference) {
+                        return;
+                    }
+
+                    // Clean up visual feedback
+                    document.querySelectorAll('.formula-mode-clickable').forEach(cell => {
+                        cell.classList.remove('formula-mode-clickable');
+                        cell.style.outline = '';
+                        cell.style.cursor = '';
+                    });
+
                     // Clean up cell click listener
                     if (cellClickHandler) {
-                        document.removeEventListener('click', cellClickHandler, true);
+                        document.removeEventListener('mousedown', cellClickHandler, true);
                         cellClickHandler = null;
                     }
+
+                    // Restore cell sizing (remove fixed constraints)
+                    td.style.width = '';
+                    td.style.minWidth = '';
+                    td.style.maxWidth = '';
+                    td.style.height = '';
+                    td.style.overflow = '';
 
                     const newValue = input.value;
 
@@ -5382,11 +6038,26 @@ Return JSON:
                         input.blur();
                     }
                     if (e.key === 'Escape') {
+                        // Clean up visual feedback
+                        document.querySelectorAll('.formula-mode-clickable').forEach(cell => {
+                            cell.classList.remove('formula-mode-clickable');
+                            cell.style.outline = '';
+                            cell.style.cursor = '';
+                        });
+
                         // Clean up cell click listener
                         if (cellClickHandler) {
-                            document.removeEventListener('click', cellClickHandler, true);
+                            document.removeEventListener('mousedown', cellClickHandler, true);
                             cellClickHandler = null;
                         }
+
+                        // Restore cell sizing
+                        td.style.width = '';
+                        td.style.minWidth = '';
+                        td.style.maxWidth = '';
+                        td.style.height = '';
+                        td.style.overflow = '';
+
                         td.textContent = value || '';
                         input.blur();
                     }
@@ -5394,13 +6065,38 @@ Return JSON:
 
                 // Enable cell click mode immediately if editing formula
                 if (input.value.startsWith('=')) {
+                    // Add visual feedback for formula mode
+                    input.style.borderColor = '#4CAF50';
+                    input.style.boxShadow = '0 0 4px rgba(76, 175, 80, 0.5)';
+                    input.placeholder = 'Click cells to add references...';
+
+                    // Highlight all clickable cells
+                    document.querySelectorAll('td[data-col-idx]').forEach(cell => {
+                        if (cell !== td && cell.dataset.colIdx !== undefined) {
+                            cell.classList.add('formula-mode-clickable');
+                            cell.style.outline = '1px dashed #4CAF50';
+                            cell.style.cursor = 'crosshair';
+                        }
+                    });
+
                     cellClickHandler = function(e) {
                         const clickedCell = e.target.closest('td');
                         if (clickedCell && clickedCell !== td && clickedCell.dataset.colIdx !== undefined) {
+                            // Prevent blur from closing the editor
+                            e.preventDefault();
+                            isClickingForReference = true;
+
                             const row = clickedCell.parentElement;
                             const rowNum = row.dataset.rowNumber;
                             const colIdx = parseInt(clickedCell.dataset.colIdx);
                             const cellRef = columnIndexToLetter(colIdx) + rowNum;
+
+                            // Flash the clicked cell
+                            const originalBg = clickedCell.style.backgroundColor;
+                            clickedCell.style.backgroundColor = '#C8E6C9';
+                            setTimeout(() => {
+                                clickedCell.style.backgroundColor = originalBg;
+                            }, 200);
 
                             // Insert cell reference at cursor position
                             const cursorPos = input.selectionStart;
@@ -5410,14 +6106,16 @@ Return JSON:
 
                             // Move cursor after inserted reference
                             const newPos = cursorPos + cellRef.length;
-                            input.setSelectionRange(newPos, newPos);
-                            input.focus();
+                            setTimeout(() => {
+                                input.focus();
+                                input.setSelectionRange(newPos, newPos);
+                                isClickingForReference = false;
+                            }, 0);
 
-                            e.preventDefault();
                             e.stopPropagation();
                         }
                     };
-                    document.addEventListener('click', cellClickHandler, true);
+                    document.addEventListener('mousedown', cellClickHandler, true);
                 }
 
                 td.textContent = '';

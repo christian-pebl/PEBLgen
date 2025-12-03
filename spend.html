@@ -950,8 +950,11 @@
             <a href="grants.html" class="nav-btn">Grants</a>
             <a href="spend.html" class="nav-btn active">Spend</a>
             <a href="gantt.html" class="nav-btn">Gantt</a>
-            <a href="timesheet.html" class="nav-btn">Timesheet</a>
+            <a href="timesheet.html" class="nav-btn">Labour</a>
             <a href="index.html" class="nav-btn">Sketcher</a>
+            <a href="exploit.html" class="nav-btn">Exploit</a>
+            <a href="risks.html" class="nav-btn">Risks</a>
+            <a href="quote.html" class="nav-btn">Quote</a>
             <!-- Queue Status Indicator -->
             <button id="queueStatusIndicator" onclick="toggleQueuePanel()"
                     style="display: none; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; margin-left: auto; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);">
@@ -1654,6 +1657,63 @@
                 <div id="invoiceListContainer">
                     <!-- Invoices will be populated here -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Duplicate Detection Modal -->
+    <div id="duplicateDetectionModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 800px; max-height: 85vh;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>⚠️</span>
+                    <span>Duplicate Transactions Detected</span>
+                </h3>
+                <button onclick="closeDuplicateModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: white;">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 15px;">
+                <!-- Summary -->
+                <div id="duplicateSummary" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                    <p style="margin: 0; font-size: 13px;">
+                        <strong id="duplicateCount">0</strong> potential duplicate(s) found in your new CSV file.
+                        These transactions already exist in your saved data.
+                    </p>
+                </div>
+
+                <!-- Options -->
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button onclick="selectAllDuplicates(true)" class="btn-secondary" style="font-size: 11px; padding: 6px 12px;">
+                        ☑️ Select All Duplicates
+                    </button>
+                    <button onclick="selectAllDuplicates(false)" class="btn-secondary" style="font-size: 11px; padding: 6px 12px;">
+                        ☐ Deselect All
+                    </button>
+                    <span style="margin-left: auto; font-size: 11px; color: #666; align-self: center;">
+                        ✓ Checked = will be <strong>skipped</strong> (not imported)
+                    </span>
+                </div>
+
+                <!-- Duplicate List -->
+                <div id="duplicateList" style="max-height: 45vh; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <!-- Duplicates will be listed here -->
+                </div>
+
+                <!-- Import Summary -->
+                <div id="importSummary" style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 12px; margin-top: 15px;">
+                    <p style="margin: 0; font-size: 13px;">
+                        <strong>Import Preview:</strong>
+                        <span id="newTransactionCount">0</span> new transaction(s) will be imported,
+                        <span id="skippedTransactionCount">0</span> duplicate(s) will be skipped.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 15px; border-top: 1px solid #e5e7eb;">
+                <button onclick="closeDuplicateModal()" class="btn-secondary" style="padding: 10px 20px;">
+                    Cancel Import
+                </button>
+                <button onclick="proceedWithImport()" class="btn-primary" style="padding: 10px 20px; background: #10b981;">
+                    ✅ Proceed with Import
+                </button>
             </div>
         </div>
     </div>
@@ -2745,7 +2805,7 @@
         }
 
         /**
-         * Fix duplicate transactions in IndexedDB
+         * Fix duplicate transactions in IndexedDB (within and across all CSV files)
          */
         async function fixDuplicates(event) {
             console.log('🔧 [FIX DUPLICATES] User clicked Fix DB button');
@@ -2758,12 +2818,13 @@
             const confirmed = confirm(
                 '⚠️ Fix Database - Remove Duplicate Transactions\n\n' +
                 'This will scan all saved CSV files and remove EXACT duplicate transactions.\n\n' +
+                '✅ Removes duplicates WITHIN each file\n' +
+                '✅ Removes duplicates ACROSS different files\n\n' +
                 'A duplicate is identified when ALL of these match:\n' +
                 '  • Date\n' +
                 '  • Description\n' +
                 '  • Spent amount\n' +
-                '  • Received amount\n' +
-                '  • From/To\n\n' +
+                '  • Received amount\n\n' +
                 'Only exact duplicates will be removed. Your unique transactions will be preserved.\n\n' +
                 'Do you want to continue?'
             );
@@ -2773,7 +2834,7 @@
                 return;
             }
 
-            console.log('🔧 [FIX DUPLICATES] Starting duplicate fix...');
+            console.log('🔧 [FIX DUPLICATES] Starting duplicate fix (within AND across files)...');
 
             if (!db) {
                 await initIndexedDB();
@@ -2794,50 +2855,105 @@
                     let totalReceivedBefore = 0;
                     let totalSpentAfter = 0;
                     let totalReceivedAfter = 0;
+                    let crossFileDuplicatesRemoved = 0;
+                    let unassignedDupesRemoved = 0;
+
+                    // PHASE 1: Build a global map of ALL transactions by key
+                    // This allows us to prefer ASSIGNED transactions over unassigned ones
+                    const globalTransactionMap = new Map(); // key -> array of {trans, fileId, isAssigned}
+
+                    console.log('📊 [FIX DUPLICATES] Phase 1: Building global transaction map...');
+
+                    allCSVFiles.forEach(csvFile => {
+                        (csvFile.transactions || []).forEach(trans => {
+                            const key = getTransactionKey(trans);
+                            const isAssigned = isTransactionAssigned(trans);
+
+                            if (!globalTransactionMap.has(key)) {
+                                globalTransactionMap.set(key, []);
+                            }
+                            globalTransactionMap.get(key).push({
+                                trans,
+                                fileId: csvFile.id,
+                                fileName: csvFile.fileName,
+                                isAssigned
+                            });
+                            totalBefore++;
+
+                            // Count totals
+                            if (trans.spent && trans.spent.trim()) totalSpentBefore++;
+                            if (trans.received && trans.received.trim()) totalReceivedBefore++;
+                        });
+                    });
+
+                    // PHASE 2: Determine which transaction to KEEP for each key
+                    // Priority: ASSIGNED > first occurrence
+                    const keepDecisions = new Map(); // key -> {fileId, transIndex} to keep
+
+                    console.log('📊 [FIX DUPLICATES] Phase 2: Determining which transactions to keep (prioritizing ASSIGNED)...');
+
+                    globalTransactionMap.forEach((entries, key) => {
+                        if (entries.length === 1) {
+                            // Only one occurrence - keep it
+                            keepDecisions.set(key, { fileId: entries[0].fileId, keep: entries[0].trans });
+                        } else {
+                            // Multiple occurrences - prefer ASSIGNED
+                            const assignedEntry = entries.find(e => e.isAssigned);
+
+                            if (assignedEntry) {
+                                // Keep the assigned one, remove others
+                                keepDecisions.set(key, { fileId: assignedEntry.fileId, keep: assignedEntry.trans });
+                                const removedUnassigned = entries.filter(e => !e.isAssigned).length;
+                                const removedAssigned = entries.filter(e => e.isAssigned).length - 1;
+                                unassignedDupesRemoved += removedUnassigned;
+                                crossFileDuplicatesRemoved += entries.length - 1;
+
+                                if (removedUnassigned > 0) {
+                                    console.log(`   ✅ Keeping ASSIGNED version, removing ${removedUnassigned} unassigned duplicate(s):`,
+                                        { date: assignedEntry.trans.date, desc: assignedEntry.trans.description?.substring(0, 30) });
+                                }
+                            } else {
+                                // None assigned - keep first one (oldest file by sort order)
+                                keepDecisions.set(key, { fileId: entries[0].fileId, keep: entries[0].trans });
+                                crossFileDuplicatesRemoved += entries.length - 1;
+                            }
+                        }
+                    });
+
+                    // PHASE 3: Rebuild each file with only kept transactions
+                    console.log('📊 [FIX DUPLICATES] Phase 3: Rebuilding files with deduplicated transactions...');
 
                     for (const csvFile of allCSVFiles) {
                         const before = csvFile.transactions?.length || 0;
-                        totalBefore += before;
+                        const spentBeforeCount = csvFile.transactions.filter(t => t.spent && t.spent.trim()).length;
+                        const receivedBeforeCount = csvFile.transactions.filter(t => t.received && t.received.trim()).length;
 
                         console.log(`📄 [FIX DUPLICATES] Processing: ${csvFile.fileName} (${before} transactions)`);
 
-                        // Count before deduplication
-                        const spentBeforeCount = csvFile.transactions.filter(t => t.spent && t.spent.trim()).length;
-                        const receivedBeforeCount = csvFile.transactions.filter(t => t.received && t.received.trim()).length;
-                        totalSpentBefore += spentBeforeCount;
-                        totalReceivedBefore += receivedBeforeCount;
-
-                        console.log(`   📊 BEFORE: ${spentBeforeCount} spent, ${receivedBeforeCount} received`);
-                        console.log(`   🔍 Sample transactions BEFORE:`, csvFile.transactions.slice(0, 3));
-
-                        // Deduplicate transactions using date + description + amount as unique key
+                        // Keep only transactions where this file is the keeper
+                        const seenKeysInFile = new Set();
                         const uniqueTransactions = [];
-                        const seen = new Set();
-                        let duplicatesRemoved = 0;
 
                         for (const trans of csvFile.transactions || []) {
-                            // Create unique key using ALL important fields to identify EXACT duplicates only
-                            const key = `${trans.date}|${trans.description}|${trans.spent}|${trans.received}|${trans.fromTo}`;
+                            const key = getTransactionKey(trans);
 
-                            if (!seen.has(key)) {
-                                seen.add(key);
-                                uniqueTransactions.push(trans);
-                            } else {
-                                duplicatesRemoved++;
-                                console.log(`   🗑️ Removing EXACT duplicate:`, {
-                                    date: trans.date,
-                                    description: trans.description.substring(0, 30) + '...',
-                                    spent: trans.spent,
-                                    received: trans.received,
-                                    fromTo: trans.fromTo,
-                                    uniqueKey: key
-                                });
+                            // Skip if we've already added this key from this file (within-file dupe)
+                            if (seenKeysInFile.has(key)) {
+                                continue;
+                            }
+
+                            // Check if this file should keep this transaction
+                            const decision = keepDecisions.get(key);
+                            if (decision && decision.fileId === csvFile.id) {
+                                seenKeysInFile.add(key);
+                                uniqueTransactions.push(decision.keep); // Use the kept version (preserves assignments)
                             }
                         }
 
+                        const duplicatesRemoved = before - uniqueTransactions.length;
                         console.log(`   ℹ️ [FIX DUPLICATES] Deduplication complete for ${csvFile.fileName}`);
-                        console.log(`   📊 Unique transactions found: ${uniqueTransactions.length}`);
-                        console.log(`   🗑️ Exact duplicates removed: ${duplicatesRemoved}`);
+                        console.log(`   📊 Unique transactions kept: ${uniqueTransactions.length}`);
+                        console.log(`   🗑️ Duplicates removed: ${duplicatesRemoved}`);
 
                         const after = uniqueTransactions.length;
                         totalAfter += after;
@@ -2879,7 +2995,9 @@
                     }
 
                     console.log(`\n🎉 [FIX DUPLICATES] === SUMMARY ===`);
-                    console.log(`📊 [FIX DUPLICATES] Total transactions: ${totalBefore} → ${totalAfter} (removed ${totalBefore - totalAfter} exact duplicates)`);
+                    console.log(`📊 [FIX DUPLICATES] Total transactions: ${totalBefore} → ${totalAfter} (removed ${totalBefore - totalAfter} duplicates)`);
+                    console.log(`🔄 [FIX DUPLICATES] Cross-file duplicates removed: ${crossFileDuplicatesRemoved}`);
+                    console.log(`✅ [FIX DUPLICATES] Unassigned duplicates removed (kept assigned version): ${unassignedDupesRemoved}`);
                     console.log(`💳 [FIX DUPLICATES] SPENT transactions: ${totalSpentBefore} → ${totalSpentAfter} (${totalSpentBefore - totalSpentAfter} removed)`);
                     console.log(`💰 [FIX DUPLICATES] RECEIVED transactions: ${totalReceivedBefore} → ${totalReceivedAfter} (${totalReceivedBefore - totalReceivedAfter} removed)`);
 
@@ -2901,7 +3019,7 @@
                         return;
                     }
 
-                    const message = `✅ Fixed! Removed ${totalBefore - totalAfter} exact duplicate transactions.\nSpent: ${totalSpentBefore} → ${totalSpentAfter} | Received: ${totalReceivedBefore} → ${totalReceivedAfter}`;
+                    const message = `✅ Fixed! Removed ${totalBefore - totalAfter} duplicates.\n${unassignedDupesRemoved > 0 ? `Kept ${unassignedDupesRemoved} assigned version(s), removed unassigned copies.\n` : ''}Spent: ${totalSpentBefore} → ${totalSpentAfter} | Received: ${totalReceivedBefore} → ${totalReceivedAfter}`;
                     showToast(message, 'success', toastPosition);
 
                     // Reload the page to show clean data
@@ -2916,6 +3034,370 @@
                 console.error('❌ [FIX DUPLICATES] Error:', error);
                 showSimpleToast('❌ Error fixing duplicates', 'error', toastPosition);
             }
+        }
+
+        // ========================================
+        // DUPLICATE DETECTION ON IMPORT
+        // ========================================
+
+        // State for pending import with duplicates
+        let pendingImportData = {
+            fileName: '',
+            bankIdentifier: '',
+            allTransactions: [],
+            duplicates: [],       // Transactions that are duplicates
+            newTransactions: [],  // Transactions that are new
+            skipDuplicates: new Set() // Indices of duplicates to skip
+        };
+
+        /**
+         * Generate a unique key for a transaction (for duplicate detection)
+         */
+        function getTransactionKey(trans) {
+            // Normalize values to handle minor formatting differences
+            const date = (trans.date || '').trim();
+            const description = (trans.description || '').trim().toLowerCase();
+            const spent = (trans.spent || '').trim().replace(/[£$,]/g, '');
+            const received = (trans.received || '').trim().replace(/[£$,]/g, '');
+            return `${date}|${description}|${spent}|${received}`;
+        }
+
+        /**
+         * Check if a transaction is assigned (has budget allocation)
+         */
+        function isTransactionAssigned(trans) {
+            return (trans.assignments && trans.assignments.length > 0) || trans.assignedItemName;
+        }
+
+        /**
+         * Get assignment info for display
+         */
+        function getAssignmentInfo(trans) {
+            if (trans.assignments && trans.assignments.length > 0) {
+                return trans.assignments.map(a => `${a.itemName || a.category} (${a.projectName || 'Unknown'})`).join(', ');
+            } else if (trans.assignedItemName) {
+                return `${trans.assignedItemName} (${trans.assignedProjectName || trans.assignedCategory || 'Unknown'})`;
+            }
+            return null;
+        }
+
+        /**
+         * Get all existing transactions from all saved CSV files
+         */
+        async function getAllExistingTransactions() {
+            console.log('🔍 [DUPLICATE CHECK] Loading all existing transactions...');
+
+            if (!db) {
+                await initIndexedDB();
+            }
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([CSV_STORE_NAME], 'readonly');
+                const objectStore = transaction.objectStore(CSV_STORE_NAME);
+                const getAllRequest = objectStore.getAll();
+
+                getAllRequest.onsuccess = () => {
+                    const allCSVFiles = getAllRequest.result || [];
+                    const existingTransactions = [];
+
+                    allCSVFiles.forEach(csvFile => {
+                        if (csvFile.transactions && Array.isArray(csvFile.transactions)) {
+                            csvFile.transactions.forEach(trans => {
+                                existingTransactions.push({
+                                    ...trans,
+                                    sourceFile: csvFile.fileName,
+                                    isAssigned: isTransactionAssigned(trans),
+                                    assignmentInfo: getAssignmentInfo(trans)
+                                });
+                            });
+                        }
+                    });
+
+                    const assignedCount = existingTransactions.filter(t => t.isAssigned).length;
+                    console.log(`📊 [DUPLICATE CHECK] Found ${existingTransactions.length} existing transactions (${assignedCount} assigned) across ${allCSVFiles.length} files`);
+                    resolve(existingTransactions);
+                };
+
+                getAllRequest.onerror = () => {
+                    console.error('❌ [DUPLICATE CHECK] Failed to load existing transactions');
+                    reject(getAllRequest.error);
+                };
+            });
+        }
+
+        /**
+         * Check new transactions against existing ones for duplicates
+         */
+        async function checkForDuplicates(newTransactions) {
+            console.log(`🔍 [DUPLICATE CHECK] Checking ${newTransactions.length} new transactions for duplicates...`);
+
+            const existingTransactions = await getAllExistingTransactions();
+
+            // Build a Set of existing transaction keys for fast lookup
+            const existingKeys = new Set();
+            const existingByKey = new Map();
+
+            existingTransactions.forEach(trans => {
+                const key = getTransactionKey(trans);
+                existingKeys.add(key);
+                if (!existingByKey.has(key)) {
+                    existingByKey.set(key, []);
+                }
+                existingByKey.get(key).push(trans);
+            });
+
+            const duplicates = [];
+            const uniqueNew = [];
+
+            newTransactions.forEach((trans, idx) => {
+                const key = getTransactionKey(trans);
+                if (existingKeys.has(key)) {
+                    const matches = existingByKey.get(key);
+                    const hasAssignedMatch = matches.some(m => m.isAssigned);
+                    const assignedMatch = matches.find(m => m.isAssigned);
+
+                    duplicates.push({
+                        index: idx,
+                        transaction: trans,
+                        existingMatches: matches,
+                        hasAssignedMatch: hasAssignedMatch,
+                        assignmentInfo: assignedMatch ? assignedMatch.assignmentInfo : null
+                    });
+                } else {
+                    uniqueNew.push({ index: idx, transaction: trans });
+                }
+            });
+
+            const assignedDupes = duplicates.filter(d => d.hasAssignedMatch).length;
+            console.log(`📊 [DUPLICATE CHECK] Results: ${uniqueNew.length} new, ${duplicates.length} duplicates (${assignedDupes} match assigned transactions)`);
+
+            return { duplicates, uniqueNew };
+        }
+
+        /**
+         * Show the duplicate detection modal
+         */
+        function showDuplicateModal(fileName, bankIdentifier, allTransactions, duplicates, newTransactions) {
+            console.log('📋 [DUPLICATE MODAL] Showing modal with', duplicates.length, 'duplicates');
+
+            // Count assigned duplicates
+            const assignedCount = duplicates.filter(d => d.hasAssignedMatch).length;
+            console.log(`📋 [DUPLICATE MODAL] ${assignedCount} of ${duplicates.length} duplicates match ASSIGNED transactions`);
+
+            // Store pending import data
+            pendingImportData = {
+                fileName,
+                bankIdentifier,
+                allTransactions,
+                duplicates,
+                newTransactions,
+                skipDuplicates: new Set(duplicates.map(d => d.index)) // Default: skip all duplicates
+            };
+
+            // Update summary counts
+            document.getElementById('duplicateCount').textContent = duplicates.length;
+
+            // Update summary to show assigned count
+            const summaryEl = document.getElementById('duplicateSummary');
+            if (assignedCount > 0) {
+                summaryEl.innerHTML = `
+                    <p style="margin: 0 0 8px 0; font-size: 13px;">
+                        <strong>${duplicates.length}</strong> potential duplicate(s) found in your new CSV file.
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #b45309; background: #fef3c7; padding: 6px 10px; border-radius: 4px;">
+                        ⚠️ <strong>${assignedCount}</strong> of these match transactions that are <strong>ALREADY ASSIGNED</strong> to budgets.
+                        These are highlighted in <span style="background: #fef3c7; border: 2px solid #f59e0b; padding: 1px 4px; border-radius: 3px;">yellow</span>.
+                        Importing them would create duplicates in your spending records.
+                    </p>
+                `;
+            } else {
+                summaryEl.innerHTML = `
+                    <p style="margin: 0; font-size: 13px;">
+                        <strong>${duplicates.length}</strong> potential duplicate(s) found in your new CSV file.
+                        These transactions already exist in your saved data.
+                    </p>
+                `;
+            }
+
+            updateImportSummary();
+
+            // Build duplicate list HTML
+            const listContainer = document.getElementById('duplicateList');
+            let html = '<table style="width: 100%; border-collapse: collapse; font-size: 11px;">';
+            html += `
+                <thead style="background: #f3f4f6; position: sticky; top: 0; z-index: 1;">
+                    <tr>
+                        <th style="padding: 8px; text-align: center; border-bottom: 2px solid #e5e7eb; width: 40px;">Skip?</th>
+                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">Date</th>
+                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">Description</th>
+                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #e5e7eb;">Amount</th>
+                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            duplicates.forEach((dup, i) => {
+                const trans = dup.transaction;
+                const amount = trans.spent && trans.spent.trim() ? `-£${trans.spent}` :
+                              (trans.received && trans.received.trim() ? `+£${trans.received}` : '£0');
+                const amountColor = trans.spent && trans.spent.trim() ? '#dc2626' : '#10b981';
+                const sourceFiles = [...new Set(dup.existingMatches.map(m => m.sourceFile))].join(', ');
+
+                // Highlight assigned duplicates
+                const isAssigned = dup.hasAssignedMatch;
+                const rowBg = isAssigned ? 'background: #fef3c7; border-left: 3px solid #f59e0b;' :
+                             (i % 2 === 0 ? 'background: #fafafa;' : '');
+
+                // Status column
+                let statusHtml;
+                if (isAssigned) {
+                    statusHtml = `
+                        <span style="background: #10b981; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">
+                            ✓ ASSIGNED
+                        </span>
+                        <br><span style="font-size: 9px; color: #666;" title="${dup.assignmentInfo || ''}">${(dup.assignmentInfo || '').substring(0, 25)}${(dup.assignmentInfo || '').length > 25 ? '...' : ''}</span>
+                    `;
+                } else {
+                    statusHtml = `
+                        <span style="background: #94a3b8; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">
+                            Pending
+                        </span>
+                        <br><span style="font-size: 9px; color: #666;">${sourceFiles}</span>
+                    `;
+                }
+
+                html += `
+                    <tr style="border-bottom: 1px solid #e5e7eb; ${rowBg}">
+                        <td style="padding: 8px; text-align: center;">
+                            <input type="checkbox" id="dupCheck_${dup.index}" checked
+                                   onchange="toggleDuplicateSkip(${dup.index})"
+                                   style="width: 16px; height: 16px; cursor: pointer;"
+                                   title="${isAssigned ? 'RECOMMENDED: Skip this - already assigned to budget' : 'Skip importing this duplicate'}">
+                        </td>
+                        <td style="padding: 8px; white-space: nowrap;">${trans.date || '-'}</td>
+                        <td style="padding: 8px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                            title="${(trans.description || '').replace(/"/g, '&quot;')}">
+                            ${trans.description || '-'}
+                        </td>
+                        <td style="padding: 8px; text-align: right; font-weight: 600; color: ${amountColor};">${amount}</td>
+                        <td style="padding: 8px; max-width: 150px;">
+                            ${statusHtml}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            listContainer.innerHTML = html;
+
+            // Show modal
+            document.getElementById('duplicateDetectionModal').style.display = 'flex';
+        }
+
+        /**
+         * Toggle whether to skip a specific duplicate
+         */
+        function toggleDuplicateSkip(index) {
+            if (pendingImportData.skipDuplicates.has(index)) {
+                pendingImportData.skipDuplicates.delete(index);
+            } else {
+                pendingImportData.skipDuplicates.add(index);
+            }
+            updateImportSummary();
+        }
+
+        /**
+         * Select or deselect all duplicates
+         */
+        function selectAllDuplicates(select) {
+            pendingImportData.duplicates.forEach(dup => {
+                const checkbox = document.getElementById(`dupCheck_${dup.index}`);
+                if (checkbox) {
+                    checkbox.checked = select;
+                }
+                if (select) {
+                    pendingImportData.skipDuplicates.add(dup.index);
+                } else {
+                    pendingImportData.skipDuplicates.delete(dup.index);
+                }
+            });
+            updateImportSummary();
+        }
+
+        /**
+         * Update the import summary counts
+         */
+        function updateImportSummary() {
+            const totalNew = pendingImportData.newTransactions.length;
+            const duplicatesKept = pendingImportData.duplicates.length - pendingImportData.skipDuplicates.size;
+            const totalToImport = totalNew + duplicatesKept;
+            const skipped = pendingImportData.skipDuplicates.size;
+
+            document.getElementById('newTransactionCount').textContent = totalToImport;
+            document.getElementById('skippedTransactionCount').textContent = skipped;
+        }
+
+        /**
+         * Close the duplicate detection modal
+         */
+        function closeDuplicateModal() {
+            document.getElementById('duplicateDetectionModal').style.display = 'none';
+            pendingImportData = {
+                fileName: '',
+                bankIdentifier: '',
+                allTransactions: [],
+                duplicates: [],
+                newTransactions: [],
+                skipDuplicates: new Set()
+            };
+        }
+
+        /**
+         * Proceed with importing after duplicate review
+         */
+        async function proceedWithImport() {
+            console.log('✅ [DUPLICATE IMPORT] User confirmed import');
+
+            const { fileName, bankIdentifier, allTransactions, duplicates, newTransactions, skipDuplicates } = pendingImportData;
+
+            // Build final transaction list (new + kept duplicates)
+            const transactionsToImport = [];
+
+            // Add all new transactions
+            newTransactions.forEach(item => {
+                transactionsToImport.push(item.transaction);
+            });
+
+            // Add duplicates that user chose to keep (not skip)
+            duplicates.forEach(dup => {
+                if (!skipDuplicates.has(dup.index)) {
+                    transactionsToImport.push(dup.transaction);
+                }
+            });
+
+            console.log(`📥 [DUPLICATE IMPORT] Importing ${transactionsToImport.length} transactions (skipped ${skipDuplicates.size} duplicates)`);
+
+            // Close modal
+            closeDuplicateModal();
+
+            if (transactionsToImport.length === 0) {
+                showSimpleToast('⚠️ No transactions to import (all were duplicates)', 'warning');
+                return;
+            }
+
+            // Add to allTransactions
+            allTransactions.push(...transactionsToImport);
+
+            // Save to IndexedDB
+            await saveCSVFileToDB(fileName, transactionsToImport, bankIdentifier);
+
+            // Update display
+            renderTransactions();
+            updateSummary();
+            updateCSVSummary();
+
+            showSimpleToast(`✅ Imported ${transactionsToImport.length} transactions (${skipDuplicates.size} duplicates skipped)`, 'success');
         }
 
         /**
@@ -3393,13 +3875,33 @@
 
                     const transactions = parseCSV(content, bankIdentifier);
 
-                    // APPEND transactions instead of replacing
-                    allTransactions.push(...transactions);
+                    // Check for duplicates against existing transactions
+                    console.log(`🔍 [CSV IMPORT] Checking ${transactions.length} transactions for duplicates...`);
+                    const { duplicates, uniqueNew } = await checkForDuplicates(transactions);
 
-                    // Save to IndexedDB
-                    await saveCSVFileToDB(file.name, transactions, bankIdentifier);
+                    if (duplicates.length > 0) {
+                        // Show duplicate detection modal for user to review
+                        console.log(`⚠️ [CSV IMPORT] Found ${duplicates.length} potential duplicates - showing modal`);
+                        showDuplicateModal(file.name, bankIdentifier, allTransactions, duplicates, uniqueNew);
+                        resolve(); // Resolve immediately - actual import happens in modal callback
+                    } else {
+                        // No duplicates - proceed with normal import
+                        console.log(`✅ [CSV IMPORT] No duplicates found - importing all ${transactions.length} transactions`);
 
-                    resolve();
+                        // APPEND transactions instead of replacing
+                        allTransactions.push(...transactions);
+
+                        // Save to IndexedDB
+                        await saveCSVFileToDB(file.name, transactions, bankIdentifier);
+
+                        // Update display
+                        renderTransactions();
+                        updateSummary();
+                        updateCSVSummary();
+
+                        showSimpleToast(`✅ Imported ${transactions.length} transactions`, 'success');
+                        resolve();
+                    }
                 };
                 reader.onerror = reject;
                 reader.readAsText(file);
