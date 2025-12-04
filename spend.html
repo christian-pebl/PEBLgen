@@ -3646,7 +3646,17 @@
             // Generate filename with timestamp and filter info
             const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
             const modeLabel = completionMode === 'complete' ? 'completed' : 'incomplete';
-            const filterLabel = showOnlyFlagged ? '_flagged' : '';
+
+            // Build filter label based on active filters
+            let filterLabel = '';
+            if (showOnlyRedFlag && showOnlyBlueFlag) {
+                filterLabel = '_red_and_blue_flagged';
+            } else if (showOnlyRedFlag) {
+                filterLabel = '_red_flagged';
+            } else if (showOnlyBlueFlag) {
+                filterLabel = '_blue_flagged';
+            }
+
             const filename = `spend_export_${modeLabel}${filterLabel}_${timestamp}.csv`;
 
             link.setAttribute('href', url);

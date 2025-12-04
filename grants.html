@@ -1625,8 +1625,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         const INVOICES_STORE_NAME = 'invoices'; // Added for spend.html invoice storage
 
         async function initIndexedDB() {
-            console.log(`🔍 [DB INIT] Starting IndexedDB initialization...`);
-            console.log(`🔍 [DB INIT] Database: ${DB_NAME}, Target Version: ${DB_VERSION}`);
 
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -1657,9 +1655,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 request.onsuccess = () => {
                     clearTimeout(timeout);
                     db = request.result;
-                    console.log('✅ [DB INIT] IndexedDB opened successfully');
-                    console.log(`✅ [DB INIT] Current version: ${db.version}`);
-                    console.log(`✅ [DB INIT] Object stores: ${Array.from(db.objectStoreNames).join(', ')}`);
                     resolve(db);
                 };
 
@@ -1738,21 +1733,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     }
                 });
 
-                console.log(`[TRANSACTIONS] Loaded ${allTransactions.length} transactions from ${allFiles.length} CSV files`);
-
-                // Debug: Show how many transactions have assignments
-                const transactionsWithAssignments = allTransactions.filter(t => t.assignments && t.assignments.length > 0);
-                console.log(`[TRANSACTIONS] ${transactionsWithAssignments.length} transactions have assignments`);
-
-                // Debug: Show how many transactions have transaction references
-                const transactionsWithRefs = allTransactions.filter(t => t.transactionRef);
-                console.log(`📝 [TRANSACTION REF] ${transactionsWithRefs.length} transactions have transaction references`);
-                if (transactionsWithRefs.length > 0) {
-                    console.log(`📝 [TRANSACTION REF] Sample references:`, transactionsWithRefs.slice(0, 5).map(t => `${t.date}: ${t.transactionRef}`));
-                }
-
-                // Removed verbose logging - transactions loaded successfully
-
                 return allTransactions;
             } catch (error) {
                 console.error('❌ [TRANSACTIONS] Failed to load transactions:', error);
@@ -1764,8 +1744,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         async function migrateTransactionRefs() {
             if (!db) await initIndexedDB();
             if (!db) return;
-
-            console.log('🔄 [MIGRATION] Checking for transaction refs to migrate...');
 
             try {
                 const txn = db.transaction([CSV_STORE_NAME], 'readwrite');
@@ -1816,8 +1794,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                     // Refresh cached transactions
                     cachedTransactions = await loadAllTransactions();
-                } else {
-                    console.log('ℹ️ [MIGRATION] No transaction refs needed migration');
                 }
 
             } catch (error) {
@@ -1978,7 +1954,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     request.onerror = () => reject(request.error);
                 });
 
-                console.log(`📎 [INVOICES] Loaded ${allInvoices.length} invoice attachments`);
                 return allInvoices;
             } catch (error) {
                 console.error('❌ [INVOICES] Failed to load invoices:', error);
@@ -2145,6 +2120,8 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
         // Render transaction details table
         function renderTransactionDetails(transactions, projectId, category, itemKey, quarter, invoices) {
+            console.log(`🎨 [RENDER] renderTransactionDetails called: ${category}-${itemKey}, ${transactions?.length || 0} transactions`);
+
             if (!transactions || transactions.length === 0) {
                 return '<p style="color: #94a3b8; font-style: italic; padding: 10px;">No transactions assigned yet</p>';
             }
@@ -2177,7 +2154,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     const usdAmount = transaction.convertedAmount;
                     const rate = transaction.conversionRate || 1;
                     currencyNote = `<div style="font-size: 0.75em; color: #10b981; margin-top: 3px;">💱 Converted from $${usdAmount.toFixed(2)} USD (rate: ${rate.toFixed(4)})</div>`;
-                    console.log(`💱 [RENDER] Displaying GBP £${spentAmount.toFixed(2)} (converted from $${usdAmount.toFixed(2)} @ ${rate.toFixed(4)})`);
                 }
 
                 // Detail column - prioritize detail field, then fall back to legacy fields
@@ -2245,11 +2221,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 // Get transaction reference from the assignment (each assignment has its own unique ref)
                 const transactionRef = assignment?.transactionRef || '-';
 
-                // Debug logging for first few transactions
-                if (transactions.indexOf(transaction) < 3) {
-                    console.log(`📝 [TRANSACTION REF] Transaction ${transactions.indexOf(transaction)}: ${transaction.date} - Assignment Ref: ${transactionRef}`);
-                }
-
                 return `
                     <tr id="${transactionId}" data-transaction-date="${escapeHtml(transaction.date)}" data-transaction-description="${escapeHtml(transaction.description)}">
                         <td style="padding: 6px 10px; white-space: nowrap;">${escapeHtml(date)}</td>
@@ -2274,10 +2245,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             }).join('');
 
             const quarterlyTableId = `quarterly-table-${itemKey.replace(/[^a-zA-Z0-9]/g, '-')}`;
-
-            console.log('🔍 [ALIGNMENT] Rendering transaction details for:', itemKey, 'Transactions:', transactions.length);
-            console.log('📊 [WIDTH DEBUG] Category:', category, 'Item:', itemKey, 'Project:', projectId);
-            console.log('📏 [WIDTH DEBUG] Transaction table will span full width using width: 100% and min-width: 1000px');
 
             return `
                 <div style="margin: 20px 0 0 0; padding: 15px 0; background: white; border-radius: 0; border-top: 2px solid #e2e8f0; width: 100%; box-sizing: border-box;">
@@ -4511,12 +4478,10 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             cachedTransactions = await loadAllTransactions();
             cachedInvoices = await loadInvoiceAttachments();
-            console.log(`✅ [PRELOAD] Cached ${cachedTransactions.length} transactions and ${cachedInvoices.length} invoices`);
         }
 
         // Refresh transaction and invoice data (call this when page becomes visible)
         async function refreshTransactionData() {
-            console.log('🔄 [REFRESH] Refreshing transaction data...');
             const oldTxCount = cachedTransactions ? cachedTransactions.length : 0;
             const oldInvCount = cachedInvoices ? cachedInvoices.length : 0;
 
@@ -4531,19 +4496,6 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             const newTxCount = cachedTransactions.length;
             const newInvCount = cachedInvoices.length;
-
-            console.log(`✅ [REFRESH] Updated cache: ${oldTxCount} → ${newTxCount} transactions, ${oldInvCount} → ${newInvCount} invoices`);
-
-            // Log invoice details for debugging
-            if (cachedInvoices.length > 0) {
-                console.log('📎 [INVOICES] Available invoices:', cachedInvoices.map(inv => ({
-                    id: inv.id,
-                    filename: inv.filename,
-                    transactionIndex: inv.transactionIndex,
-                    transactionDate: inv.transactionDate,
-                    description: inv.description?.substring(0, 30)
-                })));
-            }
 
             // Re-render the results to show updated data
             if (window.budgetProjects && window.budgetProjects.length > 0) {
@@ -4962,6 +4914,127 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             }
         }
 
+        // Migrate old property names to new standardized names
+        // Returns true if any migration was performed, false otherwise
+        function migrateProjectProperties(project) {
+            if (!project) return false;
+            let migrated = false;
+
+            // Migrate subcontracting.items → subcontracting.contractors
+            if (project.subcontracting) {
+                if (project.subcontracting.items && Array.isArray(project.subcontracting.items)) {
+                    console.log(`🔄 [MIGRATION] Found ${project.subcontracting.items.length} items in subcontracting.items`);
+
+                    // Initialize contractors array if it doesn't exist
+                    if (!project.subcontracting.contractors) {
+                        project.subcontracting.contractors = [];
+                    }
+
+                    // Merge items into contractors (avoid duplicates)
+                    project.subcontracting.items.forEach(item => {
+                        // Check if this item already exists in contractors
+                        const exists = project.subcontracting.contractors.some(c =>
+                            c.item === item.item && c.total === item.total
+                        );
+                        if (!exists) {
+                            project.subcontracting.contractors.push(item);
+                            console.log(`  ✅ Migrated: ${item.item}`);
+                        }
+                    });
+
+                    // Delete old property
+                    delete project.subcontracting.items;
+                    console.log('✅ [MIGRATION] Migrated subcontracting.items → subcontracting.contractors');
+                    migrated = true;
+                }
+            }
+
+            // Migrate travel.items → travel.trips (if items exists)
+            if (project.travel) {
+                if (project.travel.items && Array.isArray(project.travel.items)) {
+                    console.log(`🔄 [MIGRATION] Found ${project.travel.items.length} items in travel.items`);
+
+                    // Initialize trips array if it doesn't exist
+                    if (!project.travel.trips) {
+                        project.travel.trips = [];
+                    }
+
+                    // Merge items into trips (avoid duplicates)
+                    project.travel.items.forEach(item => {
+                        // Check if this item already exists in trips
+                        const exists = project.travel.trips.some(t =>
+                            t.destination === item.destination && t.total === item.total
+                        );
+                        if (!exists) {
+                            project.travel.trips.push(item);
+                            console.log(`  ✅ Migrated: ${item.destination || item.purpose}`);
+                        }
+                    });
+
+                    // Delete old property
+                    delete project.travel.items;
+                    console.log('✅ [MIGRATION] Migrated travel.items → travel.trips');
+                    migrated = true;
+                }
+            }
+
+            // DEBUG: Log the state after migration
+            console.log('🔍 [MIGRATION DEBUG] After migration:');
+            console.log('  - subcontracting.contractors:', project.subcontracting?.contractors?.length || 0);
+            console.log('  - subcontracting.items:', project.subcontracting?.items?.length || 'undefined');
+            console.log('  - travel.trips:', project.travel?.trips?.length || 0);
+            console.log('  - travel.items:', project.travel?.items?.length || 'undefined');
+            console.log('  - otherCosts.items:', project.otherCosts?.items?.length || 0);
+
+            console.log(`✅ [MIGRATION] Property migration complete (${migrated ? 'changes made' : 'no changes needed'})`);
+            return migrated;
+        }
+
+        // Emergency data recovery function - call this from console if data disappeared
+        window.recoverProjectData = async function() {
+            console.log('🚨 [RECOVERY] Starting emergency data recovery...');
+
+            if (!db) {
+                console.error('❌ [RECOVERY] Database not initialized');
+                return;
+            }
+
+            try {
+                const transaction = db.transaction(['projects'], 'readonly');
+                const objectStore = transaction.objectStore('projects');
+                const request = objectStore.getAll();
+
+                request.onsuccess = () => {
+                    const projects = request.result;
+                    console.log(`📊 [RECOVERY] Found ${projects.length} projects in database`);
+
+                    projects.forEach((project, index) => {
+                        console.log(`\n📁 [RECOVERY] Project ${index + 1}: ${project.projectName || project.projectNumber}`);
+                        console.log('  Subcontracting:', {
+                            contractors: project.subcontracting?.contractors?.length || 0,
+                            items: project.subcontracting?.items?.length || 0,
+                            data: project.subcontracting
+                        });
+                        console.log('  Travel:', {
+                            trips: project.travel?.trips?.length || 0,
+                            items: project.travel?.items?.length || 0,
+                            data: project.travel
+                        });
+                        console.log('  Other Costs:', {
+                            items: project.otherCosts?.items?.length || 0,
+                            data: project.otherCosts
+                        });
+                    });
+                };
+
+                request.onerror = () => {
+                    console.error('❌ [RECOVERY] Failed to load projects:', request.error);
+                };
+            } catch (error) {
+                console.error('❌ [RECOVERY] Error:', error);
+            }
+        }
+
         async function loadProjectFromDB(projectId) {
             if (!db) {
                 addLog('⚠️ Database not initialized');
@@ -4974,9 +5047,19 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 const request = objectStore.get(projectId);
 
                 return new Promise((resolve, reject) => {
-                    request.onsuccess = () => {
+                    request.onsuccess = async () => {
                         if (request.result) {
                             projectBudget = request.result;
+
+                            // Migrate old property names to new ones
+                            const wasMigrated = migrateProjectProperties(projectBudget);
+
+                            // If migration occurred, save the updated project back to DB
+                            if (wasMigrated) {
+                                console.log('💾 [MIGRATION] Saving migrated project back to database...');
+                                await saveToIndexedDB();
+                            }
+
                             addLog(`📂 Loaded: ${projectBudget.projectName || projectBudget.projectNumber}`);
                             resolve(projectBudget);
                         } else {
@@ -6426,10 +6509,17 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
         // Open the Add Item modal (optionally pre-select a category)
         function openAddItemModal(preselectedCategory = null) {
+            console.log(`🔓 [ADD ITEM] Opening modal with preselectedCategory="${preselectedCategory}"`);
+            console.log(`🔍 [ADD ITEM] projectBudget.projectId = ${projectBudget?.projectId || 'UNDEFINED'}`);
+            console.log(`🔍 [ADD ITEM] projectBudget exists:`, !!projectBudget);
+
             if (!projectBudget.projectId) {
+                console.error('❌ [ADD ITEM] No projectId found - cannot add items');
                 alert('Please load or create a project first.');
                 return;
             }
+
+            console.log('✅ [ADD ITEM] ProjectId exists, opening modal...');
 
             // Reset form
             document.getElementById('addItemCategory').value = '';
@@ -6446,12 +6536,20 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             // If a category is pre-selected, set it and show fields
             if (preselectedCategory) {
+                console.log(`📋 [ADD ITEM] Pre-selecting category: ${preselectedCategory}`);
                 document.getElementById('addItemCategory').value = preselectedCategory;
                 showAddItemFields();
             }
 
             // Show modal
-            document.getElementById('addItemModal').style.display = 'flex';
+            console.log('🎬 [ADD ITEM] Setting modal display to flex...');
+            const modal = document.getElementById('addItemModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                console.log('✅ [ADD ITEM] Modal is now visible');
+            } else {
+                console.error('❌ [ADD ITEM] Modal element #addItemModal not found!');
+            }
         }
 
         // Close the Add Item modal
@@ -6642,6 +6740,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         // Show fields based on selected category
         function showAddItemFields() {
             const category = document.getElementById('addItemCategory').value;
+            console.log(`📝 [ADD ITEM FIELDS] Category selected: "${category}"`);
 
             // Hide all field sections first
             document.getElementById('labourFields').style.display = 'none';
@@ -6649,6 +6748,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             document.getElementById('travelFields').style.display = 'none';
 
             if (!category) {
+                console.log('⚠️ [ADD ITEM FIELDS] No category selected, hiding fields');
                 document.getElementById('addItemStep2').style.display = 'none';
                 document.getElementById('saveNewItemBtn').style.display = 'none';
                 return;
@@ -6660,12 +6760,15 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
             // Show appropriate fields based on category
             if (category === 'labour') {
+                console.log('👷 [ADD ITEM FIELDS] Showing labour fields');
                 document.getElementById('labourFields').style.display = 'block';
             } else if (category === 'travel') {
+                console.log('✈️ [ADD ITEM FIELDS] Showing travel fields');
                 document.getElementById('travelFields').style.display = 'block';
                 setupTravelCalculation();
             } else {
                 // Materials, Capital Usage, Subcontracting, Other Costs
+                console.log(`📦 [ADD ITEM FIELDS] Showing generic item fields for category: ${category}`);
                 document.getElementById('genericItemFields').style.display = 'block';
                 setupGenericCalculation();
             }
@@ -6780,14 +6883,14 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         quarterlyCosts: {}
                     };
 
-                    // Add to travel items array
-                    if (!projectBudget.travel.items) {
-                        projectBudget.travel.items = [];
+                    // Add to travel trips array
+                    if (!projectBudget.travel.trips) {
+                        projectBudget.travel.trips = [];
                     }
-                    projectBudget.travel.items.push(newItem);
+                    projectBudget.travel.trips.push(newItem);
 
                     // Update total
-                    projectBudget.travel.totalCost = projectBudget.travel.items.reduce((sum, i) => sum + (i.total || 0), 0);
+                    projectBudget.travel.totalCost = projectBudget.travel.trips.reduce((sum, i) => sum + (i.total || 0), 0);
 
                     categoryName = 'Travel';
 
@@ -6814,21 +6917,22 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                     // Determine which array to add to
                     const categoryMap = {
-                        'materials': { array: 'materials', name: 'Materials' },
-                        'capitalUsage': { array: 'capitalUsage', name: 'Capital Usage' },
-                        'subcontracting': { array: 'subcontracting', name: 'Subcontracting' },
-                        'otherCosts': { array: 'otherCosts', name: 'Other Costs' }
+                        'materials': { array: 'materials', property: 'items', name: 'Materials' },
+                        'capitalUsage': { array: 'capitalUsage', property: 'items', name: 'Capital Usage' },
+                        'subcontracting': { array: 'subcontracting', property: 'contractors', name: 'Subcontracting' },
+                        'otherCosts': { array: 'otherCosts', property: 'items', name: 'Other Costs' }
                     };
 
                     const catInfo = categoryMap[category];
                     if (catInfo) {
-                        if (!projectBudget[catInfo.array].items) {
-                            projectBudget[catInfo.array].items = [];
+                        const propertyName = catInfo.property;
+                        if (!projectBudget[catInfo.array][propertyName]) {
+                            projectBudget[catInfo.array][propertyName] = [];
                         }
-                        projectBudget[catInfo.array].items.push(newItem);
+                        projectBudget[catInfo.array][propertyName].push(newItem);
 
                         // Update total
-                        projectBudget[catInfo.array].totalCost = projectBudget[catInfo.array].items.reduce((sum, i) => sum + (i.total || 0), 0);
+                        projectBudget[catInfo.array].totalCost = projectBudget[catInfo.array][propertyName].reduce((sum, i) => sum + (i.total || 0), 0);
 
                         categoryName = catInfo.name;
                     }
@@ -6837,10 +6941,10 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 // Determine the category path for undo
                 const categoryPathMap = {
                     'labour': 'labour.staff',
-                    'travel': 'travel.items',
+                    'travel': 'travel.trips',
                     'materials': 'materials.items',
                     'capitalUsage': 'capitalUsage.items',
-                    'subcontracting': 'subcontracting.items',
+                    'subcontracting': 'subcontracting.contractors',
                     'otherCosts': 'otherCosts.items'
                 };
                 const categoryPath = categoryPathMap[category] || category;
@@ -10251,23 +10355,31 @@ ${inputText}`
                             </thead>
                             <tbody>
                                 ${projectBudget.subcontracting.contractors.map((contractor, index) => {
+                                    // Normalize property names for items added via "Add Item" modal
+                                    // Old format: name, country, role, cost
+                                    // New format: item, quantity, costPerItem, total
+                                    const name = contractor.name || contractor.item || 'Unnamed';
+                                    const country = contractor.country || '-';
+                                    const role = contractor.role || `Qty: ${contractor.quantity || 1} @ £${contractor.costPerItem || 0}`;
+                                    const cost = contractor.cost || contractor.total || 0;
+
                                     // Ensure cost is treated as the total cost
-                                    if (!contractor.totalCost && contractor.cost) {
-                                        contractor.totalCost = contractor.cost;
+                                    if (!contractor.totalCost && cost) {
+                                        contractor.totalCost = cost;
                                     }
                                     initializeQuarterlyCosts(contractor);
                                     const itemKey = `subcontracting-${index}`;
                                     const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Subcontracting', itemKey);
-                                    const remaining = contractor.cost - costsClaimed;
-                                    const difference = contractor.cost > 0 ? ((costsClaimed - contractor.cost) / contractor.cost) * 100 : 0;
-                                    const isOverBudget = costsClaimed > contractor.cost;
+                                    const remaining = cost - costsClaimed;
+                                    const difference = cost > 0 ? ((costsClaimed - cost) / cost) * 100 : 0;
+                                    const isOverBudget = costsClaimed > cost;
 
                                     return `
                                         <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${contractor.name}</td>
-                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${contractor.country}</td>
-                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${contractor.role}</td>
-                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">£${contractor.cost.toLocaleString()}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${name}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${country}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">${role}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer;">£${cost.toLocaleString()}</td>
                                             ${hasQuarters ? `
                                                 <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer; ${isOverBudget ? 'color: #d32f2f; font-weight: 600;' : ''}">£${costsClaimed.toLocaleString()}</td>
                                                 <td onclick="toggleQuarterlyBreakdown('subcontracting-${index}')" style="cursor: pointer; ${remaining < 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">£${remaining.toLocaleString()}</td>
@@ -10286,7 +10398,7 @@ ${inputText}`
                                             <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
                                                     <div id="quarterly-table-subcontracting-${index}" style="display: none;">
-                                                        <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${contractor.name}</h4>
+                                                        <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${name}</h4>
                                                         <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
                                                             <thead>
                                                                 <tr style="background: #e2e8f0;">
@@ -10512,15 +10624,15 @@ ${inputText}`
                                     const isOverBudget = costsClaimed > totalBudget;
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')">${trip.purpose || 'General Travel'}</td>
-                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')">${trip.numberOfTimes || '-'}</td>
-                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')">${trip.costEach ? '£' + trip.costEach.toLocaleString() : '-'}</td>
-                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')">£${(trip.total || trip.totalCost).toLocaleString()}</td>
+                                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer;">${trip.purpose || 'General Travel'}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer;">${trip.numberOfTimes || '-'}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer;">${trip.costEach ? '£' + trip.costEach.toLocaleString() : '-'}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer;">£${(trip.total || trip.totalCost).toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer; ${isOverBudget ? 'color: #d32f2f; font-weight: 600;' : ''}">£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer; ${remaining < 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('travel-${index}')" style="cursor: pointer; ${difference > 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">${difference.toFixed(1)}%</td>
                                             ` : ''}
                                             <td style="text-align: center;">
                                                 <button onclick="event.stopPropagation(); deleteCategoryItem(this, 'travel.trips', ${index}, 'Travel');"
@@ -10530,10 +10642,10 @@ ${inputText}`
                                                 </button>
                                             </td>
                                         </tr>
-                                        ${hasQuarters ? `
                                         <tr id="travel-${index}-breakdown" style="display: none;">
                                             <td colspan="${hasQuarters ? '8' : '5'}" style="padding: 0; background: transparent;">
                                                 <div class="quarterly-breakdown-container">
+                                                    ${hasQuarters ? `
                                                     <div id="quarterly-table-travel-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${trip.purpose || 'General Travel'}</h4>
                                                         <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -10567,6 +10679,7 @@ ${inputText}`
                                                             </tbody>
                                                         </table>
                                                     </div>
+                                                    ` : ''}
                                                     ${(() => {
                                                         // Render transaction details for this Travel item
                                                         if (cachedTransactions && cachedTransactions.length > 0) {
@@ -10591,7 +10704,6 @@ ${inputText}`
                                                 </div>
                                             </td>
                                         </tr>
-                                        ` : ''}
                                     `;
                                 }).join('')}
 
@@ -10716,28 +10828,31 @@ ${inputText}`
                             </thead>
                             <tbody>
                                 ${(projectBudget.otherCosts.items && projectBudget.otherCosts.items.length > 0 ? projectBudget.otherCosts.items : (projectBudget.otherCosts.quarterlyCosts ? [projectBudget.otherCosts] : [])).map((item, index) => {
+                                    // Normalize property names for items added via "Add Item" modal
+                                    // Old format: description, estimatedCost
+                                    // New format: item, total
+                                    const description = item.description || item.item || 'General Other Costs';
+                                    const budgetAmount = item.estimatedCost || item.total || item.totalCost || 0;
+
                                     // Ensure estimatedCost is treated as totalCost
-                                    if (!item.totalCost && item.estimatedCost) {
-                                        item.totalCost = item.estimatedCost;
+                                    if (!item.totalCost && budgetAmount) {
+                                        item.totalCost = budgetAmount;
                                     }
                                     initializeQuarterlyCosts(item);
                                     const itemKey = `otherCosts-${index}`;
-                                    console.log(`📊 [OTHER COSTS] Rendering item: "${item.description}" (index=${index}, itemKey=${itemKey})`);
                                     const costsClaimed = getItemClaimedFromTransactions(projectBudget.projectId, 'Other Costs', itemKey);
-                                    const budgetAmount = item.estimatedCost || item.totalCost;
                                     const remaining = budgetAmount - costsClaimed;
                                     const difference = budgetAmount > 0 ? ((costsClaimed - budgetAmount) / budgetAmount) * 100 : 0;
                                     const isOverBudget = costsClaimed > budgetAmount;
-                                    console.log(`📊 [OTHER COSTS] "${item.description}": budget=${budgetAmount}, claimed=${costsClaimed.toFixed(2)}, remaining=${remaining.toFixed(2)}`);
 
                                     return `
-                                        <tr onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer; ${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
-                                            <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')">${item.description || 'General Other Costs'}</td>
-                                            <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')">£${(item.estimatedCost || item.totalCost).toLocaleString()}</td>
+                                        <tr style="${isOverBudget && hasQuarters ? 'background: #fee;' : ''}">
+                                            <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer;">${description}</td>
+                                            <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer;">£${budgetAmount.toLocaleString()}</td>
                                             ${hasQuarters ? `
-                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" ${isOverBudget ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${costsClaimed.toLocaleString()}</td>
-                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" ${remaining < 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>£${remaining.toLocaleString()}</td>
-                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" ${difference > 0 ? 'style="color: #d32f2f; font-weight: 600;"' : ''}>${difference.toFixed(1)}%</td>
+                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer; ${isOverBudget ? 'color: #d32f2f; font-weight: 600;' : ''}">£${costsClaimed.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer; ${remaining < 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">£${remaining.toLocaleString()}</td>
+                                                <td onclick="toggleQuarterlyBreakdown('othercosts-${index}')" style="cursor: pointer; ${difference > 0 ? 'color: #d32f2f; font-weight: 600;' : ''}">${difference.toFixed(1)}%</td>
                                             ` : ''}
                                             <td style="text-align: center;">
                                                 <button onclick="event.stopPropagation(); deleteCategoryItem(this, 'otherCosts.items', ${index}, 'Other Costs');"
@@ -10747,10 +10862,10 @@ ${inputText}`
                                                 </button>
                                             </td>
                                         </tr>
-                                        ${hasQuarters ? `
                                         <tr id="othercosts-${index}-breakdown" style="display: none;">
                                             <td colspan="${hasQuarters ? '6' : '3'}" class="breakdown-row-cell">
                                                 <div class="quarterly-breakdown-container">
+                                                    ${hasQuarters ? `
                                                     <div id="quarterly-table-otherCosts-${index}" style="display: none;">
                                                         <h4 class="quarterly-breakdown-header">Quarterly Breakdown - ${item.description || 'General Other Costs'}</h4>
                                                         <table class="quarterly-breakdown-table" style="width: 100%; margin: 0;">
@@ -10784,6 +10899,7 @@ ${inputText}`
                                                             </tbody>
                                                         </table>
                                                     </div>
+                                                    ` : ''}
                                                     ${(() => {
                                                         // Render transaction details for this Other Costs item
                                                         if (cachedTransactions && cachedTransactions.length > 0) {
@@ -10808,7 +10924,6 @@ ${inputText}`
                                                 </div>
                                             </td>
                                         </tr>
-                                        ` : ''}
                                     `;
                                 }).join('')}
 
@@ -11701,19 +11816,28 @@ ${inputText}`
             const breakdownRow = document.getElementById(`${rowId}-breakdown`);
             if (breakdownRow) {
                 const isCurrentlyHidden = breakdownRow.style.display === 'none' || breakdownRow.style.display === '';
-                breakdownRow.style.display = isCurrentlyHidden ? 'block' : 'none';
+                // Use 'table-row' for proper table row display
+                breakdownRow.style.display = isCurrentlyHidden ? 'table-row' : 'none';
 
-                console.log(`🔽 [ALIGNMENT] Toggling breakdown for: ${rowId}, New state: ${isCurrentlyHidden ? 'VISIBLE' : 'HIDDEN'}`);
+                console.log(`🔽 [TOGGLE] ${rowId}: ${isCurrentlyHidden ? 'SHOWING' : 'HIDING'}`);
 
-                // Log width information when opening
+                // Enhanced diagnostics when opening
                 if (isCurrentlyHidden) {
-                    const parentTable = breakdownRow.closest('.item-table-container');
-                    const breakdownCell = breakdownRow.querySelector('.breakdown-row-cell');
                     const container = breakdownRow.querySelector('.quarterly-breakdown-container');
+                    const transactionTable = breakdownRow.querySelector('.transaction-details-table');
+                    const transactionRows = transactionTable ? transactionTable.querySelectorAll('tbody tr') : [];
 
-                    console.log(`📏 [WIDTH DEBUG] Parent container width: ${parentTable?.offsetWidth}px`);
-                    console.log(`📏 [WIDTH DEBUG] Breakdown cell width: ${breakdownCell?.offsetWidth}px`);
-                    console.log(`📏 [WIDTH DEBUG] Quarterly container width: ${container?.offsetWidth}px`);
+                    console.log(`📦 [DEBUG] Breakdown row HTML length: ${breakdownRow.innerHTML.length} chars`);
+                    console.log(`📦 [DEBUG] Container exists: ${!!container}`);
+                    console.log(`📦 [DEBUG] Transaction table exists: ${!!transactionTable}`);
+                    console.log(`📦 [DEBUG] Transaction rows found: ${transactionRows.length}`);
+                    console.log(`📦 [DEBUG] Breakdown row display: ${breakdownRow.style.display}`);
+                    console.log(`📦 [DEBUG] Breakdown row offsetHeight: ${breakdownRow.offsetHeight}px`);
+
+                    if (container) {
+                        console.log(`📦 [DEBUG] Container offsetHeight: ${container.offsetHeight}px`);
+                        console.log(`📦 [DEBUG] Container innerHTML preview: ${container.innerHTML.substring(0, 200)}...`);
+                    }
                 }
 
                 // Update arrow indicator
@@ -11721,6 +11845,8 @@ ${inputText}`
                 if (arrow) {
                     arrow.textContent = isCurrentlyHidden ? '▼' : '▶';
                 }
+            } else {
+                console.log(`❌ [TOGGLE] Element not found: ${rowId}-breakdown`);
             }
         }
 
