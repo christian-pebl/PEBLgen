@@ -6137,15 +6137,77 @@
                 transaction.transactionRef = generateTransactionRef(transaction, allTransactions);
             }
 
-            // Calculate quarter from transaction date
-            const quarter = calculateTransactionQuarter(transaction.date, project);
+            // ===== QUARTER DETERMINATION (Using Claiming Quarters System) =====
+            let quarter;
+            let quarterWarnings = [];
+
+            // Check if project has claiming settings
+            if (!project.claimingSettings || !project.claimingSettings.quarters || project.claimingSettings.quarters.length === 0) {
+                // Fallback: Legacy auto-calculation behavior
+                console.warn('[ASSIGN] Project has no claiming settings, using auto-calculation');
+                quarter = calculateTransactionQuarter(transaction.date, project);
+            } else {
+                // Use claiming settings
+                const settings = project.claimingSettings;
+
+                if (settings.autoCalculateQuarter) {
+                    // Auto-calculate from transaction date (legacy mode)
+                    quarter = calculateTransactionQuarter(transaction.date, project);
+                    console.log(`📅 [ASSIGN] Using auto-calculated quarter: Q${quarter}`);
+                } else {
+                    // Use active claiming quarter (new default behavior)
+                    quarter = settings.activeClaimingQuarter;
+
+                    if (!quarter) {
+                        alert('⚠️ No active claiming quarter is set.\n\nPlease go to the Grants page and configure quarters for this project.');
+                        return;
+                    }
+
+                    // Validate quarter status
+                    const quarterConfig = settings.quarters.find(q => q.quarter === quarter);
+
+                    if (!quarterConfig) {
+                        alert(`❌ Quarter ${quarter} configuration not found in project.`);
+                        return;
+                    }
+
+                    if (quarterConfig.status !== 'draft') {
+                        alert(`❌ Cannot assign to Q${quarter}\n\nThis quarter has been ${quarterConfig.status}.\n\nPlease go to the Grants page to:\n• Activate a different quarter, OR\n• Reopen this quarter`);
+                        return;
+                    }
+
+                    // Check if transaction date aligns with quarter period
+                    const calculatedQuarter = calculateTransactionQuarter(transaction.date, project);
+                    if (calculatedQuarter && calculatedQuarter !== quarter) {
+                        quarterWarnings.push(
+                            `Transaction date falls in Q${calculatedQuarter}, but will be assigned to active claiming quarter Q${quarter}`
+                        );
+                    }
+
+                    console.log(`📅 [ASSIGN] Using active claiming quarter: Q${quarter}`);
+                }
+            }
 
             if (!quarter) {
-                alert('⚠️ Cannot calculate quarter. Check project start date or transaction date.');
+                alert('⚠️ Cannot determine quarter. Check project start date or transaction date.');
                 return;
             }
 
-            console.log(`📅 [ASSIGN] Calculated quarter: Q${quarter}`);
+            // Show warnings if any
+            if (quarterWarnings.length > 0) {
+                const proceed = confirm(
+                    '⚠️ Quarter Assignment Notice:\n\n' +
+                    quarterWarnings.join('\n\n') +
+                    '\n\nDo you want to proceed with this assignment?'
+                );
+
+                if (!proceed) {
+                    console.log('[ASSIGN] User cancelled due to quarter warnings');
+                    return;
+                }
+            }
+
+            console.log(`📅 [ASSIGN] Final quarter: Q${quarter}`);
 
             // Calculate amount to assign (default 100%) - use ex-VAT amount
             const transAmount = getTransactionExVatAmount(transaction);

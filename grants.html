@@ -1348,6 +1348,123 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     </div>
                 </div>
             </div>
+
+            <!-- Quarter Claiming Management Panel (NEW) -->
+            <div id="quarterClaimingSection" class="mt-6 p-6 bg-white rounded-lg shadow-md border border-gray-200" style="margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg style="width: 1.5rem; height: 1.5rem; color: #2563eb;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        Claiming Quarters Management
+                    </h2>
+
+                    <button id="toggleQuarterSettings" style="padding: 0.25rem 0.75rem; font-size: 0.875rem; color: #4b5563; border: 1px solid #d1d5db; border-radius: 0.375rem; background: white; cursor: pointer;">
+                        <span id="toggleQuarterSettingsIcon">▼</span> <span id="toggleQuarterSettingsText">Collapse</span>
+                    </button>
+                </div>
+
+                <div id="quarterSettingsContent">
+                    <!-- Active Quarter Display -->
+                    <div style="margin-bottom: 1.5rem; padding: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <p style="margin: 0 0 0.25rem 0; font-size: 0.875rem; font-weight: 500; color: #4b5563;">Active Claiming Quarter</p>
+                                <p id="activeClaimingQuarterDisplay" style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #1d4ed8;">Q2</p>
+                                <p style="margin: 0.25rem 0 0 0; font-size: 0.75rem; color: #6b7280;">New transactions will be assigned to this quarter</p>
+                            </div>
+
+                            <div style="text-align: right;">
+                                <p style="margin: 0 0 0.25rem 0; font-size: 0.875rem; color: #4b5563;">Status</p>
+                                <span id="activeQuarterStatusBadge" style="display: inline-block; padding: 0.25rem 0.75rem; margin-top: 0.25rem; font-size: 0.875rem; font-weight: 500; color: #166534; background: #dcfce7; border-radius: 9999px;">
+                                    Draft
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quarter List Table -->
+                    <div style="overflow-x: auto; margin-bottom: 1.5rem;">
+                        <table style="min-width: 100%; border-collapse: collapse; background: white;">
+                            <thead style="background: #f9fafb;">
+                                <tr>
+                                    <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb;">Quarter</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb;">Period</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb;">Status</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: right; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb;">Transactions</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: right; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb;">Total Claimed</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: right; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quarterListTableBody">
+                                <!-- Populated by renderQuarterListTable() -->
+                                <tr>
+                                    <td colspan="6" style="padding: 2rem; text-align: center; color: #9ca3af;">Loading quarters...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Quarter Actions -->
+                    <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <button id="initializeQuartersBtn" style="padding: 0.5rem 1rem; background: #2563eb; color: white; font-weight: 500; border: none; border-radius: 0.375rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Initialize Quarters
+                        </button>
+
+                        <button id="submitCurrentQuarterBtn" style="padding: 0.5rem 1rem; background: #ea580c; color: white; font-weight: 500; border: none; border-radius: 0.375rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Submit Current Quarter
+                        </button>
+
+                        <button id="startNextQuarterBtn" style="padding: 0.5rem 1rem; background: #16a34a; color: white; font-weight: 500; border: none; border-radius: 0.375rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Start Next Quarter
+                        </button>
+
+                        <button id="reopenQuarterBtn" style="padding: 0.5rem 1rem; background: #4b5563; color: white; font-weight: 500; border: none; border-radius: 0.375rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Reopen Quarter
+                        </button>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                        <details>
+                            <summary style="cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #374151; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="display: inline-block; transition: transform 0.2s;">▶</span>
+                                Advanced Settings
+                            </summary>
+
+                            <div style="margin-top: 1rem; margin-left: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                                <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer;">
+                                    <input type="checkbox" id="autoCalculateQuarterToggle" style="width: 1rem; height: 1rem; margin-top: 0.125rem; color: #2563eb; border: 1px solid #d1d5db; border-radius: 0.25rem;">
+                                    <span style="font-size: 0.875rem; color: #374151;">
+                                        <span style="font-weight: 500;">Auto-calculate quarters from transaction dates</span>
+                                        <br><span style="font-size: 0.75rem; color: #6b7280;">When enabled, ignores active quarter and assigns based on transaction date</span>
+                                    </span>
+                                </label>
+
+                                <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer;">
+                                    <input type="checkbox" id="allowPastQuarterAssignmentToggle" style="width: 1rem; height: 1rem; margin-top: 0.125rem; color: #2563eb; border: 1px solid #d1d5db; border-radius: 0.25rem;">
+                                    <span style="font-size: 0.875rem; color: #374151;">
+                                        <span style="font-weight: 500;">Allow assignments to past quarters</span>
+                                        <br><span style="font-size: 0.75rem; color: #6b7280;">Permits adding transactions to quarters older than the active quarter</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1567,6 +1684,14 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 fundingSought: 0,
                 otherPublicFunding: 0,
                 contribution: 0
+            },
+
+            // Claiming Quarters Management (NEW)
+            claimingSettings: {
+                activeClaimingQuarter: null,    // Currently active quarter for new assignments
+                autoCalculateQuarter: false,     // If true, use legacy date-based calculation
+                allowPastQuarterAssignment: false, // If true, allow assigning to non-active quarters
+                quarters: []  // Array of quarter configs: {quarter, status, startedDate, submittedDate, approvedDate, notes, totalClaimed, transactionCount}
             },
 
             // Labour
@@ -4548,6 +4673,12 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                         // Migrate existing projects to Supabase (one-time background sync)
                         migrateProjectsToSupabase().catch(err => console.warn('☁️ Migration failed:', err));
+
+                        // Migrate projects to claiming quarters system (one-time initialization)
+                        migrateProjectsToClaimingQuarters().catch(err => console.warn('📅 Claiming quarters migration failed:', err));
+
+                        // Initialize claiming quarters event listeners
+                        initializeClaimingQuarterEvents();
 
                         // Pre-load transactions and invoices from Spend tab
                         preloadTransactionData();
@@ -9363,6 +9494,8 @@ ${inputText}`
                     addLog('✅ Welsh Gov budget displayed');
                     // Restore expanded state
                     restoreExpandedState(expandedSections);
+                    // Render claiming quarters management table
+                    renderQuarterListTable();
                 } else {
                     console.warn('⚠️ [DISPLAY] Welsh Gov project but no welshGovData found');
                     addLog('⚠️ Welsh Gov data missing - may need to re-parse');
@@ -11041,6 +11174,9 @@ ${inputText}`
 
             // Restore expanded state
             restoreExpandedState(expandedSections);
+
+            // Render claiming quarters management table
+            renderQuarterListTable();
         }
 
         function updateItem(id, field, value) {
@@ -11407,6 +11543,864 @@ ${inputText}`
 
             console.log(`[getPreviousQuarter] Most recently completed quarter: Q${previousQuarter}`);
             return previousQuarter;
+        }
+
+        // ===== CLAIMING QUARTERS MIGRATION & MANAGEMENT FUNCTIONS =====
+
+        /**
+         * Calculate statistics for each quarter (transaction count, total claimed)
+         * Used during migration and after assignments
+         */
+        async function updateQuarterStatistics(project) {
+            console.log(`[Quarter Stats] Updating statistics for project: ${project.projectId}`);
+
+            if (!project.claimingSettings || !project.claimingSettings.quarters) {
+                console.warn('[Quarter Stats] Project has no claiming settings');
+                return;
+            }
+
+            // Load all transactions
+            const allTransactions = await loadAllTransactionsForStats();
+
+            // Count assignments per quarter
+            const quarterStats = {};
+
+            allTransactions.forEach(file => {
+                if (file.transactions) {
+                    file.transactions.forEach(trans => {
+                        if (trans.assignments) {
+                            trans.assignments.forEach(assignment => {
+                                if (assignment.projectId === project.projectId) {
+                                    const q = assignment.quarter;
+                                    if (!quarterStats[q]) {
+                                        quarterStats[q] = { count: 0, total: 0 };
+                                    }
+                                    quarterStats[q].count++;
+                                    quarterStats[q].total += assignment.amount || 0;
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Update quarter configs
+            project.claimingSettings.quarters.forEach(quarterConfig => {
+                const stats = quarterStats[quarterConfig.quarter] || { count: 0, total: 0 };
+                quarterConfig.transactionCount = stats.count;
+                quarterConfig.totalClaimed = stats.total;
+            });
+
+            console.log('[Quarter Stats] Statistics updated:', quarterStats);
+        }
+
+        /**
+         * Load all transactions from IndexedDB for statistics calculation
+         */
+        async function loadAllTransactionsForStats() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    console.warn('[Transaction Load] No database connection');
+                    resolve([]);
+                    return;
+                }
+
+                const transaction = db.transaction([CSV_STORE_NAME], 'readonly');
+                const store = transaction.objectStore(CSV_STORE_NAME);
+                const request = store.getAll();
+
+                request.onsuccess = () => {
+                    resolve(request.result || []);
+                };
+
+                request.onerror = () => {
+                    console.error('[Transaction Load] Failed:', request.error);
+                    resolve([]);
+                };
+            });
+        }
+
+        /**
+         * Initialize claiming settings for projects that don't have them
+         * Run once on page load for backward compatibility
+         */
+        async function migrateProjectsToClaimingQuarters() {
+            console.log('[Migration] Checking projects for claiming settings...');
+
+            const projects = await loadAllProjectsFromDB();
+            let migratedCount = 0;
+
+            for (const project of projects) {
+                // Skip if already has claiming settings
+                if (project.claimingSettings && project.claimingSettings.quarters && project.claimingSettings.quarters.length > 0) {
+                    console.log(`[Migration] Project ${project.projectId} already has claiming settings, skipping`);
+                    continue;
+                }
+
+                console.log(`[Migration] Migrating project: ${project.projectName} (${project.projectId})`);
+
+                // Initialize claiming settings
+                project.claimingSettings = {
+                    activeClaimingQuarter: null,
+                    autoCalculateQuarter: false,
+                    allowPastQuarterAssignment: false,
+                    quarters: []
+                };
+
+                // Build quarter configs from project dates
+                const quarters = calculateQuartersForProject(project);
+                const previousQuarter = getPreviousQuarterForProject(project);
+
+                if (quarters.length === 0) {
+                    console.warn(`[Migration] Project ${project.projectId} has no quarters (missing start date/duration)`);
+                    continue;
+                }
+
+                // Set active quarter to previous quarter or first quarter
+                project.claimingSettings.activeClaimingQuarter = previousQuarter || 1;
+
+                // Create quarter configs
+                for (const q of quarters) {
+                    const quarterConfig = {
+                        quarter: q.index,
+                        status: 'draft',  // All start as draft
+                        startedDate: `${q.startYear}-${String(q.startMonth).padStart(2, '0')}-01`,
+                        submittedDate: null,
+                        approvedDate: null,
+                        notes: '',
+                        totalClaimed: 0,
+                        transactionCount: 0
+                    };
+
+                    project.claimingSettings.quarters.push(quarterConfig);
+                }
+
+                // Calculate existing transaction counts and totals
+                await updateQuarterStatistics(project);
+
+                // Save updated project
+                await saveProjectToDBSilent(project);
+                migratedCount++;
+
+                console.log(`[Migration] ✓ Migrated project: ${project.projectName} (${project.projectId}) - Active quarter: Q${project.claimingSettings.activeClaimingQuarter}`);
+            }
+
+            console.log(`[Migration] Complete. Migrated ${migratedCount} project(s).`);
+
+            if (migratedCount > 0) {
+                showToast('success', 'Projects Updated', `Initialized claiming quarters for ${migratedCount} project(s).`, 5000);
+            }
+        }
+
+        /**
+         * Load all projects from IndexedDB
+         */
+        async function loadAllProjectsFromDB() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    console.warn('[Project Load] No database connection');
+                    resolve([]);
+                    return;
+                }
+
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+
+                request.onsuccess = () => {
+                    resolve(request.result || []);
+                };
+
+                request.onerror = () => {
+                    console.error('[Project Load] Failed:', request.error);
+                    resolve([]);
+                };
+            });
+        }
+
+        /**
+         * Save project to DB without showing toast (for batch operations)
+         */
+        async function saveProjectToDBSilent(project) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    console.warn('[Project Save] No database connection');
+                    resolve(false);
+                    return;
+                }
+
+                project.lastModified = new Date().toISOString();
+
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(project);
+
+                request.onsuccess = () => {
+                    resolve(true);
+                };
+
+                request.onerror = () => {
+                    console.error('[Project Save] Failed:', request.error);
+                    resolve(false);
+                };
+            });
+        }
+
+        /**
+         * Calculate quarters for a specific project (doesn't use global projectBudget)
+         */
+        function calculateQuartersForProject(project) {
+            const fs = project.financeSummary;
+            if (!fs.projectStartMonth || !fs.projectStartYear || !fs.projectDurationMonths) {
+                return [];
+            }
+
+            const quarters = [];
+            const startMonth = fs.projectStartMonth;
+            const startYear = fs.projectStartYear;
+            const durationMonths = fs.projectDurationMonths;
+
+            let currentMonth = startMonth;
+            let currentYear = startYear;
+            let monthsRemaining = durationMonths;
+            let quarterIndex = 1;
+
+            while (monthsRemaining > 0) {
+                const quarterMonths = Math.min(3, monthsRemaining);
+                const endMonth = currentMonth + quarterMonths - 1;
+                const endYear = currentYear + Math.floor((endMonth - 1) / 12);
+                const adjustedEndMonth = ((endMonth - 1) % 12) + 1;
+
+                const startYYMM = `${String(currentYear).slice(-2)}${String(currentMonth).padStart(2, '0')}`;
+                const endYYMM = `${String(endYear).slice(-2)}${String(adjustedEndMonth).padStart(2, '0')}`;
+
+                quarters.push({
+                    index: quarterIndex,
+                    label: `Q${quarterIndex} (${startYYMM}-${endYYMM})`,
+                    startMonth: currentMonth,
+                    startYear: currentYear,
+                    endMonth: adjustedEndMonth,
+                    endYear: endYear
+                });
+
+                currentMonth = adjustedEndMonth + 1;
+                if (currentMonth > 12) {
+                    currentMonth = 1;
+                    currentYear++;
+                }
+
+                monthsRemaining -= quarterMonths;
+                quarterIndex++;
+            }
+
+            return quarters;
+        }
+
+        /**
+         * Get previous quarter for a specific project
+         */
+        function getPreviousQuarterForProject(project) {
+            const quarters = calculateQuartersForProject(project);
+            if (quarters.length === 0) return null;
+
+            const now = new Date();
+            const currentMonth = now.getMonth() + 1;
+            const currentYear = now.getFullYear();
+            const nowDate = new Date(currentYear, currentMonth - 1, now.getDate());
+
+            let previousQuarter = null;
+
+            for (const quarter of quarters) {
+                const endDate = new Date(quarter.endYear, quarter.endMonth, 0);
+
+                if (endDate < nowDate) {
+                    previousQuarter = quarter.index;
+                }
+            }
+
+            if (previousQuarter === null) {
+                return quarters.length > 0 ? quarters[0].index : null;
+            }
+
+            return previousQuarter;
+        }
+
+        // ===== CLAIMING QUARTERS UI FUNCTIONS =====
+
+        /**
+         * Render the quarter list table with status and statistics
+         */
+        function renderQuarterListTable() {
+            const tbody = document.getElementById('quarterListTableBody');
+            if (!tbody) {
+                console.warn('[Quarter Table] Table body not found');
+                return;
+            }
+
+            // Clear existing content
+            tbody.innerHTML = '';
+
+            // Check if we have a project loaded
+            if (!projectBudget || !projectBudget.projectId) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align: center; color: #9ca3af;">No project loaded</td></tr>';
+                updateQuarterButtonVisibility(false);
+                return;
+            }
+
+            // Check if claiming settings exist
+            if (!projectBudget.claimingSettings || !projectBudget.claimingSettings.quarters || projectBudget.claimingSettings.quarters.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align: center; color: #6366f1;"><strong>Click "Initialize Quarters" to set up claiming quarters for this project</strong></td></tr>';
+                updateQuarterButtonVisibility(false);
+                updateActiveQuarterDisplay();
+                return;
+            }
+
+            const quarters = calculateQuarters();
+            const activeQuarter = projectBudget.claimingSettings.activeClaimingQuarter;
+
+            console.log('[Quarter Table] Rendering quarters:', projectBudget.claimingSettings.quarters.length, 'Active:', activeQuarter);
+
+            projectBudget.claimingSettings.quarters.forEach(quarterConfig => {
+                const quarterInfo = quarters.find(q => q.index === quarterConfig.quarter);
+                if (!quarterInfo) return;
+
+                const isActive = quarterConfig.quarter === activeQuarter;
+
+                // Status badge styles
+                let statusBadge = '';
+                let statusBadgeStyle = '';
+                switch (quarterConfig.status) {
+                    case 'draft':
+                        statusBadgeStyle = 'display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 500; color: #166534; background: #dcfce7; border-radius: 9999px;';
+                        statusBadge = `<span style="${statusBadgeStyle}">Draft</span>`;
+                        break;
+                    case 'submitted':
+                        statusBadgeStyle = 'display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 500; color: #9a3412; background: #ffedd5; border-radius: 9999px;';
+                        statusBadge = `<span style="${statusBadgeStyle}">Submitted</span>`;
+                        break;
+                    case 'approved':
+                        statusBadgeStyle = 'display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 500; color: #1e40af; background: #dbeafe; border-radius: 9999px;';
+                        statusBadge = `<span style="${statusBadgeStyle}">Approved</span>`;
+                        break;
+                }
+
+                // Action buttons
+                let actionButtons = '';
+                if (isActive && quarterConfig.status === 'draft') {
+                    actionButtons = `
+                        <button onclick="submitQuarter(${quarterConfig.quarter})"
+                                style="padding: 0.25rem 0.75rem; font-size: 0.75rem; color: #ea580c; border: 1px solid #ea580c; border-radius: 0.25rem; background: white; cursor: pointer;">
+                            Submit
+                        </button>
+                    `;
+                } else if (quarterConfig.status === 'submitted' || quarterConfig.status === 'approved') {
+                    actionButtons = `
+                        <button onclick="reopenQuarter(${quarterConfig.quarter})"
+                                style="padding: 0.25rem 0.75rem; font-size: 0.75rem; color: #4b5563; border: 1px solid #4b5563; border-radius: 0.25rem; background: white; cursor: pointer;">
+                            Reopen
+                        </button>
+                    `;
+                } else if (quarterConfig.status === 'draft' && !isActive) {
+                    actionButtons = `
+                        <button onclick="setActiveClaimingQuarter(${quarterConfig.quarter})"
+                                style="padding: 0.25rem 0.75rem; font-size: 0.75rem; color: #2563eb; border: 1px solid #2563eb; border-radius: 0.25rem; background: white; cursor: pointer;">
+                            Activate
+                        </button>
+                    `;
+                }
+
+                // Active badge
+                const activeBadge = isActive
+                    ? '<span style="margin-left: 0.5rem; padding: 0.125rem 0.5rem; font-size: 0.625rem; font-weight: 500; color: #1e40af; background: #dbeafe; border-radius: 0.25rem;">Active</span>'
+                    : '';
+
+                const row = document.createElement('tr');
+                row.style.cssText = isActive ? 'background: #eff6ff;' : '';
+                row.innerHTML = `
+                    <td style="padding: 0.75rem 1rem; white-space: nowrap; border-bottom: 1px solid #e5e7eb;">
+                        <div style="display: flex; align-items: center;">
+                            <span style="font-size: 0.875rem; font-weight: 500; color: #111827;">Q${quarterConfig.quarter}</span>
+                            ${activeBadge}
+                        </div>
+                    </td>
+                    <td style="padding: 0.75rem 1rem; white-space: nowrap; font-size: 0.875rem; color: #374151; border-bottom: 1px solid #e5e7eb;">
+                        ${quarterInfo.label.replace(`Q${quarterInfo.index} `, '')}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; white-space: nowrap; border-bottom: 1px solid #e5e7eb;">
+                        ${statusBadge}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; white-space: nowrap; text-align: right; font-size: 0.875rem; color: #111827; border-bottom: 1px solid #e5e7eb;">
+                        ${quarterConfig.transactionCount || 0}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; white-space: nowrap; text-align: right; font-size: 0.875rem; font-weight: 500; color: #111827; border-bottom: 1px solid #e5e7eb;">
+                        £${(quarterConfig.totalClaimed || 0).toFixed(2)}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; white-space: nowrap; text-align: right; font-size: 0.875rem; border-bottom: 1px solid #e5e7eb;">
+                        ${actionButtons}
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+
+            // Update header display
+            updateActiveQuarterDisplay();
+
+            // Update button visibility
+            updateQuarterButtonVisibility(true);
+        }
+
+        /**
+         * Update visibility of quarter action buttons based on state
+         */
+        function updateQuarterButtonVisibility(hasQuarters) {
+            const initBtn = document.getElementById('initializeQuartersBtn');
+            const submitBtn = document.getElementById('submitCurrentQuarterBtn');
+            const nextBtn = document.getElementById('startNextQuarterBtn');
+            const reopenBtn = document.getElementById('reopenQuarterBtn');
+
+            if (initBtn) {
+                // Show Initialize button only when quarters not configured
+                initBtn.style.display = hasQuarters ? 'none' : 'flex';
+            }
+            if (submitBtn) {
+                submitBtn.style.display = hasQuarters ? 'flex' : 'none';
+            }
+            if (nextBtn) {
+                nextBtn.style.display = hasQuarters ? 'flex' : 'none';
+            }
+            if (reopenBtn) {
+                reopenBtn.style.display = hasQuarters ? 'flex' : 'none';
+            }
+        }
+
+        /**
+         * Update the active quarter display card at the top
+         */
+        function updateActiveQuarterDisplay() {
+            const activeQuarter = projectBudget?.claimingSettings?.activeClaimingQuarter;
+            const quarterConfig = projectBudget?.claimingSettings?.quarters?.find(q => q.quarter === activeQuarter);
+
+            const displayEl = document.getElementById('activeClaimingQuarterDisplay');
+            const badgeEl = document.getElementById('activeQuarterStatusBadge');
+
+            if (displayEl) {
+                displayEl.textContent = activeQuarter ? `Q${activeQuarter}` : 'Not Set';
+            }
+
+            if (badgeEl && quarterConfig) {
+                const statusColors = {
+                    'draft': { text: '#166534', bg: '#dcfce7' },
+                    'submitted': { text: '#9a3412', bg: '#ffedd5' },
+                    'approved': { text: '#1e40af', bg: '#dbeafe' }
+                };
+
+                const colors = statusColors[quarterConfig.status] || statusColors['draft'];
+                badgeEl.style.color = colors.text;
+                badgeEl.style.background = colors.bg;
+                badgeEl.textContent = quarterConfig.status.charAt(0).toUpperCase() + quarterConfig.status.slice(1);
+            }
+
+            // Update advanced settings checkboxes
+            const autoCalcToggle = document.getElementById('autoCalculateQuarterToggle');
+            const pastQuarterToggle = document.getElementById('allowPastQuarterAssignmentToggle');
+
+            if (autoCalcToggle && projectBudget?.claimingSettings) {
+                autoCalcToggle.checked = projectBudget.claimingSettings.autoCalculateQuarter || false;
+            }
+            if (pastQuarterToggle && projectBudget?.claimingSettings) {
+                pastQuarterToggle.checked = projectBudget.claimingSettings.allowPastQuarterAssignment || false;
+            }
+        }
+
+        /**
+         * Set the active claiming quarter
+         */
+        async function setActiveClaimingQuarter(quarterNumber) {
+            if (!projectBudget || !projectBudget.claimingSettings) {
+                showToast('error', 'Configuration Error', 'Claiming settings not initialized', 5000);
+                return;
+            }
+
+            const quarterConfig = projectBudget.claimingSettings.quarters.find(q => q.quarter === quarterNumber);
+            if (!quarterConfig) {
+                showToast('error', 'Invalid Quarter', `Quarter ${quarterNumber} does not exist`, 5000);
+                return;
+            }
+
+            // Check if trying to activate a non-draft quarter
+            if (quarterConfig.status !== 'draft') {
+                showToast('warning', 'Quarter Closed', `Q${quarterNumber} is ${quarterConfig.status}. Reopen it first to make it active.`, 5000);
+                return;
+            }
+
+            // Confirm if switching from a draft quarter with transactions
+            const currentQuarter = projectBudget.claimingSettings.quarters.find(
+                q => q.quarter === projectBudget.claimingSettings.activeClaimingQuarter
+            );
+
+            if (currentQuarter && currentQuarter.status === 'draft' && currentQuarter.transactionCount > 0) {
+                const confirmed = confirm(
+                    `The current quarter (Q${currentQuarter.quarter}) has ${currentQuarter.transactionCount} transaction(s) and is still in draft status.\n\n` +
+                    `Are you sure you want to switch to Q${quarterNumber}?\n\n` +
+                    `Consider submitting Q${currentQuarter.quarter} first to finalize those claims.`
+                );
+
+                if (!confirmed) return;
+            }
+
+            // Set as active
+            projectBudget.claimingSettings.activeClaimingQuarter = quarterNumber;
+
+            // Update started date if not set
+            if (!quarterConfig.startedDate) {
+                quarterConfig.startedDate = new Date().toISOString().split('T')[0];
+            }
+
+            // Save to database
+            await saveProjectToDBSilent(projectBudget);
+
+            // Refresh UI
+            renderQuarterListTable();
+            setActiveQuarter(quarterNumber); // Updates the main quarter view
+
+            showToast('success', 'Quarter Activated', `Q${quarterNumber} is now the active claiming quarter`, 4000);
+
+            console.log(`[Claiming Quarters] Activated Q${quarterNumber} for project ${projectBudget.projectId}`);
+        }
+
+        /**
+         * Submit the current quarter (mark as submitted)
+         */
+        async function submitQuarter(quarterNumber) {
+            if (!projectBudget || !projectBudget.claimingSettings) {
+                showToast('error', 'Error', 'Project not loaded', 5000);
+                return;
+            }
+
+            const quarterConfig = projectBudget.claimingSettings.quarters.find(q => q.quarter === quarterNumber);
+            if (!quarterConfig) {
+                showToast('error', 'Invalid Quarter', `Quarter ${quarterNumber} does not exist`, 5000);
+                return;
+            }
+
+            if (quarterConfig.status !== 'draft') {
+                showToast('warning', 'Already Submitted', `Q${quarterNumber} has already been ${quarterConfig.status}`, 5000);
+                return;
+            }
+
+            // Recalculate statistics before submitting
+            await updateQuarterStatistics(projectBudget);
+
+            // Confirmation dialog
+            const confirmed = confirm(
+                `Submit Q${quarterNumber} for claiming?\n\n` +
+                `Transactions: ${quarterConfig.transactionCount}\n` +
+                `Total Amount: £${quarterConfig.totalClaimed.toFixed(2)}\n\n` +
+                `After submission, you will not be able to add new transactions to this quarter unless you reopen it.`
+            );
+
+            if (!confirmed) return;
+
+            // Prompt for notes
+            const notes = prompt(`Add notes for Q${quarterNumber} submission (optional):`, quarterConfig.notes || '');
+
+            // Mark as submitted
+            quarterConfig.status = 'submitted';
+            quarterConfig.submittedDate = new Date().toISOString().split('T')[0];
+            if (notes !== null) {
+                quarterConfig.notes = notes;
+            }
+
+            // Save to database
+            await saveProjectToDBSilent(projectBudget);
+
+            // Refresh UI
+            renderQuarterListTable();
+
+            showToast('success', 'Quarter Submitted',
+                      `Q${quarterNumber} marked as submitted. Total claimed: £${quarterConfig.totalClaimed.toFixed(2)}`, 5000);
+
+            console.log(`[Claiming Quarters] Submitted Q${quarterNumber} for project ${projectBudget.projectId}`, {
+                transactionCount: quarterConfig.transactionCount,
+                totalClaimed: quarterConfig.totalClaimed,
+                submittedDate: quarterConfig.submittedDate
+            });
+
+            // Suggest starting next quarter if available
+            const nextQuarter = projectBudget.claimingSettings.quarters.find(
+                q => q.quarter === quarterNumber + 1 && q.status === 'draft'
+            );
+
+            if (nextQuarter) {
+                setTimeout(() => {
+                    const startNext = confirm(
+                        `Q${quarterNumber} has been submitted.\n\n` +
+                        `Would you like to activate Q${nextQuarter.quarter} now?`
+                    );
+
+                    if (startNext) {
+                        setActiveClaimingQuarter(nextQuarter.quarter);
+                    }
+                }, 500);
+            }
+        }
+
+        /**
+         * Start the next quarter (submit current + activate next)
+         */
+        async function startNextQuarter() {
+            if (!projectBudget || !projectBudget.claimingSettings) {
+                showToast('error', 'Error', 'Project not loaded', 5000);
+                return;
+            }
+
+            const currentQuarter = projectBudget.claimingSettings.activeClaimingQuarter;
+            const nextQuarterNumber = currentQuarter + 1;
+
+            const currentQuarterConfig = projectBudget.claimingSettings.quarters.find(q => q.quarter === currentQuarter);
+            const nextQuarterConfig = projectBudget.claimingSettings.quarters.find(q => q.quarter === nextQuarterNumber);
+
+            if (!nextQuarterConfig) {
+                showToast('warning', 'No Next Quarter', 'There is no next quarter available in this project', 5000);
+                return;
+            }
+
+            // Check if current quarter should be submitted first
+            if (currentQuarterConfig && currentQuarterConfig.status === 'draft') {
+                const submitCurrent = confirm(
+                    `The current quarter (Q${currentQuarter}) is still in draft status with ${currentQuarterConfig.transactionCount} transaction(s).\n\n` +
+                    `Would you like to submit Q${currentQuarter} before starting Q${nextQuarterNumber}?`
+                );
+
+                if (submitCurrent) {
+                    await submitQuarter(currentQuarter);
+                }
+            }
+
+            // Activate next quarter
+            await setActiveClaimingQuarter(nextQuarterNumber);
+        }
+
+        /**
+         * Reopen a submitted quarter (revert to draft)
+         */
+        async function reopenQuarter(quarterNumber) {
+            if (!projectBudget || !projectBudget.claimingSettings) {
+                showToast('error', 'Error', 'Project not loaded', 5000);
+                return;
+            }
+
+            const quarterConfig = projectBudget.claimingSettings.quarters.find(q => q.quarter === quarterNumber);
+            if (!quarterConfig) {
+                showToast('error', 'Invalid Quarter', `Quarter ${quarterNumber} does not exist`, 5000);
+                return;
+            }
+
+            if (quarterConfig.status === 'draft') {
+                showToast('info', 'Already Open', `Q${quarterNumber} is already in draft status`, 4000);
+                return;
+            }
+
+            // Confirmation
+            const confirmed = confirm(
+                `Reopen Q${quarterNumber}?\n\n` +
+                `Current status: ${quarterConfig.status}\n` +
+                `Submitted: ${quarterConfig.submittedDate || 'N/A'}\n\n` +
+                `This will allow adding new transactions to this quarter again.`
+            );
+
+            if (!confirmed) return;
+
+            // Revert to draft
+            quarterConfig.status = 'draft';
+            // Keep submitted date for audit trail
+
+            // Save to database
+            await saveProjectToDBSilent(projectBudget);
+
+            // Refresh UI
+            renderQuarterListTable();
+
+            showToast('success', 'Quarter Reopened', `Q${quarterNumber} is now in draft status`, 4000);
+
+            console.log(`[Claiming Quarters] Reopened Q${quarterNumber} for project ${projectBudget.projectId}`);
+        }
+
+        /**
+         * Initialize claiming quarter event listeners
+         * Called after DOM is ready
+         */
+        function initializeClaimingQuarterEvents() {
+            // Toggle quarter settings panel
+            const toggleBtn = document.getElementById('toggleQuarterSettings');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    const content = document.getElementById('quarterSettingsContent');
+                    const icon = document.getElementById('toggleQuarterSettingsIcon');
+                    const text = document.getElementById('toggleQuarterSettingsText');
+
+                    if (content.style.display === 'none') {
+                        content.style.display = 'block';
+                        icon.textContent = '▼';
+                        text.textContent = 'Collapse';
+                    } else {
+                        content.style.display = 'none';
+                        icon.textContent = '▶';
+                        text.textContent = 'Expand';
+                    }
+                });
+            }
+
+            // Submit current quarter button
+            const submitBtn = document.getElementById('submitCurrentQuarterBtn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', async function() {
+                    const activeQuarter = projectBudget?.claimingSettings?.activeClaimingQuarter;
+                    if (activeQuarter) {
+                        await submitQuarter(activeQuarter);
+                    } else {
+                        showToast('warning', 'No Active Quarter', 'Please select a project first', 5000);
+                    }
+                });
+            }
+
+            // Start next quarter button
+            const nextBtn = document.getElementById('startNextQuarterBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', async function() {
+                    await startNextQuarter();
+                });
+            }
+
+            // Reopen quarter button
+            const reopenBtn = document.getElementById('reopenQuarterBtn');
+            if (reopenBtn) {
+                reopenBtn.addEventListener('click', async function() {
+                    const activeQuarter = projectBudget?.claimingSettings?.activeClaimingQuarter;
+                    if (activeQuarter) {
+                        // This button reopens the currently viewed quarter, not necessarily the active one
+                        // For now, show a prompt to select which quarter to reopen
+                        const quarterNum = prompt('Enter quarter number to reopen (e.g., 1 for Q1):');
+                        if (quarterNum && !isNaN(parseInt(quarterNum))) {
+                            await reopenQuarter(parseInt(quarterNum));
+                        }
+                    } else {
+                        showToast('warning', 'No Project', 'Please select a project first', 5000);
+                    }
+                });
+            }
+
+            // Advanced settings toggles
+            const autoCalcToggle = document.getElementById('autoCalculateQuarterToggle');
+            if (autoCalcToggle) {
+                autoCalcToggle.addEventListener('change', async function(e) {
+                    if (!projectBudget?.claimingSettings) return;
+
+                    projectBudget.claimingSettings.autoCalculateQuarter = e.target.checked;
+                    await saveProjectToDBSilent(projectBudget);
+
+                    showToast('info', 'Settings Updated',
+                              e.target.checked
+                                  ? 'Quarters will be auto-calculated from transaction dates'
+                                  : 'Quarters will use the active claiming quarter', 4000);
+                });
+            }
+
+            const pastQuarterToggle = document.getElementById('allowPastQuarterAssignmentToggle');
+            if (pastQuarterToggle) {
+                pastQuarterToggle.addEventListener('change', async function(e) {
+                    if (!projectBudget?.claimingSettings) return;
+
+                    projectBudget.claimingSettings.allowPastQuarterAssignment = e.target.checked;
+                    await saveProjectToDBSilent(projectBudget);
+
+                    showToast('info', 'Settings Updated',
+                              e.target.checked
+                                  ? 'Assignments to past quarters are now allowed'
+                                  : 'Assignments restricted to active quarter only', 4000);
+                });
+            }
+
+            // Initialize quarters button
+            const initBtn = document.getElementById('initializeQuartersBtn');
+            if (initBtn) {
+                initBtn.addEventListener('click', async function() {
+                    await initializeQuartersForCurrentProject();
+                });
+            }
+
+            console.log('[Claiming Quarters] Event listeners initialized');
+        }
+
+        /**
+         * Initialize claiming quarters for the currently loaded project
+         * Uses the existing calculateQuarters() function which already works
+         */
+        async function initializeQuartersForCurrentProject() {
+            if (!projectBudget || !projectBudget.projectId) {
+                showToast('warning', 'No Project', 'Please load a project first', 5000);
+                return;
+            }
+
+            const fs = projectBudget.financeSummary;
+            if (!fs || !fs.projectStartMonth || !fs.projectStartYear || !fs.projectDurationMonths) {
+                showToast('error', 'Missing Dates', 'Please set project start date and duration in the Finance Summary first', 5000);
+                return;
+            }
+
+            console.log('[Initialize Quarters] Starting for project:', projectBudget.projectName || projectBudget.projectId);
+
+            // Use the existing calculateQuarters() function that already works
+            const quarters = calculateQuarters();
+
+            if (!quarters || quarters.length === 0) {
+                showToast('error', 'No Quarters', 'Could not calculate quarters. Check project dates.', 5000);
+                return;
+            }
+
+            // Get the previous quarter (same logic used by "Current: Q3" display)
+            const previousQuarter = getPreviousQuarter();
+
+            // Initialize or reset claimingSettings
+            projectBudget.claimingSettings = {
+                activeClaimingQuarter: previousQuarter || 1,
+                autoCalculateQuarter: false,
+                allowPastQuarterAssignment: false,
+                quarters: []
+            };
+
+            // Create quarter configs from calculated quarters
+            for (const q of quarters) {
+                const quarterConfig = {
+                    quarter: q.index,
+                    status: 'draft',
+                    startedDate: `${q.startYear}-${String(q.startMonth).padStart(2, '0')}-01`,
+                    submittedDate: null,
+                    approvedDate: null,
+                    notes: '',
+                    totalClaimed: 0,
+                    transactionCount: 0
+                };
+
+                projectBudget.claimingSettings.quarters.push(quarterConfig);
+            }
+
+            console.log('[Initialize Quarters] Created', quarters.length, 'quarters. Active:', previousQuarter);
+
+            // Calculate existing transaction counts and totals
+            await updateQuarterStatistics(projectBudget);
+
+            // Save to database
+            await saveProjectToDBSilent(projectBudget);
+
+            // Refresh UI
+            renderQuarterListTable();
+
+            showToast('success', 'Quarters Initialized',
+                      `Created ${quarters.length} quarters. Active quarter: Q${projectBudget.claimingSettings.activeClaimingQuarter}`, 5000);
+
+            console.log('[Initialize Quarters] Complete:', projectBudget.claimingSettings);
         }
 
         // Initialize quarterly costs for an item (ensures all quarters have cost entries)
