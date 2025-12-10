@@ -101,8 +101,14 @@ function showNotification(title, message, type = 'info') {
     if (!SYNC_CONFIG.showNotifications) return;
 
     // Try to use existing toast system if available
-    if (typeof showToast === 'function') {
-        showToast(title, type);
+    if (typeof showSimpleToast === 'function') {
+        // Use showSimpleToast which accepts (message, type, position)
+        showSimpleToast(`${title}: ${message}`, type);
+    } else if (typeof showToast === 'function') {
+        // showToast expects an object with { icon, title, message, bgColor }
+        const bgColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+        const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+        showToast({ icon, title, message, bgColor, duration: 5000 });
     } else {
         // Fallback to console
         console.log(`[${type.toUpperCase()}] ${title}: ${message}`);

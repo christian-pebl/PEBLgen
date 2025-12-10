@@ -78,6 +78,153 @@
             border-color: rgba(255, 255, 255, 0.9);
         }
 
+        /* Split Screen Mode */
+        .split-screen-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #1e293b;
+            z-index: 9999;
+        }
+        .split-screen-overlay.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .split-screen-header {
+            background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+        .split-screen-header h2 {
+            color: white;
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .split-screen-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+        .split-pane-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+        .split-pane-selector label {
+            color: rgba(255,255,255,0.8);
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .split-pane-selector select {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.9);
+            font-size: 13px;
+            cursor: pointer;
+            min-width: 120px;
+        }
+        .split-screen-close {
+            margin-left: auto;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .split-screen-close:hover {
+            background: #dc2626;
+        }
+        .split-screen-container {
+            display: flex;
+            flex: 1;
+            gap: 4px;
+            padding: 4px;
+            background: #1e293b;
+            overflow: hidden;
+        }
+        .split-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .split-pane-header {
+            background: #f1f5f9;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .split-pane-content {
+            flex: 1;
+            position: relative;
+        }
+        .split-pane-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .split-divider {
+            width: 6px;
+            background: #475569;
+            cursor: col-resize;
+            border-radius: 3px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .split-divider:hover {
+            background: #3AAFA9;
+        }
+        .split-orientation-btn {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .split-orientation-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        .split-screen-container.vertical {
+            flex-direction: column;
+        }
+        .split-screen-container.vertical .split-divider {
+            width: auto;
+            height: 6px;
+            cursor: row-resize;
+        }
+        .split-btn-icon {
+            font-size: 16px;
+        }
+
         /* Tab Navigation */
         .tab-container {
             display: flex;
@@ -527,7 +674,8 @@
             <a href="exploit.html" class="nav-btn">Exploit</a>
             <a href="risks.html" class="nav-btn">Risks</a>
             <a href="quote.html" class="nav-btn">Quote</a>
-            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Scroll to top">↑ Top</button>
+            <button onclick="openSplitScreenMode()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Split Screen Mode"><span class="split-btn-icon">⫿</span> Split</button>
+            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
         </div>
     </div>
 
@@ -843,9 +991,32 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                                 </tbody>
                             </table>
 
-                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
                                 <button onclick="addBudgetRowNew()" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">+ Add Row</button>
                                 <button onclick="saveBudgetData()" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">💾 Save</button>
+                                <div id="labourBudgetTotalBox" style="margin-left: auto; padding: 8px 16px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 6px; color: white; display: none;">
+                                    <div style="font-size: 11px; opacity: 0.9;">Total Labour Budget</div>
+                                    <div id="labourBudgetTotalValue" style="font-size: 18px; font-weight: 700;">£0.00</div>
+                                </div>
+                            </div>
+
+                            <!-- Budget Notes Section -->
+                            <div id="budgetNotesSection" style="margin-top: 12px; padding: 10px; background: #fefce8; border: 1px solid #fde047; border-radius: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <h4 style="margin: 0; color: #854d0e; font-size: 13px;">📝 Budget Notes</h4>
+                                    <button onclick="toggleNotesSection()" id="notesSectionToggle" style="background: none; border: none; color: #854d0e; cursor: pointer; font-size: 14px; padding: 0;">▼</button>
+                                </div>
+                                <div id="budgetNotesContent">
+                                    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                                        <input type="text" id="newBudgetNoteInput" placeholder="Type a note and press Add..."
+                                            style="flex: 1; padding: 8px 12px; font-size: 13px; border: 1px solid #fde047; border-radius: 4px; background: white;"
+                                            onkeypress="if(event.key==='Enter') addBudgetNote()">
+                                        <button onclick="addBudgetNote()" style="background: #eab308; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">+ Add</button>
+                                    </div>
+                                    <div id="budgetNotesList" style="max-height: 200px; overflow-y: auto;">
+                                        <p style="color: #a16207; font-size: 12px; margin: 0; font-style: italic;">No notes yet. Add a note above.</p>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Labour Allocation Breakdown -->
@@ -870,12 +1041,20 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                 <!-- Copy Month Dialog -->
                 <div id="copyMonthDialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
                     <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; width: 90%;">
-                        <h3 style="margin-top: 0; color: #1e40af;">Copy Month Data</h3>
+                        <h3 style="margin-top: 0; color: #1e40af;">📋 Copy Month Data</h3>
+                        <p style="color: #6b7280; font-size: 13px; margin-bottom: 20px;">Copy labour allocation data from one month to another. You can copy to past or future months.</p>
+
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">From (source month):</label>
+                            <select id="copyMonthSelect" onchange="updateCopyMonthPreview()" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                <option value="">-- Select source month --</option>
+                            </select>
+                        </div>
 
                         <div style="margin-bottom: 20px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Select month to copy:</label>
-                            <select id="copyMonthSelect" onchange="updateCopyMonthPreview()" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 4px;">
-                                <option value="">-- Select a month --</option>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">To (destination month):</label>
+                            <select id="copyToMonthSelect" onchange="updateCopyMonthPreview()" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                <option value="">-- Select destination month --</option>
                             </select>
                         </div>
 
@@ -2450,6 +2629,8 @@ Return JSON:
                 document.getElementById('budgetTableContainer').style.display = 'none';
                 currentBudgetProject = null;
                 currentBudgetItems = [];
+                // Clear notes display
+                renderBudgetNotes();
                 return;
             }
 
@@ -2490,6 +2671,9 @@ Return JSON:
 
                 // Render the budget items
                 renderBudgetTableNew();
+
+                // Render budget notes
+                renderBudgetNotes();
 
                 // Calculate and display allocation breakdown
                 calculateAllocationBreakdown(projectId);
@@ -3018,6 +3202,9 @@ Return JSON:
 
             if (!currentBudgetItems || currentBudgetItems.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">Click "+ Add Row" to get started</td></tr>';
+                // Hide total box when empty
+                const totalBox = document.getElementById('labourBudgetTotalBox');
+                if (totalBox) totalBox.style.display = 'none';
                 return;
             }
 
@@ -3038,10 +3225,47 @@ Return JSON:
                                    style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px;">
                         </td>
                         <td style="padding: 8px; border: 1px solid #e2e8f0;">
-                            <input type="number" step="0.5" value="${item.days || ''}"
-                                   onchange="updateBudgetRowNew(${idx}, 'days', this.value)"
-                                   placeholder="0"
-                                   style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px;">
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <input type="number" step="0.5" value="${item.days || ''}"
+                                       id="budgetDaysInput_${idx}"
+                                       onchange="updateBudgetRowNew(${idx}, 'days', this.value); clearHoursCalculation(${idx});"
+                                       placeholder="0"
+                                       style="flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px;">
+                                <button onclick="toggleHoursCalculator(${idx})"
+                                        title="Calculate days from hours"
+                                        style="background: ${item.totalHours ? '#10b981' : '#3b82f6'}; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap;">
+                                    ⏱️
+                                </button>
+                            </div>
+                            ${item.totalHours ? `<div style="font-size: 10px; color: #059669; margin-top: 4px;">${item.totalHours}hrs ÷ ${item.hrsPerDay || 7.5}hrs/day</div>` : ''}
+                            <div id="hoursCalculator_${idx}" style="display: none; margin-top: 8px; padding: 10px; background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1;">
+                                <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 6px;">Calculate Days from Hours</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+                                    <div>
+                                        <label style="font-size: 10px; color: #64748b;">Total Hours</label>
+                                        <input type="number" step="0.5" id="totalHours_${idx}"
+                                               oninput="calculateDaysFromHours(${idx})"
+                                               placeholder="0"
+                                               value="${item.totalHours || ''}"
+                                               style="width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 10px; color: #64748b;">Hrs/Day</label>
+                                        <input type="number" step="0.5" id="hrsPerDay_${idx}"
+                                               oninput="calculateDaysFromHours(${idx})"
+                                               placeholder="7.5"
+                                               value="${item.hrsPerDay || 7.5}"
+                                               style="width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px;">
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                                    <span id="calculatedDays_${idx}" style="font-size: 12px; color: #059669; font-weight: 600;">= ${item.days || 0} days</span>
+                                    <button onclick="applyCalculatedDays(${idx})"
+                                            style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                        Apply
+                                    </button>
+                                </div>
+                            </div>
                         </td>
                         <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600; font-size: 14px;">
                             £${total.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -3053,6 +3277,32 @@ Return JSON:
                     </tr>
                 `;
             }).join('');
+
+            // Calculate and display total labour budget
+            updateLabourBudgetTotal();
+        }
+
+        // Update total labour budget display
+        function updateLabourBudgetTotal() {
+            const totalBox = document.getElementById('labourBudgetTotalBox');
+            const totalValue = document.getElementById('labourBudgetTotalValue');
+
+            if (!totalBox || !totalValue) return;
+
+            if (!currentBudgetItems || currentBudgetItems.length === 0) {
+                totalBox.style.display = 'none';
+                return;
+            }
+
+            // Calculate total
+            const total = currentBudgetItems.reduce((sum, item) => {
+                const itemTotal = (parseFloat(item.dayRate) || 0) * (parseFloat(item.days) || 0);
+                return sum + itemTotal;
+            }, 0);
+
+            // Update display
+            totalValue.textContent = '£' + total.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            totalBox.style.display = 'block';
         }
 
         // Add a new budget row
@@ -3101,6 +3351,170 @@ Return JSON:
             showToast('Row removed', 'info');
         }
 
+        // Toggle hours calculator visibility
+        function toggleHoursCalculator(idx) {
+            const calculator = document.getElementById(`hoursCalculator_${idx}`);
+            if (calculator) {
+                const isVisible = calculator.style.display !== 'none';
+                calculator.style.display = isVisible ? 'none' : 'block';
+
+                // Focus on the total hours input when opening
+                if (!isVisible) {
+                    const totalHoursInput = document.getElementById(`totalHours_${idx}`);
+                    if (totalHoursInput) {
+                        totalHoursInput.focus();
+                    }
+                }
+            }
+        }
+
+        // Calculate days from total hours and hours per day
+        function calculateDaysFromHours(idx) {
+            const totalHoursInput = document.getElementById(`totalHours_${idx}`);
+            const hrsPerDayInput = document.getElementById(`hrsPerDay_${idx}`);
+            const calculatedDaysSpan = document.getElementById(`calculatedDays_${idx}`);
+
+            if (!totalHoursInput || !hrsPerDayInput || !calculatedDaysSpan) return;
+
+            const totalHours = parseFloat(totalHoursInput.value) || 0;
+            const hrsPerDay = parseFloat(hrsPerDayInput.value) || 7.5;
+
+            if (hrsPerDay === 0) {
+                calculatedDaysSpan.textContent = '= Invalid (÷0)';
+                calculatedDaysSpan.style.color = '#ef4444';
+                return;
+            }
+
+            const days = totalHours / hrsPerDay;
+            const roundedDays = Math.round(days * 100) / 100; // Round to 2 decimal places
+
+            calculatedDaysSpan.textContent = `= ${roundedDays} days`;
+            calculatedDaysSpan.style.color = '#059669';
+        }
+
+        // Apply calculated days to the days input field
+        function applyCalculatedDays(idx) {
+            const totalHoursInput = document.getElementById(`totalHours_${idx}`);
+            const hrsPerDayInput = document.getElementById(`hrsPerDay_${idx}`);
+            const daysInput = document.getElementById(`budgetDaysInput_${idx}`);
+            const calculator = document.getElementById(`hoursCalculator_${idx}`);
+
+            if (!totalHoursInput || !hrsPerDayInput || !daysInput) return;
+
+            const totalHours = parseFloat(totalHoursInput.value) || 0;
+            const hrsPerDay = parseFloat(hrsPerDayInput.value) || 7.5;
+
+            if (hrsPerDay === 0) {
+                showToast('Hours per day cannot be zero', 'error');
+                return;
+            }
+
+            const days = totalHours / hrsPerDay;
+            const roundedDays = Math.round(days * 100) / 100; // Round to 2 decimal places
+
+            // Update the input field
+            daysInput.value = roundedDays;
+
+            // Save the hours calculation data to the model
+            if (currentBudgetItems[idx]) {
+                currentBudgetItems[idx].days = roundedDays;
+                currentBudgetItems[idx].totalHours = totalHours;
+                currentBudgetItems[idx].hrsPerDay = hrsPerDay;
+            }
+
+            // Re-render to update the total
+            renderBudgetTableNew();
+
+            showToast(`Applied ${roundedDays} days (${totalHours}hrs ÷ ${hrsPerDay}hrs/day)`, 'success');
+        }
+
+        // Clear hours calculation data when user manually edits days
+        function clearHoursCalculation(idx) {
+            if (currentBudgetItems[idx]) {
+                delete currentBudgetItems[idx].totalHours;
+                delete currentBudgetItems[idx].hrsPerDay;
+            }
+        }
+
+        // Toggle inline hours calculator visibility (for Labour Budget Summary Section)
+        function toggleInlineHoursCalculator(idx) {
+            const calculator = document.getElementById(`inlineHoursCalculator_${idx}`);
+            if (calculator) {
+                const isVisible = calculator.style.display !== 'none';
+                calculator.style.display = isVisible ? 'none' : 'block';
+
+                // Focus on the total hours input when opening
+                if (!isVisible) {
+                    const totalHoursInput = document.getElementById(`inlineTotalHours_${idx}`);
+                    if (totalHoursInput) {
+                        totalHoursInput.focus();
+                    }
+                }
+            }
+        }
+
+        // Calculate days from hours for inline calculator
+        function calculateInlineDaysFromHours(idx) {
+            const totalHoursInput = document.getElementById(`inlineTotalHours_${idx}`);
+            const hrsPerDayInput = document.getElementById(`inlineHrsPerDay_${idx}`);
+            const calculatedDaysSpan = document.getElementById(`inlineCalculatedDays_${idx}`);
+
+            if (!totalHoursInput || !hrsPerDayInput || !calculatedDaysSpan) return;
+
+            const totalHours = parseFloat(totalHoursInput.value) || 0;
+            const hrsPerDay = parseFloat(hrsPerDayInput.value) || 7.5;
+
+            if (hrsPerDay === 0) {
+                calculatedDaysSpan.textContent = '= Invalid (÷0)';
+                calculatedDaysSpan.style.color = '#ef4444';
+                return;
+            }
+
+            const days = totalHours / hrsPerDay;
+            const roundedDays = Math.round(days * 100) / 100;
+
+            calculatedDaysSpan.textContent = `= ${roundedDays} days`;
+            calculatedDaysSpan.style.color = '#059669';
+        }
+
+        // Apply calculated days for inline calculator
+        function applyInlineCalculatedDays(idx) {
+            const totalHoursInput = document.getElementById(`inlineTotalHours_${idx}`);
+            const hrsPerDayInput = document.getElementById(`inlineHrsPerDay_${idx}`);
+
+            if (!totalHoursInput || !hrsPerDayInput) return;
+
+            const totalHours = parseFloat(totalHoursInput.value) || 0;
+            const hrsPerDay = parseFloat(hrsPerDayInput.value) || 7.5;
+
+            if (hrsPerDay === 0) {
+                showToast('Hours per day cannot be zero', 'error');
+                return;
+            }
+
+            const days = totalHours / hrsPerDay;
+            const roundedDays = Math.round(days * 100) / 100;
+
+            // Save the hours calculation data to the model
+            if (window.currentEditingGrantProject && window.currentEditingGrantProject.labourBudgetItems[idx]) {
+                window.currentEditingGrantProject.labourBudgetItems[idx].totalHours = totalHours;
+                window.currentEditingGrantProject.labourBudgetItems[idx].hrsPerDay = hrsPerDay;
+            }
+
+            // Update using the existing updateLabourBudgetItem function (this will re-render)
+            updateLabourBudgetItem(idx, 'days', roundedDays);
+
+            showToast(`Applied ${roundedDays} days (${totalHours}hrs ÷ ${hrsPerDay}hrs/day)`, 'success');
+        }
+
+        // Clear hours calculation data for inline calculator
+        function clearInlineHoursCalculation(idx) {
+            if (window.currentEditingGrantProject && window.currentEditingGrantProject.labourBudgetItems[idx]) {
+                delete window.currentEditingGrantProject.labourBudgetItems[idx].totalHours;
+                delete window.currentEditingGrantProject.labourBudgetItems[idx].hrsPerDay;
+            }
+        }
+
         // Save budget data to database
         async function saveBudgetData() {
             if (!currentBudgetProject) {
@@ -3111,7 +3525,7 @@ Return JSON:
             try {
                 showToast('Saving budget...', 'info');
 
-                // Update the project with budget items
+                // Update the project with budget items (notes are already in currentBudgetProject.budgetNotes)
                 currentBudgetProject.budgetItems = currentBudgetItems;
 
                 // Save to IndexedDB
@@ -3154,6 +3568,118 @@ Return JSON:
                 console.error('Error saving budget:', error);
                 alert('Failed to save budget: ' + error.message);
             }
+        }
+
+        // ============================================
+        // BUDGET NOTES FUNCTIONS
+        // ============================================
+
+        // Toggle notes section visibility
+        function toggleNotesSection() {
+            const content = document.getElementById('budgetNotesContent');
+            const toggle = document.getElementById('notesSectionToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
+        // Add a new budget note
+        async function addBudgetNote() {
+            const input = document.getElementById('newBudgetNoteInput');
+            const noteText = input.value.trim();
+
+            if (!noteText) {
+                showToast('Please enter a note', 'warning');
+                return;
+            }
+
+            if (!currentBudgetProject) {
+                showToast('Please select a project first', 'warning');
+                return;
+            }
+
+            // Initialize notes array if it doesn't exist
+            if (!currentBudgetProject.budgetNotes) {
+                currentBudgetProject.budgetNotes = [];
+            }
+
+            // Create note object with timestamp
+            const note = {
+                id: Date.now(),
+                text: noteText,
+                createdAt: new Date().toISOString()
+            };
+
+            // Add to array
+            currentBudgetProject.budgetNotes.push(note);
+
+            // Clear input
+            input.value = '';
+
+            // Render notes
+            renderBudgetNotes();
+
+            // Auto-save
+            await saveBudgetData();
+        }
+
+        // Delete a budget note
+        async function deleteBudgetNote(noteId) {
+            if (!currentBudgetProject || !currentBudgetProject.budgetNotes) return;
+
+            // Remove note from array
+            currentBudgetProject.budgetNotes = currentBudgetProject.budgetNotes.filter(n => n.id !== noteId);
+
+            // Render notes
+            renderBudgetNotes();
+
+            // Auto-save
+            await saveBudgetData();
+        }
+
+        // Render budget notes list
+        function renderBudgetNotes() {
+            const container = document.getElementById('budgetNotesList');
+            if (!container) return;
+
+            const notes = currentBudgetProject?.budgetNotes || [];
+
+            if (notes.length === 0) {
+                container.innerHTML = '<p style="color: #a16207; font-size: 12px; margin: 0; font-style: italic;">No notes yet. Add a note above.</p>';
+                return;
+            }
+
+            let html = '';
+            notes.forEach((note, index) => {
+                const date = new Date(note.createdAt);
+                const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+                html += `
+                    <div style="display: flex; align-items: flex-start; gap: 10px; padding: 8px; background: white; border: 1px solid #fde68a; border-radius: 4px; margin-bottom: 6px;">
+                        <div style="flex: 1;">
+                            <p style="margin: 0 0 4px 0; color: #374151; font-size: 13px;">${escapeHtml(note.text)}</p>
+                            <span style="font-size: 11px; color: #9ca3af;">${dateStr} at ${timeStr}</span>
+                        </div>
+                        <button onclick="deleteBudgetNote(${note.id})"
+                            style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;"
+                            title="Delete this note">✕</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Initialize budget dropdown on page load
@@ -3998,8 +4524,10 @@ Return JSON:
 
                     <div style="margin-bottom: 15px;">
                         ${project.labourBudgetItems.map((item, idx) => {
-                            const hours = (item.days || 0) * 8;
+                            const hours = item.totalHours || (item.days || 0) * 8;
+                            const hrsPerDay = item.hrsPerDay || 8;
                             const total = (item.dayRate || 0) * (item.days || 0);
+                            const hoursSource = item.totalHours ? `(${item.totalHours}hrs ÷ ${hrsPerDay}hrs/day)` : '(estimated at 8hrs/day)';
                             return `
                                 <div style="padding: 12px; margin-bottom: 10px; background: white; border: 1px solid #e2e8f0; border-radius: 4px;">
                                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
@@ -4007,7 +4535,7 @@ Return JSON:
                                             <div style="font-weight: 600; font-size: 14px; color: #1e293b; margin-bottom: 4px;">${item.role || 'Unnamed Role'}</div>
                                             <div style="font-size: 12px; color: #64748b; line-height: 1.5;">
                                                 The application details show a total of <strong>${hours} Hours</strong> for the ${item.role || 'role'},
-                                                calculated as <strong>${item.days} days</strong> at a rate of <strong>£${item.dayRate ? item.dayRate.toFixed(2) : '0.00'} per day</strong>
+                                                calculated as <strong>${item.days} days</strong> ${hoursSource} at a rate of <strong>£${item.dayRate ? item.dayRate.toFixed(2) : '0.00'} per day</strong>
                                                 (£${item.hourlyRate ? item.hourlyRate.toFixed(2) : '0.00'}/hr).
                                                 Total budget: <strong>£${total.toLocaleString()}</strong>
                                             </div>
@@ -4047,7 +4575,45 @@ Return JSON:
                             <td><input type="text" value="${item.role || ''}" onchange="updateLabourBudgetItem(${idx}, 'role', this.value)" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"></td>
                             <td><input type="number" step="0.01" value="${item.hourlyRate || ''}" onchange="updateLabourBudgetItem(${idx}, 'hourlyRate', this.value)" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"></td>
                             <td><input type="number" step="0.01" value="${item.dayRate || ''}" onchange="updateLabourBudgetItem(${idx}, 'dayRate', this.value)" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"></td>
-                            <td><input type="number" value="${item.days || ''}" onchange="updateLabourBudgetItem(${idx}, 'days', this.value)" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"></td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0;">
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="number" id="inlineBudgetDaysInput_${idx}" value="${item.days || ''}" onchange="updateLabourBudgetItem(${idx}, 'days', this.value); clearInlineHoursCalculation(${idx});" style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <button onclick="toggleInlineHoursCalculator(${idx})"
+                                            title="Calculate days from hours"
+                                            style="background: ${item.totalHours ? '#10b981' : '#3b82f6'}; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                        ⏱️
+                                    </button>
+                                </div>
+                                ${item.totalHours ? `<div style="font-size: 10px; color: #059669; margin-top: 4px;">${item.totalHours}hrs ÷ ${item.hrsPerDay || 7.5}hrs/day</div>` : ''}
+                                <div id="inlineHoursCalculator_${idx}" style="display: none; margin-top: 8px; padding: 10px; background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1;">
+                                    <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 6px;">Calculate Days from Hours</div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+                                        <div>
+                                            <label style="font-size: 10px; color: #64748b;">Total Hours</label>
+                                            <input type="number" step="0.5" id="inlineTotalHours_${idx}"
+                                                   oninput="calculateInlineDaysFromHours(${idx})"
+                                                   placeholder="0"
+                                                   value="${item.totalHours || ''}"
+                                                   style="width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size: 10px; color: #64748b;">Hrs/Day</label>
+                                            <input type="number" step="0.5" id="inlineHrsPerDay_${idx}"
+                                                   oninput="calculateInlineDaysFromHours(${idx})"
+                                                   placeholder="7.5"
+                                                   value="${item.hrsPerDay || 7.5}"
+                                                   style="width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px;">
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                                        <span id="inlineCalculatedDays_${idx}" style="font-size: 12px; color: #059669; font-weight: 600;">= ${item.days || 0} days</span>
+                                        <button onclick="applyInlineCalculatedDays(${idx})"
+                                                style="background: #10b981; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                            Apply
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
                             <td style="text-align: right; font-weight: 600;">£${((item.dayRate || 0) * (item.days || 0)).toLocaleString()}</td>
                             <td style="text-align: center;"><button onclick="removeLabourBudgetItem(${idx})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">×</button></td>
                         </tr>
@@ -6271,18 +6837,42 @@ Return JSON:
                 return;
             }
 
-            // Populate the dropdown
-            const select = document.getElementById('copyMonthSelect');
-            select.innerHTML = '<option value="">-- Select a month --</option>';
+            // Populate the SOURCE month dropdown (only existing months)
+            const sourceSelect = document.getElementById('copyMonthSelect');
+            sourceSelect.innerHTML = '<option value="">-- Select source month --</option>';
 
             uniqueMonths.forEach(month => {
                 const option = document.createElement('option');
                 option.value = month;
-                // Format: "2025-09" -> "September 2025"
                 const [year, monthNum] = month.split('-');
                 const monthName = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                 option.textContent = monthName;
-                select.appendChild(option);
+                sourceSelect.appendChild(option);
+            });
+
+            // Populate the DESTINATION month dropdown (wide range: 12 months back to 24 months forward)
+            const destSelect = document.getElementById('copyToMonthSelect');
+            destSelect.innerHTML = '<option value="">-- Select destination month --</option>';
+
+            // Generate months from 12 months ago to 24 months in the future
+            const today = new Date();
+            const destMonths = [];
+
+            for (let offset = -12; offset <= 24; offset++) {
+                const d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+                const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                destMonths.push(monthStr);
+            }
+
+            destMonths.forEach(month => {
+                const option = document.createElement('option');
+                option.value = month;
+                const [year, monthNum] = month.split('-');
+                const monthName = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                // Mark if month already has data
+                const hasData = uniqueMonths.includes(month);
+                option.textContent = hasData ? `${monthName} (has data)` : monthName;
+                destSelect.appendChild(option);
             });
 
             // Reset preview
@@ -6293,67 +6883,70 @@ Return JSON:
             document.getElementById('copyMonthDialog').style.display = 'flex';
         }
 
-        // Update preview when month is selected
+        // Update preview when either month selector changes
         function updateCopyMonthPreview() {
-            const selectedMonth = document.getElementById('copyMonthSelect').value;
+            const sourceMonth = document.getElementById('copyMonthSelect').value;
+            const destMonth = document.getElementById('copyToMonthSelect').value;
             const previewDiv = document.getElementById('copyMonthPreview');
             const previewText = document.getElementById('copyMonthPreviewText');
             const copyBtn = document.getElementById('executeCopyBtn');
 
-            if (!selectedMonth) {
+            // Need both selections to show preview
+            if (!sourceMonth || !destMonth) {
                 previewDiv.style.display = 'none';
                 copyBtn.disabled = true;
                 return;
             }
 
-            // Count rows for this month
-            const rowsToCopy = labourRows.filter(row => row.month === selectedMonth);
-            const rowCount = rowsToCopy.length;
-
-            // Calculate next month
-            const [year, month] = selectedMonth.split('-').map(Number);
-            let nextYear = year;
-            let nextMonth = month + 1;
-
-            if (nextMonth > 12) {
-                nextMonth = 1;
-                nextYear++;
+            // Check if source and destination are the same
+            if (sourceMonth === destMonth) {
+                previewText.innerHTML = `<span style="color: #dc2626;">⚠️ Source and destination cannot be the same month.</span>`;
+                previewDiv.style.display = 'block';
+                copyBtn.disabled = true;
+                return;
             }
 
-            const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
-            const nextMonthName = new Date(nextYear, nextMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            // Count rows for source month
+            const rowsToCopy = labourRows.filter(row => row.month === sourceMonth);
+            const rowCount = rowsToCopy.length;
+
+            // Format destination month name
+            const [destYear, destMonthNum] = destMonth.split('-');
+            const destMonthName = new Date(destYear, destMonthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            // Check if destination already has data
+            const existingRows = labourRows.filter(row => row.month === destMonth);
+            const hasExisting = existingRows.length > 0;
+
+            // Determine if copying to past or future
+            const sourceDate = new Date(sourceMonth + '-01');
+            const destDate = new Date(destMonth + '-01');
+            const direction = destDate < sourceDate ? '⬅️ (to past)' : destDate > sourceDate ? '➡️ (to future)' : '';
 
             // Show preview
-            previewText.innerHTML = `This will copy <strong>${rowCount} row(s)</strong> to <strong>${nextMonthName}</strong>`;
+            let previewHtml = `This will copy <strong>${rowCount} row(s)</strong> to <strong>${destMonthName}</strong> ${direction}`;
+            if (hasExisting) {
+                previewHtml += `<br><span style="color: #d97706;">⚠️ Note: ${destMonthName} already has ${existingRows.length} row(s). New rows will be added.</span>`;
+            }
+            previewText.innerHTML = previewHtml;
             previewDiv.style.display = 'block';
             copyBtn.disabled = false;
         }
 
         // Execute the copy operation
         function executeCopyMonth() {
-            const selectedMonth = document.getElementById('copyMonthSelect').value;
+            const sourceMonth = document.getElementById('copyMonthSelect').value;
+            const destMonth = document.getElementById('copyToMonthSelect').value;
 
-            if (!selectedMonth) {
+            if (!sourceMonth || !destMonth || sourceMonth === destMonth) {
                 return;
             }
 
-            // Calculate next month
-            const [year, month] = selectedMonth.split('-').map(Number);
-            let nextYear = year;
-            let nextMonth = month + 1;
-
-            if (nextMonth > 12) {
-                nextMonth = 1;
-                nextYear++;
-            }
-
-            const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
-
-            // Find all rows from the selected month
-            const rowsToCopy = labourRows.filter(row => row.month === selectedMonth);
+            // Find all rows from the source month
+            const rowsToCopy = labourRows.filter(row => row.month === sourceMonth);
 
             if (rowsToCopy.length === 0) {
-                alert(`No rows found for ${selectedMonth}.`);
+                alert(`No rows found for the selected source month.`);
                 return;
             }
 
@@ -6361,12 +6954,21 @@ Return JSON:
             const newRows = rowsToCopy.map(row => {
                 // Deep clone the row
                 const newRow = JSON.parse(JSON.stringify(row));
-                newRow.month = nextMonthStr;
+                newRow.month = destMonth;
                 return newRow;
             });
 
-            // Add the new rows to the end of the labour rows array (below the last row)
+            // Add the new rows to labourRows
             labourRows.push(...newRows);
+
+            // Sort all rows chronologically by month, then by staff name
+            labourRows.sort((a, b) => {
+                // First sort by month
+                const monthCompare = a.month.localeCompare(b.month);
+                if (monthCompare !== 0) return monthCompare;
+                // Then by staff name
+                return (a.staff || '').localeCompare(b.staff || '');
+            });
 
             // Re-render and save
             renderLabourRows();
@@ -6377,14 +6979,16 @@ Return JSON:
             closeCopyMonthDialog();
 
             // Show success message
-            const nextMonthName = new Date(nextYear, nextMonth - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-            alert(`✅ Copied ${newRows.length} row(s) to ${nextMonthName}`);
+            const [destYear, destMonthNum] = destMonth.split('-');
+            const destMonthName = new Date(destYear, destMonthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            alert(`✅ Copied ${newRows.length} row(s) to ${destMonthName}. Table has been re-sorted chronologically.`);
         }
 
         // Close copy month dialog
         function closeCopyMonthDialog() {
             document.getElementById('copyMonthDialog').style.display = 'none';
             document.getElementById('copyMonthSelect').value = '';
+            document.getElementById('copyToMonthSelect').value = '';
             document.getElementById('copyMonthPreview').style.display = 'none';
         }
 
@@ -7632,6 +8236,194 @@ Return JSON:
         }
 
 
+    </script>
+
+    <!-- Split Screen Overlay -->
+    <div id="splitScreenOverlay" class="split-screen-overlay">
+        <div class="split-screen-header">
+            <h2>Split Screen Mode</h2>
+            <div class="split-screen-controls">
+                <div class="split-pane-selector">
+                    <label>Left:</label>
+                    <select id="splitLeftPage" onchange="loadSplitPane('left', this.value)">
+                        <option value="grants.html">Grants</option>
+                        <option value="spend.html">Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html" selected>Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <div class="split-pane-selector">
+                    <label>Right:</label>
+                    <select id="splitRightPage" onchange="loadSplitPane('right', this.value)">
+                        <option value="grants.html" selected>Grants</option>
+                        <option value="spend.html">Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <button class="split-orientation-btn" onclick="toggleSplitOrientation()" title="Toggle horizontal/vertical split">
+                    ⇄ Toggle Layout
+                </button>
+                <button class="split-orientation-btn" onclick="refreshSplitPanes()" title="Refresh both panes">
+                    ↻ Refresh
+                </button>
+            </div>
+            <button class="split-screen-close" onclick="closeSplitScreenMode()">✕ Close Split View</button>
+        </div>
+        <div id="splitScreenContainer" class="split-screen-container">
+            <div class="split-pane" id="splitPaneLeft">
+                <div class="split-pane-header">
+                    <span id="splitLeftTitle">Labour</span>
+                    <button onclick="loadSplitPane('left', document.getElementById('splitLeftPage').value)" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">↻</button>
+                </div>
+                <div class="split-pane-content">
+                    <iframe id="splitLeftFrame" src="about:blank"></iframe>
+                </div>
+            </div>
+            <div class="split-divider" id="splitDivider"></div>
+            <div class="split-pane" id="splitPaneRight">
+                <div class="split-pane-header">
+                    <span id="splitRightTitle">Grants</span>
+                    <button onclick="loadSplitPane('right', document.getElementById('splitRightPage').value)" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">↻</button>
+                </div>
+                <div class="split-pane-content">
+                    <iframe id="splitRightFrame" src="about:blank"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Split Screen Mode Functions
+        const pageNames = {
+            'grants.html': 'Grants',
+            'spend.html': 'Spend',
+            'gantt.html': 'Gantt',
+            'timesheet.html': 'Labour',
+            'index.html': 'Sketcher',
+            'exploit.html': 'Exploit',
+            'risks.html': 'Risks',
+            'quote.html': 'Quote'
+        };
+
+        function openSplitScreenMode() {
+            const overlay = document.getElementById('splitScreenOverlay');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Load default pages
+            loadSplitPane('left', document.getElementById('splitLeftPage').value);
+            loadSplitPane('right', document.getElementById('splitRightPage').value);
+
+            // Initialize divider drag functionality
+            initSplitDivider();
+
+            showToast('Split Screen Mode activated', 'info');
+        }
+
+        function closeSplitScreenMode() {
+            const overlay = document.getElementById('splitScreenOverlay');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+
+            // Clear iframes to free memory
+            document.getElementById('splitLeftFrame').src = 'about:blank';
+            document.getElementById('splitRightFrame').src = 'about:blank';
+
+            showToast('Split Screen Mode closed', 'info');
+        }
+
+        function loadSplitPane(pane, page) {
+            const frameId = pane === 'left' ? 'splitLeftFrame' : 'splitRightFrame';
+            const titleId = pane === 'left' ? 'splitLeftTitle' : 'splitRightTitle';
+            const frame = document.getElementById(frameId);
+            const title = document.getElementById(titleId);
+
+            // Add splitMode parameter to URL so pages know they're in split mode
+            const url = page + (page.includes('?') ? '&' : '?') + 'splitMode=true';
+            frame.src = url;
+            title.textContent = pageNames[page] || page;
+        }
+
+        function toggleSplitOrientation() {
+            const container = document.getElementById('splitScreenContainer');
+            container.classList.toggle('vertical');
+            showToast(container.classList.contains('vertical') ? 'Vertical layout' : 'Horizontal layout', 'info');
+        }
+
+        function refreshSplitPanes() {
+            loadSplitPane('left', document.getElementById('splitLeftPage').value);
+            loadSplitPane('right', document.getElementById('splitRightPage').value);
+            showToast('Both panes refreshed', 'info');
+        }
+
+        function initSplitDivider() {
+            const divider = document.getElementById('splitDivider');
+            const container = document.getElementById('splitScreenContainer');
+            const leftPane = document.getElementById('splitPaneLeft');
+            const rightPane = document.getElementById('splitPaneRight');
+
+            let isDragging = false;
+
+            divider.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                document.body.style.cursor = container.classList.contains('vertical') ? 'row-resize' : 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                // Disable pointer events on iframes during drag
+                document.getElementById('splitLeftFrame').style.pointerEvents = 'none';
+                document.getElementById('splitRightFrame').style.pointerEvents = 'none';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const containerRect = container.getBoundingClientRect();
+                const isVertical = container.classList.contains('vertical');
+
+                if (isVertical) {
+                    const percentage = ((e.clientY - containerRect.top) / containerRect.height) * 100;
+                    const clampedPercentage = Math.max(20, Math.min(80, percentage));
+                    leftPane.style.flex = `0 0 ${clampedPercentage}%`;
+                    rightPane.style.flex = `0 0 ${100 - clampedPercentage - 1}%`;
+                } else {
+                    const percentage = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                    const clampedPercentage = Math.max(20, Math.min(80, percentage));
+                    leftPane.style.flex = `0 0 ${clampedPercentage}%`;
+                    rightPane.style.flex = `0 0 ${100 - clampedPercentage - 1}%`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+
+                    // Re-enable pointer events on iframes
+                    document.getElementById('splitLeftFrame').style.pointerEvents = '';
+                    document.getElementById('splitRightFrame').style.pointerEvents = '';
+                }
+            });
+        }
+
+        // Listen for Escape key to close split screen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const overlay = document.getElementById('splitScreenOverlay');
+                if (overlay.classList.contains('active')) {
+                    closeSplitScreenMode();
+                }
+            }
+        });
     </script>
 </body>
 </html>

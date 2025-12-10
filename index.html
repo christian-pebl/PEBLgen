@@ -17,6 +17,29 @@
         .nav-btn { background-color: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; display: inline-block; font-family: 'Roboto', sans-serif; }
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); }
         .nav-btn.active { background-color: rgba(255, 255, 255, 0.9); color: #2B7A78; border-color: rgba(255, 255, 255, 0.9); }
+        /* Split Screen Mode */
+        .split-screen-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1e293b; z-index: 9999; }
+        .split-screen-overlay.active { display: flex; flex-direction: column; }
+        .split-screen-header { background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 10px 20px; display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+        .split-screen-header h2 { color: white; margin: 0; font-size: 18px; font-weight: 600; }
+        .split-screen-controls { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .split-pane-selector { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; }
+        .split-pane-selector label { color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500; }
+        .split-pane-selector select { padding: 6px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-size: 13px; cursor: pointer; min-width: 120px; }
+        .split-screen-close { margin-left: auto; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .split-screen-close:hover { background: #dc2626; }
+        .split-screen-container { display: flex; flex: 1; gap: 4px; padding: 4px; background: #1e293b; overflow: hidden; }
+        .split-pane { flex: 1; display: flex; flex-direction: column; background: white; border-radius: 6px; overflow: hidden; }
+        .split-pane-header { background: #f1f5f9; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+        .split-pane-content { flex: 1; position: relative; }
+        .split-pane-content iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+        .split-divider { width: 6px; background: #475569; cursor: col-resize; border-radius: 3px; flex-shrink: 0; }
+        .split-divider:hover { background: #3AAFA9; }
+        .split-orientation-btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .split-orientation-btn:hover { background: rgba(255,255,255,0.25); }
+        .split-screen-container.vertical { flex-direction: column; }
+        .split-screen-container.vertical .split-divider { width: auto; height: 6px; cursor: row-resize; }
+        .split-btn-icon { font-size: 16px; }
         .content-container { padding: 20px; max-width: 1200px; margin: 0 auto; padding-top: 90px; }
 
         body {
@@ -443,6 +466,7 @@
             <a href="exploit.html" class="nav-btn">Exploit</a>
             <a href="risks.html" class="nav-btn">Risks</a>
             <a href="quote.html" class="nav-btn">Quote</a>
+            <button onclick="openSplitScreenMode()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Split Screen Mode"><span class="split-btn-icon">⫿</span> Split</button>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Scroll to top">↑ Top</button>
         </div>
     </div>
@@ -1261,5 +1285,157 @@
         }
     </script>
     </div>
+
+    <!-- Split Screen Overlay -->
+    <div id="splitScreenOverlay" class="split-screen-overlay">
+        <div class="split-screen-header">
+            <h2>Split Screen Mode</h2>
+            <div class="split-screen-controls">
+                <div class="split-pane-selector">
+                    <label>Left:</label>
+                    <select id="leftPaneSelect" onchange="updateSplitPane('left')">
+                        <option value="grants.html">Grants</option>
+                        <option value="spend.html">Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html" selected>Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <div class="split-pane-selector">
+                    <label>Right:</label>
+                    <select id="rightPaneSelect" onchange="updateSplitPane('right')">
+                        <option value="grants.html">Grants</option>
+                        <option value="spend.html" selected>Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <button class="split-orientation-btn" onclick="toggleOrientation()">
+                    <span id="orientationIcon">⇄</span> Toggle Layout
+                </button>
+            </div>
+            <button class="split-screen-close" onclick="closeSplitScreenMode()">Close Split Screen</button>
+        </div>
+        <div id="splitScreenContainer" class="split-screen-container">
+            <div class="split-pane">
+                <div class="split-pane-header">
+                    <span id="leftPaneTitle">Sketcher</span>
+                </div>
+                <div class="split-pane-content">
+                    <iframe id="leftPaneFrame" src="index.html"></iframe>
+                </div>
+            </div>
+            <div class="split-divider" id="splitDivider"></div>
+            <div class="split-pane">
+                <div class="split-pane-header">
+                    <span id="rightPaneTitle">Spend</span>
+                </div>
+                <div class="split-pane-content">
+                    <iframe id="rightPaneFrame" src="spend.html"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Split Screen Functionality
+        function openSplitScreenMode() {
+            document.getElementById('splitScreenOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSplitScreenMode() {
+            document.getElementById('splitScreenOverlay').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function updateSplitPane(pane) {
+            const select = document.getElementById(pane + 'PaneSelect');
+            const iframe = document.getElementById(pane + 'PaneFrame');
+            const title = document.getElementById(pane + 'PaneTitle');
+
+            const selectedValue = select.value;
+            iframe.src = selectedValue;
+
+            // Update title
+            const selectedText = select.options[select.selectedIndex].text;
+            title.textContent = selectedText;
+        }
+
+        function toggleOrientation() {
+            const container = document.getElementById('splitScreenContainer');
+            const icon = document.getElementById('orientationIcon');
+
+            if (container.classList.contains('vertical')) {
+                container.classList.remove('vertical');
+                icon.textContent = '⇄';
+            } else {
+                container.classList.add('vertical');
+                icon.textContent = '⇅';
+            }
+        }
+
+        // Split Divider Drag Functionality
+        const splitDivider = document.getElementById('splitDivider');
+        let isDragging = false;
+
+        splitDivider.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+
+            const container = document.getElementById('splitScreenContainer');
+            const isVertical = container.classList.contains('vertical');
+
+            if (isVertical) {
+                const containerRect = container.getBoundingClientRect();
+                const offsetY = e.clientY - containerRect.top;
+                const percentage = (offsetY / containerRect.height) * 100;
+
+                if (percentage > 10 && percentage < 90) {
+                    const panes = container.querySelectorAll('.split-pane');
+                    panes[0].style.flex = `0 0 ${percentage}%`;
+                    panes[1].style.flex = `0 0 ${100 - percentage}%`;
+                    document.body.style.cursor = 'row-resize';
+                }
+            } else {
+                const containerRect = container.getBoundingClientRect();
+                const offsetX = e.clientX - containerRect.left;
+                const percentage = (offsetX / containerRect.width) * 100;
+
+                if (percentage > 10 && percentage < 90) {
+                    const panes = container.querySelectorAll('.split-pane');
+                    panes[0].style.flex = `0 0 ${percentage}%`;
+                    panes[1].style.flex = `0 0 ${100 - percentage}%`;
+                    document.body.style.cursor = 'col-resize';
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.cursor = 'auto';
+            }
+        });
+
+        // Close split screen with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('splitScreenOverlay').classList.contains('active')) {
+                closeSplitScreenMode();
+            }
+        });
+    </script>
 </body>
 </html>

@@ -25,6 +25,29 @@
         .nav-btn { background-color: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; display: inline-block; font-family: 'Roboto', sans-serif; }
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); }
         .nav-btn.active { background-color: rgba(255, 255, 255, 0.9); color: #2B7A78; border-color: rgba(255, 255, 255, 0.9); }
+        /* Split Screen Mode */
+        .split-screen-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1e293b; z-index: 9999; }
+        .split-screen-overlay.active { display: flex; flex-direction: column; }
+        .split-screen-header { background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 10px 20px; display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+        .split-screen-header h2 { color: white; margin: 0; font-size: 18px; font-weight: 600; }
+        .split-screen-controls { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .split-pane-selector { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; }
+        .split-pane-selector label { color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500; }
+        .split-pane-selector select { padding: 6px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-size: 13px; cursor: pointer; min-width: 120px; }
+        .split-screen-close { margin-left: auto; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .split-screen-close:hover { background: #dc2626; }
+        .split-screen-container { display: flex; flex: 1; gap: 4px; padding: 4px; background: #1e293b; overflow: hidden; }
+        .split-pane { flex: 1; display: flex; flex-direction: column; background: white; border-radius: 6px; overflow: hidden; }
+        .split-pane-header { background: #f1f5f9; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+        .split-pane-content { flex: 1; position: relative; }
+        .split-pane-content iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+        .split-divider { width: 6px; background: #475569; cursor: col-resize; border-radius: 3px; flex-shrink: 0; }
+        .split-divider:hover { background: #3AAFA9; }
+        .split-orientation-btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .split-orientation-btn:hover { background: rgba(255,255,255,0.25); }
+        .split-screen-container.vertical { flex-direction: column; }
+        .split-screen-container.vertical .split-divider { width: auto; height: 6px; cursor: row-resize; }
+        .split-btn-icon { font-size: 16px; }
         .content-container { padding: 20px; max-width: 1200px; margin: 0 auto; padding-top: 90px; }
 
         body {
@@ -961,6 +984,7 @@
                 <span class="queue-pulse"></span>
                 <span>🔍 0 running</span>
             </button>
+            <button onclick="openSplitScreenMode()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Split Screen Mode"><span class="split-btn-icon">⫿</span> Split</button>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
         </div>
     </div>
@@ -2767,7 +2791,7 @@
 
             // Show saved CSV files from IndexedDB (compact format)
             if (savedCSVFiles.length > 0) {
-                const totalTrans = savedCSVFiles.reduce((sum, f) => sum + f.transactionCount, 0);
+                const totalTrans = savedCSVFiles.reduce((sum, f) => sum + (f.transactionCount || 0), 0);
                 contentDiv.innerHTML = `${savedCSVFiles.length} file${savedCSVFiles.length > 1 ? 's' : ''} (${totalTrans} trans.)`;
                 return;
             }
@@ -4255,10 +4279,13 @@
             }));
 
             // Filter by completion mode
+            console.log(`🔍 [RENDER FILTER] Filtering by completionMode: "${completionMode}"`);
+            const beforeCompletionFilter = transactionsWithIndices.length;
             transactionsWithIndices = transactionsWithIndices.filter(item => {
                 const isCompleted = item.transaction.completed === true;
                 return completionMode === 'complete' ? isCompleted : !isCompleted;
             });
+            console.log(`🔍 [RENDER FILTER] Completion filter: ${beforeCompletionFilter} → ${transactionsWithIndices.length} (mode: ${completionMode})`);
 
             // Filter by flagged status if enabled
             if (showOnlyRedFlag || showOnlyBlueFlag) {
@@ -4540,8 +4567,12 @@
 
         function parseAmount(amountStr) {
             if (!amountStr) return 0;
+            // Handle case where amount is already a number
+            if (typeof amountStr === 'number') return amountStr;
+            // Convert to string if needed
+            const str = String(amountStr);
             // Remove currency symbols and commas
-            const cleaned = amountStr.replace(/[£$,]/g, '');
+            const cleaned = str.replace(/[£$,]/g, '');
             return parseFloat(cleaned) || 0;
         }
 
@@ -4589,9 +4620,64 @@
         // Completion Mode Functions
         let completionMode = localStorage.getItem('completionViewMode') || 'incomplete';
 
+        // DEBUG: Diagnostic function - run window.debugTransactions() in console
+        window.debugTransactions = function() {
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🔍 TRANSACTION DIAGNOSTIC REPORT');
+            console.log('═══════════════════════════════════════════════════════');
+            console.log(`📊 Total transactions in allTransactions: ${allTransactions.length}`);
+            console.log(`📊 Current completionMode: "${completionMode}"`);
+
+            const completed = allTransactions.filter(t => t.completed === true);
+            const incomplete = allTransactions.filter(t => t.completed !== true);
+
+            console.log(`✅ Completed transactions: ${completed.length}`);
+            console.log(`⏳ Incomplete transactions: ${incomplete.length}`);
+
+            // Group by month
+            const byMonth = {};
+            allTransactions.forEach(t => {
+                const date = t.date || 'Unknown';
+                const month = date.substring(3, 10) || 'Unknown'; // MM/YYYY or similar
+                byMonth[month] = byMonth[month] || { total: 0, completed: 0, incomplete: 0 };
+                byMonth[month].total++;
+                if (t.completed === true) byMonth[month].completed++;
+                else byMonth[month].incomplete++;
+            });
+
+            console.log('\n📅 Transactions by month:');
+            Object.keys(byMonth).sort().forEach(month => {
+                const m = byMonth[month];
+                console.log(`   ${month}: ${m.total} total (${m.completed} done, ${m.incomplete} pending)`);
+            });
+
+            // Show sample incomplete transactions
+            if (incomplete.length > 0) {
+                console.log('\n📋 Sample INCOMPLETE transactions (first 5):');
+                incomplete.slice(0, 5).forEach((t, i) => {
+                    console.log(`   ${i+1}. ${t.date} - ${t.description?.substring(0, 50)}... completed=${t.completed}`);
+                });
+            }
+
+            // Show sample completed transactions
+            if (completed.length > 0) {
+                console.log('\n📋 Sample COMPLETED transactions (first 5):');
+                completed.slice(0, 5).forEach((t, i) => {
+                    console.log(`   ${i+1}. ${t.date} - ${t.description?.substring(0, 50)}... completed=${t.completed}`);
+                });
+            }
+
+            console.log('\n═══════════════════════════════════════════════════════');
+            return { total: allTransactions.length, completed: completed.length, incomplete: incomplete.length, byMonth };
+        };
+
         function toggleCompletionMode() {
             const toggle = document.getElementById('completionModeToggle');
+            const previousMode = completionMode;
             completionMode = toggle.checked ? 'complete' : 'incomplete';
+
+            console.log(`🔄 [COMPLETION TOGGLE] Toggle checked: ${toggle.checked}`);
+            console.log(`🔄 [COMPLETION TOGGLE] Mode changed: ${previousMode} → ${completionMode}`);
 
             // Save to localStorage
             localStorage.setItem('completionViewMode', completionMode);
@@ -4599,10 +4685,18 @@
             // Update UI
             updateCompletionModeUI();
 
+            // Count transactions before render
+            const completedCount = allTransactions.filter(t => t.completed === true).length;
+            const incompleteCount = allTransactions.filter(t => t.completed !== true).length;
+            console.log(`📊 [COMPLETION TOGGLE] Total: ${allTransactions.length}, Completed: ${completedCount}, Incomplete: ${incompleteCount}`);
+            console.log(`📊 [COMPLETION TOGGLE] Expected to show: ${completionMode === 'complete' ? completedCount : incompleteCount} transactions`);
+
             // Re-render transactions
             renderTransactions();
 
-            console.log(`✅ [COMPLETION] Switched to ${completionMode} mode`);
+            // Verify rendered count
+            const renderedRows = document.querySelectorAll('#tableBody tr:not(.empty-state)').length;
+            console.log(`✅ [COMPLETION TOGGLE] Actually rendered: ${renderedRows} rows`);
         }
 
         function updateCompletionModeUI() {
@@ -16751,6 +16845,71 @@ Extract the invoice data.`
                 document.removeEventListener('keydown', showHintOnce);
             }
         });
+    </script>
+
+    <!-- Split Screen Overlay -->
+    <div id="splitScreenOverlay" class="split-screen-overlay">
+        <div class="split-screen-header">
+            <h2>Split Screen Mode</h2>
+            <div class="split-screen-controls">
+                <div class="split-pane-selector">
+                    <label>Left:</label>
+                    <select id="splitLeftPage" onchange="loadSplitPane('left', this.value)">
+                        <option value="grants.html">Grants</option>
+                        <option value="spend.html" selected>Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <div class="split-pane-selector">
+                    <label>Right:</label>
+                    <select id="splitRightPage" onchange="loadSplitPane('right', this.value)">
+                        <option value="grants.html" selected>Grants</option>
+                        <option value="spend.html">Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <button class="split-orientation-btn" onclick="toggleSplitOrientation()" title="Toggle horizontal/vertical split">⇄ Toggle Layout</button>
+                <button class="split-orientation-btn" onclick="refreshSplitPanes()" title="Refresh both panes">↻ Refresh</button>
+            </div>
+            <button class="split-screen-close" onclick="closeSplitScreenMode()">✕ Close Split View</button>
+        </div>
+        <div id="splitScreenContainer" class="split-screen-container">
+            <div class="split-pane" id="splitPaneLeft">
+                <div class="split-pane-header">
+                    <span id="splitLeftTitle">Spend</span>
+                    <button onclick="loadSplitPane('left', document.getElementById('splitLeftPage').value)" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">↻</button>
+                </div>
+                <div class="split-pane-content"><iframe id="splitLeftFrame" src="about:blank"></iframe></div>
+            </div>
+            <div class="split-divider" id="splitDivider"></div>
+            <div class="split-pane" id="splitPaneRight">
+                <div class="split-pane-header">
+                    <span id="splitRightTitle">Grants</span>
+                    <button onclick="loadSplitPane('right', document.getElementById('splitRightPage').value)" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">↻</button>
+                </div>
+                <div class="split-pane-content"><iframe id="splitRightFrame" src="about:blank"></iframe></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const pageNames = { 'grants.html': 'Grants', 'spend.html': 'Spend', 'gantt.html': 'Gantt', 'timesheet.html': 'Labour', 'index.html': 'Sketcher', 'exploit.html': 'Exploit', 'risks.html': 'Risks', 'quote.html': 'Quote' };
+        function openSplitScreenMode() { const overlay = document.getElementById('splitScreenOverlay'); overlay.classList.add('active'); document.body.style.overflow = 'hidden'; loadSplitPane('left', document.getElementById('splitLeftPage').value); loadSplitPane('right', document.getElementById('splitRightPage').value); initSplitDivider(); if (typeof showToast === 'function') showToast('Split Screen Mode activated', 'info'); }
+        function closeSplitScreenMode() { const overlay = document.getElementById('splitScreenOverlay'); overlay.classList.remove('active'); document.body.style.overflow = ''; document.getElementById('splitLeftFrame').src = 'about:blank'; document.getElementById('splitRightFrame').src = 'about:blank'; if (typeof showToast === 'function') showToast('Split Screen Mode closed', 'info'); }
+        function loadSplitPane(pane, page) { const frameId = pane === 'left' ? 'splitLeftFrame' : 'splitRightFrame'; const titleId = pane === 'left' ? 'splitLeftTitle' : 'splitRightTitle'; document.getElementById(frameId).src = page + (page.includes('?') ? '&' : '?') + 'splitMode=true'; document.getElementById(titleId).textContent = pageNames[page] || page; }
+        function toggleSplitOrientation() { const container = document.getElementById('splitScreenContainer'); container.classList.toggle('vertical'); if (typeof showToast === 'function') showToast(container.classList.contains('vertical') ? 'Vertical layout' : 'Horizontal layout', 'info'); }
+        function refreshSplitPanes() { loadSplitPane('left', document.getElementById('splitLeftPage').value); loadSplitPane('right', document.getElementById('splitRightPage').value); if (typeof showToast === 'function') showToast('Both panes refreshed', 'info'); }
+        function initSplitDivider() { const divider = document.getElementById('splitDivider'); const container = document.getElementById('splitScreenContainer'); const leftPane = document.getElementById('splitPaneLeft'); const rightPane = document.getElementById('splitPaneRight'); let isDragging = false; divider.addEventListener('mousedown', () => { isDragging = true; document.body.style.cursor = container.classList.contains('vertical') ? 'row-resize' : 'col-resize'; document.body.style.userSelect = 'none'; document.getElementById('splitLeftFrame').style.pointerEvents = 'none'; document.getElementById('splitRightFrame').style.pointerEvents = 'none'; }); document.addEventListener('mousemove', (e) => { if (!isDragging) return; const rect = container.getBoundingClientRect(); const pct = container.classList.contains('vertical') ? ((e.clientY - rect.top) / rect.height) * 100 : ((e.clientX - rect.left) / rect.width) * 100; const clamped = Math.max(20, Math.min(80, pct)); leftPane.style.flex = `0 0 ${clamped}%`; rightPane.style.flex = `0 0 ${100 - clamped - 1}%`; }); document.addEventListener('mouseup', () => { if (isDragging) { isDragging = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; document.getElementById('splitLeftFrame').style.pointerEvents = ''; document.getElementById('splitRightFrame').style.pointerEvents = ''; } }); }
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('splitScreenOverlay').classList.contains('active')) closeSplitScreenMode(); });
     </script>
 </body>
 </html>

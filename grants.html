@@ -26,6 +26,30 @@
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); }
         .nav-btn.active { background-color: rgba(255, 255, 255, 0.9); color: #2B7A78; border-color: rgba(255, 255, 255, 0.9); }
 
+        /* Split Screen Mode */
+        .split-screen-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1e293b; z-index: 9999; }
+        .split-screen-overlay.active { display: flex; flex-direction: column; }
+        .split-screen-header { background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 10px 20px; display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+        .split-screen-header h2 { color: white; margin: 0; font-size: 18px; font-weight: 600; }
+        .split-screen-controls { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .split-pane-selector { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; }
+        .split-pane-selector label { color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500; }
+        .split-pane-selector select { padding: 6px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-size: 13px; cursor: pointer; min-width: 120px; }
+        .split-screen-close { margin-left: auto; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .split-screen-close:hover { background: #dc2626; }
+        .split-screen-container { display: flex; flex: 1; gap: 4px; padding: 4px; background: #1e293b; overflow: hidden; }
+        .split-pane { flex: 1; display: flex; flex-direction: column; background: white; border-radius: 6px; overflow: hidden; }
+        .split-pane-header { background: #f1f5f9; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+        .split-pane-content { flex: 1; position: relative; }
+        .split-pane-content iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+        .split-divider { width: 6px; background: #475569; cursor: col-resize; border-radius: 3px; flex-shrink: 0; }
+        .split-divider:hover { background: #3AAFA9; }
+        .split-orientation-btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .split-orientation-btn:hover { background: rgba(255,255,255,0.25); }
+        .split-screen-container.vertical { flex-direction: column; }
+        .split-screen-container.vertical .split-divider { width: auto; height: 6px; cursor: row-resize; }
+        .split-btn-icon { font-size: 16px; }
+
         body {
             font-family: 'Roboto', sans-serif;
             font-weight: 300;
@@ -1146,6 +1170,7 @@
             <a href="quote.html" class="nav-btn">Quote</a>
             <button onclick="refreshTransactionData()" class="nav-btn" style="background-color: rgba(76, 175, 80, 0.8); margin-left: auto;" title="Refresh transactions and PDFs from Spend page">🔄 Sync Spend Data</button>
             <button onclick="resetBackupAuth()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Reset cloud backup authentication">🔄 Reset Backup</button>
+            <button onclick="openSplitScreenMode()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Split Screen Mode"><span class="split-btn-icon">⫿</span> Split</button>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
         </div>
     </div>
@@ -2247,8 +2272,35 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
         function renderTransactionDetails(transactions, projectId, category, itemKey, quarter, invoices) {
             console.log(`🎨 [RENDER] renderTransactionDetails called: ${category}-${itemKey}, ${transactions?.length || 0} transactions`);
 
+            try {
+            // Create unique form ID for this item
+            const safeCategory = (category || 'unknown').replace(/[^a-zA-Z0-9]/g, '-');
+            const safeItemKey = (itemKey || 'all').replace(/[^a-zA-Z0-9]/g, '-');
+            const formId = `custom-tx-form-${safeCategory}-${safeItemKey}`;
+
+            // Button to add custom transaction (appears in both states)
+            const addCustomBtn = `
+                <button onclick="showCustomTransactionForm('${formId}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey || '')}'); event.stopPropagation();"
+                    style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; font-weight: 600; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); transition: all 0.2s;"
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.4)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.3)';"
+                    title="Add a custom transaction manually (for items not in bank feed)">
+                    <span>➕</span>
+                    <span>Add Custom Transaction</span>
+                </button>
+            `;
+
+            // Container for custom transaction form
+            const formContainer = `<div id="${formId}" style="display: none;"></div>`;
+
             if (!transactions || transactions.length === 0) {
-                return '<p style="color: #94a3b8; font-style: italic; padding: 10px;">No transactions assigned yet</p>';
+                return `
+                    <div style="padding: 10px;">
+                        <p style="color: #94a3b8; font-style: italic; margin: 0 0 10px 0;">No transactions assigned yet</p>
+                        ${addCustomBtn}
+                        ${formContainer}
+                    </div>
+                `;
             }
 
             const rows = transactions.map(transaction => {
@@ -2337,11 +2389,40 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 // Create unique identifier for this transaction row
                 const transactionId = `transaction-${transaction.date}-${transaction.description?.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '')}`;
 
-                // Create view in spend button
-                const viewInSpendBtn = `<button onclick="viewInSpend('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}'); event.stopPropagation();" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap;">👁️ View in Spend</button>`;
+                // Check if this is a custom transaction
+                const isCustomTransaction = transaction.isCustom || transaction.description?.startsWith('[CUSTOM]');
 
-                // Create unassign button
-                const unassignBtn = `<button onclick="unassignTransaction('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey)}'); event.stopPropagation();" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap; margin-left: 4px;" title="Remove this assignment">✕</button>`;
+                // Create action buttons - different for custom vs regular transactions
+                let actionButtons = '';
+                if (isCustomTransaction) {
+                    // Custom transaction: show edit and delete buttons
+                    // Encode transaction data for editing
+                    const txDataForEdit = JSON.stringify({
+                        date: transaction.date,
+                        description: transaction.description,
+                        spent: transaction.spent,
+                        spent_ex_vat: transaction.spent_ex_vat,
+                        zeroVAT: transaction.zeroVAT,
+                        detail: transaction.detail || '',
+                        transactionRef: assignment?.transactionRef || '',
+                        quarter: assignment?.quarter || 1,
+                        percentage: assignment?.percentage || 100
+                    }).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+                    actionButtons = `
+                        <button onclick="editCustomTransaction('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey || '')}', '${txDataForEdit}'); event.stopPropagation();"
+                            style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap;"
+                            title="Edit this custom transaction">✏️ Edit</button>
+                        <button onclick="deleteCustomTransaction('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey)}'); event.stopPropagation();"
+                            style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap; margin-left: 4px;"
+                            title="Delete this custom transaction">🗑️ Delete</button>
+                    `;
+                } else {
+                    // Regular transaction: show view in spend and unassign buttons
+                    const viewInSpendBtn = `<button onclick="viewInSpend('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}'); event.stopPropagation();" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap;">👁️ View in Spend</button>`;
+                    const unassignBtn = `<button onclick="unassignTransaction('${escapeHtml(transaction.date)}', '${escapeHtml(transaction.description)}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey)}'); event.stopPropagation();" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em; white-space: nowrap; margin-left: 4px;" title="Remove this assignment">✕</button>`;
+                    actionButtons = viewInSpendBtn + unassignBtn;
+                }
 
                 // Get transaction reference from the assignment (each assignment has its own unique ref)
                 const transactionRef = assignment?.transactionRef || '-';
@@ -2364,12 +2445,12 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                         <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">Q${assignedQuarter}</td>
                         <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">${splitPercentage}</td>
                         <td style="padding: 6px 10px; text-align: right; font-weight: 600; white-space: nowrap;">${currencySymbol}${assignedAmount}</td>
-                        <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${viewInSpendBtn}${unassignBtn}</td>
+                        <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${actionButtons}</td>
                     </tr>
                 `;
             }).join('');
 
-            const quarterlyTableId = `quarterly-table-${itemKey.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const quarterlyTableId = `quarterly-table-${(itemKey || 'all').replace(/[^a-zA-Z0-9]/g, '-')}`;
 
             return `
                 <div style="margin: 20px 0 0 0; padding: 15px 0; background: white; border-radius: 0; border-top: 2px solid #e2e8f0; width: 100%; box-sizing: border-box;">
@@ -2408,8 +2489,16 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             </tbody>
                         </table>
                     </div>
+                    <div style="margin-top: 12px; display: flex; gap: 8px;">
+                        ${addCustomBtn}
+                    </div>
+                    ${formContainer}
                 </div>
             `;
+            } catch (err) {
+                console.error('❌ [RENDER] Error in renderTransactionDetails:', err);
+                return '<p style="color: #ef4444; padding: 10px;">Error loading transaction details. Check console for details.</p>';
+            }
         }
 
         // Render all transactions for active quarter, organized by category
@@ -2694,9 +2783,11 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
         // Parse amount from string (removes currency symbols and commas)
         function parseAmount(amountStr) {
-            if (!amountStr) return 0;
+            if (!amountStr && amountStr !== 0) return 0;
+            // If it's already a number, return it directly
+            if (typeof amountStr === 'number') return amountStr;
             // Remove currency symbols and commas
-            const cleaned = amountStr.replace(/[£$,]/g, '');
+            const cleaned = String(amountStr).replace(/[£$,]/g, '');
             return parseFloat(cleaned) || 0;
         }
 
@@ -10815,24 +10906,29 @@ ${inputText}`
                                                     ` : ''}
                                                     ${(() => {
                                                         // Render transaction details for this Travel item
-                                                        if (cachedTransactions && cachedTransactions.length > 0) {
-                                                            const itemTransactions = getTransactionsForItem(
-                                                                cachedTransactions,
-                                                                projectBudget.projectId,
-                                                                'Travel',
-                                                                'travel-' + index,
-                                                                null
-                                                            );
-                                                            return renderTransactionDetails(
-                                                                itemTransactions,
-                                                                projectBudget.projectId,
-                                                                'Travel',
-                                                                'travel-' + index,
-                                                                null,
-                                                                cachedInvoices || []
-                                                            );
+                                                        try {
+                                                            if (cachedTransactions && cachedTransactions.length > 0) {
+                                                                const itemTransactions = getTransactionsForItem(
+                                                                    cachedTransactions,
+                                                                    projectBudget.projectId,
+                                                                    'Travel',
+                                                                    'travel-' + index,
+                                                                    null
+                                                                );
+                                                                return renderTransactionDetails(
+                                                                    itemTransactions,
+                                                                    projectBudget.projectId,
+                                                                    'Travel',
+                                                                    'travel-' + index,
+                                                                    null,
+                                                                    cachedInvoices || []
+                                                                );
+                                                            }
+                                                            return '';
+                                                        } catch (err) {
+                                                            console.error('❌ [RENDER] Error rendering Travel transactions:', err);
+                                                            return '<p style="color: #ef4444; padding: 10px;">Error loading transactions</p>';
                                                         }
-                                                        return '';
                                                     })()}
                                                 </div>
                                             </td>
@@ -13737,6 +13833,443 @@ ${inputText}`
             }
         }
 
+        // Global storage for edit mode transaction data (avoids escaping issues with hidden fields)
+        const customTransactionEditData = {};
+
+        /**
+         * Show custom transaction form for manual entry or editing
+         * This is for transactions that come from outside the typical bank feed
+         * @param {string} formId - The ID of the form container
+         * @param {string} projectId - The project ID
+         * @param {string} category - The category
+         * @param {string} itemKey - The item key
+         * @param {object} editData - Optional data for editing existing transaction
+         */
+        function showCustomTransactionForm(formId, projectId, category, itemKey, editData = null) {
+            const isEditMode = !!editData;
+            console.log('📝 [CUSTOM TX] Showing form:', { formId, projectId, category, itemKey, isEditMode });
+
+            // Store edit data globally to avoid escaping issues
+            if (isEditMode) {
+                customTransactionEditData[formId] = editData;
+            } else {
+                delete customTransactionEditData[formId];
+            }
+
+            const container = document.getElementById(formId);
+            if (!container) {
+                console.error('❌ [CUSTOM TX] Form container not found:', formId);
+                return;
+            }
+
+            // Toggle form visibility if already visible (only for non-edit mode)
+            if (!isEditMode && container.style.display === 'block') {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            // Get default values - either from editData or defaults
+            const dateValue = editData?.date || new Date().toISOString().split('T')[0];
+            const refValue = editData?.transactionRef || '';
+            // Remove [CUSTOM] prefix for editing
+            const descValue = editData?.description?.replace(/^\[CUSTOM\]\s*/, '') || '';
+            const amountValue = editData?.spent || '';
+            const vatValue = editData?.zeroVAT ? '0' : '20';
+            const quarterValue = editData?.quarter || '1';
+            const splitValue = editData?.percentage || '100';
+            const detailValue = editData?.detail || '';
+
+            const formTitle = isEditMode ? '✏️ Edit Custom Transaction' : '➕ Add Custom Transaction';
+            const formBorderColor = isEditMode ? '#3b82f6' : '#10b981';
+            const formTitleColor = isEditMode ? '#3b82f6' : '#10b981';
+            const saveButtonGradient = isEditMode
+                ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            const saveButtonShadow = isEditMode
+                ? '0 2px 8px rgba(59, 130, 246, 0.3)'
+                : '0 2px 8px rgba(16, 185, 129, 0.3)';
+            const saveButtonText = isEditMode ? '💾 Update Transaction' : '💾 Save Transaction';
+
+            // Generate form HTML
+            container.innerHTML = `
+                <div style="background: #f8fafc; border: 2px solid ${formBorderColor}; border-radius: 8px; padding: 16px; margin-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h6 style="margin: 0; color: ${formTitleColor}; font-size: 0.95em;">${formTitle}</h6>
+                        <button onclick="document.getElementById('${formId}').style.display='none'; document.getElementById('${formId}').innerHTML=''; event.stopPropagation();"
+                            style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2em; padding: 4px;"
+                            title="Close form">✕</button>
+                    </div>
+                    <p style="color: #64748b; font-size: 0.85em; margin: 0 0 12px 0;">
+                        ${isEditMode ? 'Update the transaction details below.' : 'Use this form to add transactions that aren\'t in your bank feed (e.g., cash payments, internal transfers, manual adjustments).'}
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <div>
+                            <label style="display: block; font-size: 0.85em; color: #475569; margin-bottom: 4px; font-weight: 500;">Date *</label>
+                            <input type="date" id="${formId}-date" value="${dateValue}" required
+                                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85em; color: #475569; margin-bottom: 4px; font-weight: 500;">Transaction Ref</label>
+                            <input type="text" id="${formId}-ref" value="${escapeHtml(refValue)}" placeholder="e.g., M0115-01"
+                                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label style="display: block; font-size: 0.85em; color: #475569; margin-bottom: 4px; font-weight: 500;">Description *</label>
+                            <input type="text" id="${formId}-description" value="${escapeHtml(descValue)}" placeholder="e.g., Manual payment for equipment" required
+                                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85em; color: #475569; margin-bottom: 4px; font-weight: 500;">Amount (Inc VAT) * £</label>
+                            <input type="number" id="${formId}-amount" value="${amountValue}" step="0.01" min="0" placeholder="0.00" required
+                                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85em; color: #475569; margin-bottom: 4px; font-weight: 500;">VAT Rate</label>
+                            <select id="${formId}-vat" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                                <option value="20" ${vatValue === '20' ? 'selected' : ''}>20% VAT (standard)</option>
+                                <option value="0" ${vatValue === '0' ? 'selected' : ''}>0% VAT (zero-rated)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85em; color: #475569; margin-bottom: 4px; font-weight: 500;">Quarter *</label>
+                            <select id="${formId}-quarter" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                                ${[1,2,3,4,5,6,7,8].map(q => `<option value="${q}" ${String(quarterValue) === String(q) ? 'selected' : ''}>Q${q}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.85em; color: #475569; margin-bottom: 4px; font-weight: 500;">Split %</label>
+                            <input type="number" id="${formId}-split" value="${splitValue}" min="0" max="100" step="1"
+                                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label style="display: block; font-size: 0.85em; color: #475569; margin-bottom: 4px; font-weight: 500;">Detail / Notes</label>
+                            <input type="text" id="${formId}-detail" value="${escapeHtml(detailValue)}" placeholder="Additional details or notes"
+                                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9em; box-sizing: border-box;">
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;">
+                        <button onclick="document.getElementById('${formId}').style.display='none'; document.getElementById('${formId}').innerHTML=''; event.stopPropagation();"
+                            style="background: #f1f5f9; color: #64748b; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: 500;">
+                            Cancel
+                        </button>
+                        <button onclick="saveCustomTransaction('${formId}', '${escapeHtml(projectId)}', '${escapeHtml(category)}', '${escapeHtml(itemKey)}'); event.stopPropagation();"
+                            style="background: ${saveButtonGradient}; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: 600; box-shadow: ${saveButtonShadow};">
+                            ${saveButtonText}
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            container.style.display = 'block';
+        }
+
+        /**
+         * Edit an existing custom transaction
+         */
+        function editCustomTransaction(transactionDate, transactionDescription, projectId, category, itemKey, txDataJson) {
+            console.log('✏️ [CUSTOM TX] Editing transaction:', { transactionDate, transactionDescription, projectId, category, itemKey });
+
+            try {
+                // Parse the transaction data
+                const txData = JSON.parse(txDataJson.replace(/&quot;/g, '"'));
+                console.log('✏️ [CUSTOM TX] Parsed transaction data:', txData);
+
+                // Generate the form ID (same logic as in renderTransactionDetails)
+                const safeCategory = (category || 'unknown').replace(/[^a-zA-Z0-9]/g, '-');
+                const safeItemKey = (itemKey || 'all').replace(/[^a-zA-Z0-9]/g, '-');
+                const formId = `custom-tx-form-${safeCategory}-${safeItemKey}`;
+
+                // Show the form with edit data
+                showCustomTransactionForm(formId, projectId, category, itemKey, txData);
+
+            } catch (error) {
+                console.error('❌ [CUSTOM TX] Failed to parse transaction data for editing:', error);
+                alert('Failed to load transaction for editing. Please try again.');
+            }
+        }
+
+        /**
+         * Save custom transaction to IndexedDB (handles both add and edit)
+         */
+        async function saveCustomTransaction(formId, projectId, category, itemKey) {
+            console.log('💾 [CUSTOM TX] Saving custom transaction:', { formId, projectId, category, itemKey });
+
+            try {
+                // Get form values
+                const dateInput = document.getElementById(`${formId}-date`);
+                const refInput = document.getElementById(`${formId}-ref`);
+                const descriptionInput = document.getElementById(`${formId}-description`);
+                const amountInput = document.getElementById(`${formId}-amount`);
+                const vatSelect = document.getElementById(`${formId}-vat`);
+                const quarterSelect = document.getElementById(`${formId}-quarter`);
+                const splitInput = document.getElementById(`${formId}-split`);
+                const detailInput = document.getElementById(`${formId}-detail`);
+
+                // Check if we're in edit mode using the global storage
+                console.log('💾 [CUSTOM TX] formId:', formId);
+                console.log('💾 [CUSTOM TX] customTransactionEditData keys:', Object.keys(customTransactionEditData));
+                console.log('💾 [CUSTOM TX] customTransactionEditData[formId]:', customTransactionEditData[formId]);
+
+                const editData = customTransactionEditData[formId];
+                const isEditMode = !!editData;
+                const originalDate = editData?.date || '';
+                const originalDescription = editData?.description || '';
+
+                console.log('💾 [CUSTOM TX] Mode:', isEditMode ? 'EDIT' : 'ADD');
+                console.log('💾 [CUSTOM TX] Original:', { originalDate, originalDescription });
+
+                // Validate required fields
+                if (!dateInput.value || !descriptionInput.value || !amountInput.value) {
+                    alert('Please fill in all required fields (Date, Description, Amount)');
+                    return;
+                }
+
+                // Parse values
+                const date = dateInput.value; // YYYY-MM-DD format
+                const transactionRef = refInput.value.trim() || '';
+                const description = descriptionInput.value.trim();
+                const amountIncVat = parseFloat(amountInput.value) || 0;
+
+                // DEBUG: Log VAT select details
+                console.log('💾 [CUSTOM TX] VAT Select element:', vatSelect);
+                console.log('💾 [CUSTOM TX] VAT Select value:', vatSelect?.value);
+                console.log('💾 [CUSTOM TX] VAT Select value type:', typeof vatSelect?.value);
+
+                const vatRate = vatSelect.value === '0' ? 0 : (parseInt(vatSelect.value) || 20);
+                console.log('💾 [CUSTOM TX] Calculated vatRate:', vatRate);
+
+                const quarter = parseInt(quarterSelect.value) || 1;
+                const splitPercentage = parseFloat(splitInput.value) || 100;
+                const detail = detailInput.value.trim() || '';
+
+                // Calculate ex-VAT amount
+                let amountExVat;
+                let zeroVAT = false;
+                if (vatRate === 0) {
+                    amountExVat = amountIncVat;
+                    zeroVAT = true;
+                    console.log('💾 [CUSTOM TX] 0% VAT - amountExVat = amountIncVat =', amountExVat);
+                } else {
+                    amountExVat = amountIncVat / 1.2;
+                    console.log('💾 [CUSTOM TX] 20% VAT - amountExVat = amountIncVat/1.2 =', amountExVat);
+                }
+
+                console.log('💾 [CUSTOM TX] Final values:', { amountIncVat, amountExVat, zeroVAT, vatRate });
+
+                // Calculate assigned amount (ex-VAT × split percentage)
+                const assignedAmount = (amountExVat * (splitPercentage / 100)).toFixed(2);
+
+                // Create transaction object matching the standard format
+                const customTransaction = {
+                    date: date,
+                    description: `[CUSTOM] ${description}`,
+                    spent: amountIncVat,
+                    spent_ex_vat: amountExVat,
+                    zeroVAT: zeroVAT,
+                    detail: detail,
+                    isCustom: true,
+                    createdAt: new Date().toISOString(),
+                    assignments: [{
+                        projectId: projectId,
+                        category: category,
+                        itemKey: itemKey || null,
+                        quarter: quarter,
+                        percentage: splitPercentage,
+                        amount: parseFloat(assignedAmount),
+                        transactionRef: transactionRef
+                    }]
+                };
+
+                console.log('📝 [CUSTOM TX] Transaction object:', customTransaction);
+
+                // Save to IndexedDB
+                if (!db) await initIndexedDB();
+                if (!db) throw new Error('Database not available');
+
+                const txn = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const store = txn.objectStore(CSV_STORE_NAME);
+
+                // Look for existing custom transactions file
+                const allFiles = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                let customFile = allFiles.find(f => f.name === 'custom_transactions.csv');
+
+                console.log('💾 [CUSTOM TX] customFile:', customFile);
+                console.log('💾 [CUSTOM TX] Looking for:', { originalDate, originalDescription });
+                if (customFile && customFile.transactions) {
+                    console.log('💾 [CUSTOM TX] Transactions in file:', customFile.transactions.map(t => ({ date: t.date, desc: t.description })));
+                }
+
+                if (isEditMode && customFile && customFile.transactions) {
+                    // EDIT MODE: Find and update the existing transaction
+                    const txIndex = customFile.transactions.findIndex(t => {
+                        const dateMatch = t.date === originalDate;
+                        const descMatch = t.description === originalDescription;
+                        console.log('💾 [CUSTOM TX] Comparing:', {
+                            txDate: t.date, originalDate, dateMatch,
+                            txDesc: t.description, originalDescription, descMatch
+                        });
+                        return dateMatch && descMatch;
+                    });
+
+                    console.log('💾 [CUSTOM TX] Found at index:', txIndex);
+
+                    if (txIndex !== -1) {
+                        // Preserve the original createdAt timestamp
+                        customTransaction.createdAt = customFile.transactions[txIndex].createdAt || customTransaction.createdAt;
+                        customTransaction.updatedAt = new Date().toISOString();
+                        console.log('✅ [CUSTOM TX] BEFORE UPDATE - old transaction:', JSON.stringify(customFile.transactions[txIndex]));
+                        customFile.transactions[txIndex] = customTransaction;
+                        console.log('✅ [CUSTOM TX] AFTER UPDATE - new transaction:', JSON.stringify(customTransaction));
+                        console.log('✅ [CUSTOM TX] Updated existing transaction at index:', txIndex);
+                    } else {
+                        // Transaction not found, add as new
+                        console.warn('⚠️ [CUSTOM TX] Original transaction not found, adding as new');
+                        customFile.transactions.push(customTransaction);
+                    }
+                } else {
+                    // ADD MODE: Create new transaction
+                    if (customFile) {
+                        if (!customFile.transactions) {
+                            customFile.transactions = [];
+                        }
+                        customFile.transactions.push(customTransaction);
+                    } else {
+                        customFile = {
+                            name: 'custom_transactions.csv',
+                            displayName: 'Custom Transactions',
+                            uploadDate: new Date().toISOString(),
+                            isCustom: true,
+                            transactions: [customTransaction]
+                        };
+                    }
+                }
+
+                // Save back to IndexedDB - use a NEW transaction to ensure write succeeds
+                // (the original transaction may have auto-committed due to async processing)
+                const writeTxn = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const writeStore = writeTxn.objectStore(CSV_STORE_NAME);
+
+                await new Promise((resolve, reject) => {
+                    const putRequest = writeStore.put(customFile);
+                    putRequest.onsuccess = () => {
+                        console.log('✅ [CUSTOM TX] IndexedDB put succeeded');
+                        resolve();
+                    };
+                    putRequest.onerror = () => {
+                        console.error('❌ [CUSTOM TX] IndexedDB put failed:', putRequest.error);
+                        reject(putRequest.error);
+                    };
+                });
+
+                // Wait for the transaction to complete
+                await new Promise((resolve, reject) => {
+                    writeTxn.oncomplete = () => {
+                        console.log('✅ [CUSTOM TX] IndexedDB transaction completed');
+                        resolve();
+                    };
+                    writeTxn.onerror = () => {
+                        console.error('❌ [CUSTOM TX] IndexedDB transaction error:', writeTxn.error);
+                        reject(writeTxn.error);
+                    };
+                });
+
+                console.log('✅ [CUSTOM TX] Transaction saved successfully');
+
+                // Close the form and clean up edit data
+                const container = document.getElementById(formId);
+                if (container) {
+                    container.style.display = 'none';
+                    container.innerHTML = '';
+                }
+                delete customTransactionEditData[formId];
+
+                // Refresh cached transactions
+                cachedTransactions = await loadAllTransactions();
+
+                // Re-render the grants page
+                if (typeof renderBudgetBreakdown === 'function') {
+                    renderBudgetBreakdown();
+                }
+
+                alert(isEditMode ? 'Custom transaction updated successfully!' : 'Custom transaction added successfully!');
+
+            } catch (error) {
+                console.error('❌ [CUSTOM TX] Failed to save custom transaction:', error);
+                alert(`Failed to save custom transaction: ${error.message}`);
+            }
+        }
+
+        /**
+         * Delete a custom transaction
+         */
+        async function deleteCustomTransaction(transactionDate, transactionDescription, projectId, category, itemKey) {
+            console.log('🗑️ [CUSTOM TX] Deleting custom transaction:', { transactionDate, transactionDescription, projectId, category, itemKey });
+
+            // Confirm with user
+            if (!confirm(`Delete this custom transaction?\n\nTransaction: ${transactionDescription}\nDate: ${transactionDate}\n\nThis will permanently remove the custom transaction.`)) {
+                return;
+            }
+
+            try {
+                if (!db) await initIndexedDB();
+                if (!db) throw new Error('Database not available');
+
+                const txn = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const store = txn.objectStore(CSV_STORE_NAME);
+
+                // Find custom transactions file
+                const allFiles = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                const customFile = allFiles.find(f => f.name === 'custom_transactions.csv');
+
+                if (!customFile || !customFile.transactions) {
+                    throw new Error('Custom transactions file not found');
+                }
+
+                // Find and remove the transaction
+                const txIndex = customFile.transactions.findIndex(t =>
+                    t.date === transactionDate && t.description === transactionDescription
+                );
+
+                if (txIndex === -1) {
+                    throw new Error('Transaction not found');
+                }
+
+                customFile.transactions.splice(txIndex, 1);
+
+                // Save back to IndexedDB
+                await new Promise((resolve, reject) => {
+                    const putRequest = store.put(customFile);
+                    putRequest.onsuccess = () => resolve();
+                    putRequest.onerror = () => reject(putRequest.error);
+                });
+
+                console.log('✅ [CUSTOM TX] Transaction deleted successfully');
+
+                // Refresh cached transactions
+                cachedTransactions = await loadAllTransactions();
+
+                // Re-render the grants page
+                if (typeof renderBudgetBreakdown === 'function') {
+                    renderBudgetBreakdown();
+                }
+
+            } catch (error) {
+                console.error('❌ [CUSTOM TX] Failed to delete custom transaction:', error);
+                alert(`Failed to delete custom transaction: ${error.message}`);
+            }
+        }
+
         /**
          * Make transaction reference editable on double-click
          */
@@ -13958,5 +14491,153 @@ ${inputText}`
             </div>
         </div>
     </div>
+
+    <!-- Split Screen Overlay -->
+    <div id="splitScreenOverlay" class="split-screen-overlay">
+        <div class="split-screen-header">
+            <h2>Split Screen Mode</h2>
+            <div class="split-screen-controls">
+                <div class="split-pane-selector">
+                    <label>Left:</label>
+                    <select id="splitLeftPage" onchange="loadSplitPane('left', this.value)">
+                        <option value="grants.html" selected>Grants</option>
+                        <option value="spend.html">Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <div class="split-pane-selector">
+                    <label>Right:</label>
+                    <select id="splitRightPage" onchange="loadSplitPane('right', this.value)">
+                        <option value="grants.html">Grants</option>
+                        <option value="spend.html" selected>Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <button class="split-orientation-btn" onclick="toggleSplitOrientation()" title="Toggle horizontal/vertical split">⇄ Toggle Layout</button>
+                <button class="split-orientation-btn" onclick="refreshSplitPanes()" title="Refresh both panes">↻ Refresh</button>
+            </div>
+            <button class="split-screen-close" onclick="closeSplitScreenMode()">✕ Close Split View</button>
+        </div>
+        <div id="splitScreenContainer" class="split-screen-container">
+            <div class="split-pane" id="splitPaneLeft">
+                <div class="split-pane-header">
+                    <span id="splitLeftTitle">Grants</span>
+                    <button onclick="loadSplitPane('left', document.getElementById('splitLeftPage').value)" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">↻</button>
+                </div>
+                <div class="split-pane-content">
+                    <iframe id="splitLeftFrame" src="about:blank"></iframe>
+                </div>
+            </div>
+            <div class="split-divider" id="splitDivider"></div>
+            <div class="split-pane" id="splitPaneRight">
+                <div class="split-pane-header">
+                    <span id="splitRightTitle">Spend</span>
+                    <button onclick="loadSplitPane('right', document.getElementById('splitRightPage').value)" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">↻</button>
+                </div>
+                <div class="split-pane-content">
+                    <iframe id="splitRightFrame" src="about:blank"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Split Screen Mode Functions
+        const pageNames = { 'grants.html': 'Grants', 'spend.html': 'Spend', 'gantt.html': 'Gantt', 'timesheet.html': 'Labour', 'index.html': 'Sketcher', 'exploit.html': 'Exploit', 'risks.html': 'Risks', 'quote.html': 'Quote' };
+
+        function openSplitScreenMode() {
+            const overlay = document.getElementById('splitScreenOverlay');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            loadSplitPane('left', document.getElementById('splitLeftPage').value);
+            loadSplitPane('right', document.getElementById('splitRightPage').value);
+            initSplitDivider();
+            if (typeof showToast === 'function') showToast('Split Screen Mode activated', 'info');
+        }
+
+        function closeSplitScreenMode() {
+            const overlay = document.getElementById('splitScreenOverlay');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+            document.getElementById('splitLeftFrame').src = 'about:blank';
+            document.getElementById('splitRightFrame').src = 'about:blank';
+            if (typeof showToast === 'function') showToast('Split Screen Mode closed', 'info');
+        }
+
+        function loadSplitPane(pane, page) {
+            const frameId = pane === 'left' ? 'splitLeftFrame' : 'splitRightFrame';
+            const titleId = pane === 'left' ? 'splitLeftTitle' : 'splitRightTitle';
+            const frame = document.getElementById(frameId);
+            const title = document.getElementById(titleId);
+            const url = page + (page.includes('?') ? '&' : '?') + 'splitMode=true';
+            frame.src = url;
+            title.textContent = pageNames[page] || page;
+        }
+
+        function toggleSplitOrientation() {
+            const container = document.getElementById('splitScreenContainer');
+            container.classList.toggle('vertical');
+            if (typeof showToast === 'function') showToast(container.classList.contains('vertical') ? 'Vertical layout' : 'Horizontal layout', 'info');
+        }
+
+        function refreshSplitPanes() {
+            loadSplitPane('left', document.getElementById('splitLeftPage').value);
+            loadSplitPane('right', document.getElementById('splitRightPage').value);
+            if (typeof showToast === 'function') showToast('Both panes refreshed', 'info');
+        }
+
+        function initSplitDivider() {
+            const divider = document.getElementById('splitDivider');
+            const container = document.getElementById('splitScreenContainer');
+            const leftPane = document.getElementById('splitPaneLeft');
+            const rightPane = document.getElementById('splitPaneRight');
+            let isDragging = false;
+
+            divider.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                document.body.style.cursor = container.classList.contains('vertical') ? 'row-resize' : 'col-resize';
+                document.body.style.userSelect = 'none';
+                document.getElementById('splitLeftFrame').style.pointerEvents = 'none';
+                document.getElementById('splitRightFrame').style.pointerEvents = 'none';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const containerRect = container.getBoundingClientRect();
+                const isVertical = container.classList.contains('vertical');
+                const percentage = isVertical ? ((e.clientY - containerRect.top) / containerRect.height) * 100 : ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                const clampedPercentage = Math.max(20, Math.min(80, percentage));
+                leftPane.style.flex = `0 0 ${clampedPercentage}%`;
+                rightPane.style.flex = `0 0 ${100 - clampedPercentage - 1}%`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    document.getElementById('splitLeftFrame').style.pointerEvents = '';
+                    document.getElementById('splitRightFrame').style.pointerEvents = '';
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const overlay = document.getElementById('splitScreenOverlay');
+                if (overlay.classList.contains('active')) closeSplitScreenMode();
+            }
+        });
+    </script>
 </body>
 </html>
