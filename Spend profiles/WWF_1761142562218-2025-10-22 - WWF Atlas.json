@@ -1,0 +1,49 @@
+{
+  "projectNumber": "WWF-1761142562218",
+  "projectName": "WWF Grant",
+  "fundingBody": "WWF",
+  "financeSummary": {
+    "fundingBody": "WWF",
+    "projectStartMonth": 7,
+    "projectStartYear": 2024,
+    "projectDurationMonths": 36,
+    "totalCosts": 283086,
+    "fundingLevel": 0,
+    "fundingSought": 0,
+    "otherPublicFunding": 0,
+    "contribution": 0
+  },
+  "labour": {
+    "workingDaysPerYear": 232,
+    "staff": [],
+    "totalCost": 118224,
+    "hasPAYE": true
+  },
+  "overheads": {
+    "percentage": 20.06529976992827,
+    "labourCosts": 118224,
+    "totalCost": 23722
+  },
+  "materials": {
+    "items": [],
+    "totalCost": 67227
+  },
+  "capitalUsage": {
+    "items": [],
+    "totalCost": 0
+  },
+  "subcontracting": {
+    "contractors": [],
+    "totalCost": 50637
+  },
+  "travel": {
+    "trips": [],
+    "totalCost": 12900
+  },
+  "otherCosts": {
+    "items": [],
+    "totalCost": 10376
+  },
+  "lastModified": "2025-10-22T14:16:59.832Z",
+  "projectId": 7
+}

@@ -1,0 +1,401 @@
+{
+  "projectId": 16,
+  "projectName": "eFloat",
+  "projectNumber": "",
+  "lastModified": "2025-10-21T13:03:54.490Z",
+  "financeSummary": {
+    "fundingBody": "Welsh Gov",
+    "totalCosts": 59775.45,
+    "totalProjectCosts": 74719.31249999999,
+    "fundingLevel": 80,
+    "projectDuration": "See grant documentation",
+    "capitalTotal": 8800.6,
+    "revenueTotal": 50974.85
+  },
+  "labour": {
+    "staff": [],
+    "workingDaysPerYear": 0,
+    "totalCost": 0
+  },
+  "overheads": {
+    "items": [],
+    "totalCost": 0
+  },
+  "materials": {
+    "items": [],
+    "totalCost": 0
+  },
+  "capitalUsage": {
+    "items": [],
+    "totalCost": 0
+  },
+  "subcontracting": {
+    "contractors": [],
+    "totalCost": 0
+  },
+  "travel": {
+    "trips": [],
+    "totalCost": 0
+  },
+  "otherCosts": {
+    "items": [],
+    "totalCost": 0
+  },
+  "fundingBody": "Welsh Gov",
+  "welshGovData": {
+    "sections": {
+      "capital": {
+        "nonStandard": [],
+        "standardCosts": []
+      },
+      "revenue": {
+        "nonStandard": [
+          {
+            "itemCode": "GF017",
+            "description": "Revenue - Administration",
+            "totalCost": 600,
+            "grantRate": 80,
+            "maxGrantValue": 480
+          },
+          {
+            "itemCode": "GF003",
+            "description": "Revenue - ICT",
+            "totalCost": 900,
+            "grantRate": 80,
+            "maxGrantValue": 720
+          },
+          {
+            "itemCode": "GF001",
+            "description": "Revenue - ICT",
+            "totalCost": 880,
+            "grantRate": 80,
+            "maxGrantValue": 704
+          },
+          {
+            "itemCode": "GF008",
+            "description": "Revenue - ICT",
+            "totalCost": 900,
+            "grantRate": 80,
+            "maxGrantValue": 720
+          },
+          {
+            "itemCode": "GF005",
+            "description": "Revenue - ICT",
+            "totalCost": 960,
+            "grantRate": 80,
+            "maxGrantValue": 768
+          },
+          {
+            "itemCode": "GF006",
+            "description": "Revenue - ICT",
+            "totalCost": 600,
+            "grantRate": 80,
+            "maxGrantValue": 480
+          },
+          {
+            "itemCode": "GF007",
+            "description": "Revenue - ICT",
+            "totalCost": 960,
+            "grantRate": 80,
+            "maxGrantValue": 768
+          },
+          {
+            "itemCode": "GF004",
+            "description": "Revenue - ICT",
+            "totalCost": 800,
+            "grantRate": 80,
+            "maxGrantValue": 640
+          },
+          {
+            "itemCode": "GF025",
+            "description": "Revenue - Legal and Professional",
+            "totalCost": 250,
+            "grantRate": 80,
+            "maxGrantValue": 200
+          },
+          {
+            "itemCode": "GF026",
+            "description": "Revenue - Legal and Professional",
+            "totalCost": 4880,
+            "grantRate": 80,
+            "maxGrantValue": 3904
+          },
+          {
+            "itemCode": "GF018",
+            "description": "Revenue - Travel and Transport (for project staff)",
+            "totalCost": 4800,
+            "grantRate": 80,
+            "maxGrantValue": 3840
+          },
+          {
+            "itemCode": "GF019",
+            "description": "Revenue - Travel and Transport (for project staff)",
+            "totalCost": 684,
+            "grantRate": 80,
+            "maxGrantValue": 547.2
+          },
+          {
+            "itemCode": "GF021",
+            "description": "Revenue items under £500",
+            "totalCost": 200,
+            "grantRate": 80,
+            "maxGrantValue": 160
+          },
+          {
+            "itemCode": "GF016",
+            "description": "Revenue items under £500",
+            "totalCost": 450,
+            "grantRate": 80,
+            "maxGrantValue": 360
+          }
+        ],
+        "standardCosts": [
+          {
+            "itemCode": "GF027",
+            "description": "Business",
+            "itemDetails": "& Financial Project Management Professionals C Berger Project Manager",
+            "quantity": 432,
+            "grantRate": 30.208,
+            "maxGrantValue": 13049.86
+          },
+          {
+            "itemCode": "GF028",
+            "description": "Business",
+            "itemDetails": "& related Research Professionals Mechanical and Electronic Engineer",
+            "quantity": 689,
+            "grantRate": 22.528,
+            "maxGrantValue": 15521.79
+          },
+          {
+            "itemCode": "GF029",
+            "description": "Elementary",
+            "itemDetails": "Trades, Administration & Service Occupations B Marshall, Marine Operations",
+            "quantity": 624,
+            "grantRate": 13,
+            "maxGrantValue": 8112
+          }
+        ]
+      },
+      "itemBreakdown": {
+        "capital": [
+          {
+            "itemCode": "009aa",
+            "description": "Capital",
+            "itemDetails": "- Plant Machinery & Other Equipment Casting mold for buoy shell",
+            "totalCost": 3840.42,
+            "grantRate": 80,
+            "maxGrantApproved": 3072.34,
+            "claimable": true
+          },
+          {
+            "itemCode": "010aa",
+            "description": "Capital",
+            "itemDetails": "- Plant Machinery & Other Equipment Electronics enclosure machining costs",
+            "totalCost": 3000.32,
+            "grantRate": 80,
+            "maxGrantApproved": 2400.26,
+            "claimable": true
+          },
+          {
+            "itemCode": "011aa",
+            "description": "Capital",
+            "itemDetails": "- Plant Machinery & Other Equipment Internal shock proof mounting gantry,",
+            "totalCost": 960,
+            "grantRate": 80,
+            "maxGrantApproved": 768,
+            "claimable": true
+          },
+          {
+            "itemCode": "012aa",
+            "description": "Capital",
+            "itemDetails": "- Plant Machinery & Other Equipment Mooring clump chain for testing buoy system",
+            "totalCost": 600,
+            "grantRate": 80,
+            "maxGrantApproved": 480,
+            "claimable": true
+          },
+          {
+            "itemCode": "013aa",
+            "description": "Capital",
+            "itemDetails": "- Plant Machinery & Other Equipment Rope and chandlery components",
+            "totalCost": 560,
+            "grantRate": 80,
+            "maxGrantApproved": 448,
+            "claimable": true
+          },
+          {
+            "itemCode": "014aa",
+            "description": "Capital",
+            "itemDetails": "- Plant Machinery & Other Equipment Stainless 316 mounting clamps",
+            "totalCost": 560,
+            "grantRate": 80,
+            "maxGrantApproved": 448,
+            "claimable": true
+          },
+          {
+            "itemCode": "015aa",
+            "description": "Capital",
+            "itemDetails": "- Plant Machinery & Other Equipment Stainless machining and 3Dprinting of latch mechanism",
+            "totalCost": 600,
+            "grantRate": 80,
+            "maxGrantApproved": 480,
+            "claimable": true
+          },
+          {
+            "itemCode": "020aa",
+            "description": "Capital",
+            "itemDetails": "- Plant Machinery & Other Equipment Plastic moldings of buoy casings",
+            "totalCost": 880,
+            "grantRate": 80,
+            "maxGrantApproved": 704,
+            "claimable": true
+          }
+        ],
+        "revenue": [
+          {
+            "itemCode": "001aa",
+            "description": "Revenue",
+            "itemDetails": "- ICT Cellular communicati on modules",
+            "totalCost": 880,
+            "grantRate": 80,
+            "maxGrantApproved": 704,
+            "claimable": true
+          },
+          {
+            "itemCode": "003aa",
+            "description": "Revenue",
+            "itemDetails": "- ICT Electronic peripherals and sundries",
+            "totalCost": 900,
+            "grantRate": 80,
+            "maxGrantApproved": 720,
+            "claimable": true
+          },
+          {
+            "itemCode": "004aa",
+            "description": "Revenue",
+            "itemDetails": "- ICT Satellite communicati on modules",
+            "totalCost": 800,
+            "grantRate": 80,
+            "maxGrantApproved": 640,
+            "claimable": true
+          },
+          {
+            "itemCode": "005aa",
+            "description": "Revenue",
+            "itemDetails": "- ICT Single board computer modules",
+            "totalCost": 960,
+            "grantRate": 80,
+            "maxGrantApproved": 768,
+            "claimable": true
+          },
+          {
+            "itemCode": "006aa",
+            "description": "Revenue",
+            "itemDetails": "- ICT Li-ion battery pack",
+            "totalCost": 600,
+            "grantRate": 80,
+            "maxGrantApproved": 480,
+            "claimable": true
+          },
+          {
+            "itemCode": "007aa",
+            "description": "Revenue",
+            "itemDetails": "- ICT Sensor components",
+            "totalCost": 960,
+            "grantRate": 80,
+            "maxGrantApproved": 768,
+            "claimable": true
+          },
+          {
+            "itemCode": "008aa",
+            "description": "Revenue",
+            "itemDetails": "- ICT Cap-free Cellular and Satellite Irridium data contracts",
+            "totalCost": 900,
+            "grantRate": 80,
+            "maxGrantApproved": 720,
+            "claimable": true
+          },
+          {
+            "itemCode": "016aa",
+            "description": "Revenue",
+            "itemDetails": "items under £500 Adhesives, tools, and sundries for protype assembly and testing",
+            "totalCost": 400,
+            "grantRate": 80,
+            "maxGrantApproved": 320,
+            "claimable": true
+          },
+          {
+            "itemCode": "017aa",
+            "description": "Revenue",
+            "itemDetails": "- Administration Postage and courier costs",
+            "totalCost": 600,
+            "grantRate": 80,
+            "maxGrantApproved": 480,
+            "claimable": true
+          },
+          {
+            "itemCode": "018aa",
+            "description": "Revenue",
+            "itemDetails": "- Travel and Transport (for project staff) Use of work barge",
+            "totalCost": 4800,
+            "grantRate": 80,
+            "maxGrantApproved": 3840,
+            "claimable": true
+          },
+          {
+            "itemCode": "019aa",
+            "description": "Revenue",
+            "itemDetails": "- Travel and Transport (for project staff) Travel expenses at recommende d 0.45p/mile",
+            "totalCost": 684,
+            "grantRate": 80,
+            "maxGrantApproved": 547.2,
+            "claimable": true
+          },
+          {
+            "itemCode": "021aa",
+            "description": "Revenue",
+            "itemDetails": "items under £500 Printing of marine grade safety labels (10x at £20ea)",
+            "totalCost": 200,
+            "grantRate": 80,
+            "maxGrantApproved": 160,
+            "claimable": true
+          },
+          {
+            "itemCode": "025aa",
+            "description": "Revenue",
+            "itemDetails": "- Legal and Professional English - Welsh Translation services at £25/hr",
+            "totalCost": 250,
+            "grantRate": 80,
+            "maxGrantApproved": 200,
+            "claimable": true
+          },
+          {
+            "itemCode": "026aa",
+            "description": "Revenue",
+            "itemDetails": "- Legal and Professional Redesign existing system PCB to support integration of new peripheral devices",
+            "totalCost": 4880,
+            "grantRate": 80,
+            "maxGrantApproved": 3904,
+            "claimable": true
+          }
+        ]
+      },
+      "totals": {
+        "totalCapital": 8800.6,
+        "totalRevenueNonStandard": 14291.2,
+        "totalRevenueStandard": 36683.65,
+        "totalRevenueApproved": 50974.85,
+        "totalGrantApproved": 59775.45
+      }
+    },
+    "financeSummary": {
+      "fundingBody": "Welsh Gov",
+      "totalCosts": 59775.45,
+      "totalProjectCosts": 74719.31249999999,
+      "fundingLevel": 80,
+      "projectDuration": "See grant documentation",
+      "capitalTotal": 8800.6,
+      "revenueTotal": 50974.85
+    }
+  }
+}

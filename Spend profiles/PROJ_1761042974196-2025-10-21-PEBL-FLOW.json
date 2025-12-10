@@ -1,0 +1,273 @@
+{
+  "projectName": "PEBL-FLOW",
+  "projectNumber": "PROJ-1761042974196",
+  "lastModified": "2025-10-22T11:02:25.001Z",
+  "financeSummary": {
+    "projectDuration": "12 months",
+    "totalCosts": 91621,
+    "fundingLevel": 100,
+    "fundingSought": 91621,
+    "otherPublicFunding": 0,
+    "contribution": 0,
+    "projectStartMonth": 4,
+    "projectStartYear": 2025,
+    "projectDurationMonths": 12
+  },
+  "labour": {
+    "workingDaysPerYear": 232,
+    "hasPAYE": true,
+    "staff": [
+      {
+        "role": "Project Manager",
+        "grossCost": 40000,
+        "ratePerDay": 172,
+        "days": 60,
+        "totalCost": 10345,
+        "quarterlyCosts": {
+          "q1": 2586.25,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "role": "Lead Electrical Engineer",
+        "grossCost": 37562,
+        "ratePerDay": 162,
+        "days": 95,
+        "totalCost": 15381,
+        "quarterlyCosts": {
+          "q1": 3845.25,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "role": "Lead Software Engineer",
+        "grossCost": 37460,
+        "ratePerDay": 161,
+        "days": 86,
+        "totalCost": 13886,
+        "quarterlyCosts": {
+          "q1": 3221.5,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      }
+    ],
+    "totalCost": 39612
+  },
+  "overheads": {
+    "percentage": 20,
+    "labourCosts": 39612,
+    "totalCost": 7922
+  },
+  "materials": {
+    "items": [
+      {
+        "item": "Acoustic imaging probes",
+        "quantity": 2,
+        "costPerItem": 2000,
+        "total": 4000,
+        "quarterlyCosts": {
+          "q1": 489.84,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "item": "Waterproof housings",
+        "quantity": 2,
+        "costPerItem": 1000,
+        "total": 2000,
+        "quarterlyCosts": {
+          "q1": 3705.73,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "item": "Single-board computer and peripherals",
+        "quantity": 2,
+        "costPerItem": 500,
+        "total": 1000,
+        "quarterlyCosts": {
+          "q1": 237.35,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "item": "Computer processing and software testing hardware",
+        "quantity": 1,
+        "costPerItem": 1050,
+        "total": 1050,
+        "quarterlyCosts": {
+          "q1": 865.56,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      }
+    ],
+    "totalCost": 8050
+  },
+  "capitalUsage": {
+    "items": [],
+    "totalCost": 0
+  },
+  "subcontracting": {
+    "contractors": [
+      {
+        "name": "Oxalid Design Ltd",
+        "country": "UK",
+        "role": "Design of custom PCB that allows us to interface acoustic imaging probes with single board computer and allows us to handle on board processing of data. Design of PCB that allows hardware of FLOWNODE to interact with SUBSCAN device acoustically",
+        "cost": 16000,
+        "totalCost": 16000,
+        "quarterlyCosts": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "name": "CaryMor",
+        "country": "UK",
+        "role": "Provision of vessel and crew for at sea trials",
+        "cost": 1900,
+        "totalCost": 1900,
+        "quarterlyCosts": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "name": "Ecodetect Ltd",
+        "country": "UK",
+        "role": "Development of Machine Learning algorithm that allows us to take raw acoustic images and process this into individual detections of object, species or other debris. Development of on-device firmware that allows the model to run efficiently on the SBC",
+        "cost": 12500,
+        "totalCost": 12500,
+        "quarterlyCosts": {
+          "q1": 180,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      }
+    ],
+    "totalCost": 30400
+  },
+  "travel": {
+    "trips": [
+      {
+        "purpose": "Travel to visit subcontractor Ecodetect",
+        "numberOfTimes": 4,
+        "costEach": 250,
+        "total": 1000,
+        "totalCost": 1000,
+        "quarterlyCosts": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "purpose": "Travel and accommodation for team to visit deployment site",
+        "numberOfTimes": 2,
+        "costEach": 500,
+        "total": 1000,
+        "totalCost": 1000,
+        "quarterlyCosts": {
+          "q1": 683.89,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "purpose": "Travel and accommodation for team to visit pool test site",
+        "numberOfTimes": 2,
+        "costEach": 500,
+        "total": 1000,
+        "totalCost": 1000,
+        "quarterlyCosts": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      }
+    ],
+    "totalCost": 3000
+  },
+  "otherCosts": {
+    "items": [
+      {
+        "description": "Cloud compute for training model",
+        "estimatedCost": 500,
+        "totalCost": 500,
+        "quarterlyCosts": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "description": "SUBSCRIPTION TO MACHINE LEARNING DEVELOPMENT PLATFORM - for 12 months",
+        "estimatedCost": 500,
+        "totalCost": 500,
+        "quarterlyCosts": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "description": "Postage costs of hardware to subcontractors",
+        "estimatedCost": 500,
+        "totalCost": 500,
+        "quarterlyCosts": {
+          "q1": 343.66,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "description": "Berthing fees for test deployments",
+        "estimatedCost": 637,
+        "totalCost": 637,
+        "quarterlyCosts": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      },
+      {
+        "description": "Acoustic Imaging Software development platform license",
+        "estimatedCost": 500,
+        "totalCost": 500,
+        "quarterlyCosts": {
+          "q1": 0,
+          "q2": 0,
+          "q3": 0,
+          "q4": 0
+        }
+      }
+    ],
+    "totalCost": 2637
+  },
+  "projectId": 5
+}

@@ -1,0 +1,223 @@
+{
+  "projectId": null,
+  "projectName": "BioScan",
+  "projectNumber": "PROJ-1761044198446",
+  "lastModified": null,
+  "financeSummary": {
+    "projectDuration": "12 months",
+    "totalCosts": 121628,
+    "fundingLevel": 70,
+    "fundingSought": 85140,
+    "otherPublicFunding": 0,
+    "contribution": 36488
+  },
+  "labour": {
+    "workingDaysPerYear": 232,
+    "hasPAYE": true,
+    "staff": [
+      {
+        "role": "Project Manager",
+        "grossCost": 39440,
+        "ratePerDay": 170,
+        "days": 92,
+        "totalCost": 15640
+      },
+      {
+        "role": "Mechanical Engineer",
+        "grossCost": 39440,
+        "ratePerDay": 170,
+        "days": 130,
+        "totalCost": 22100
+      },
+      {
+        "role": "Embedded Systems Engineer",
+        "grossCost": 39440,
+        "ratePerDay": 170,
+        "days": 85,
+        "totalCost": 14450
+      }
+    ],
+    "totalCost": 52190
+  },
+  "overheads": {
+    "percentage": 20,
+    "labourCosts": 52190,
+    "totalCost": 10438
+  },
+  "materials": {
+    "items": [
+      {
+        "item": "Acoustic Modem for subsea comms",
+        "quantity": 6,
+        "costPerItem": 500,
+        "total": 3000
+      },
+      {
+        "item": "Subsea waterproof enclosures materials",
+        "quantity": 12,
+        "costPerItem": 300,
+        "total": 3600
+      },
+      {
+        "item": "Subsea enclosure potting compounds and tools",
+        "quantity": 1,
+        "costPerItem": 400,
+        "total": 400
+      },
+      {
+        "item": "Camera modules for BioScan integration",
+        "quantity": 6,
+        "costPerItem": 250,
+        "total": 1500
+      },
+      {
+        "item": "On-board computer module for machine vision processing",
+        "quantity": 6,
+        "costPerItem": 150,
+        "total": 900
+      },
+      {
+        "item": "Irridium antenna for surface relay",
+        "quantity": 3,
+        "costPerItem": 250,
+        "total": 750
+      },
+      {
+        "item": "Mechanical components for wiper mechanisms",
+        "quantity": 6,
+        "costPerItem": 200,
+        "total": 1200
+      },
+      {
+        "item": "Sensor components (pressure, temperature, accelerometer, light)",
+        "quantity": 6,
+        "costPerItem": 200,
+        "total": 1200
+      },
+      {
+        "item": "Magnetic clamping mechanical components",
+        "quantity": 6,
+        "costPerItem": 200,
+        "total": 1200
+      },
+      {
+        "item": "Tools for machining and modifying electronics",
+        "quantity": 1,
+        "costPerItem": 500,
+        "total": 500
+      },
+      {
+        "item": "Tools for machining and modifying mechanical components",
+        "quantity": 1,
+        "costPerItem": 500,
+        "total": 500
+      },
+      {
+        "item": "Mooring materials for marine deployments",
+        "quantity": 1,
+        "costPerItem": 510,
+        "total": 510
+      },
+      {
+        "item": "Marine safety signage and night lights",
+        "quantity": 1,
+        "costPerItem": 400,
+        "total": 400
+      },
+      {
+        "item": "Custom PCB boards and components for camera modules",
+        "quantity": 6,
+        "costPerItem": 180,
+        "total": 1080
+      },
+      {
+        "item": "Custom PCB boards and components for wiper modules",
+        "quantity": 3,
+        "costPerItem": 200,
+        "total": 600
+      },
+      {
+        "item": "Custom PCB boards and components for sensor modules",
+        "quantity": 6,
+        "costPerItem": 200,
+        "total": 1200
+      },
+      {
+        "item": "Custom PCB boards and components for acoustic modules",
+        "quantity": 6,
+        "costPerItem": 160,
+        "total": 960
+      }
+    ],
+    "totalCost": 19500
+  },
+  "capitalUsage": {
+    "items": [],
+    "totalCost": 0
+  },
+  "subcontracting": {
+    "contractors": [
+      {
+        "name": "Excel Precision Engineering Ltd",
+        "country": "UK",
+        "role": "Design and manufacture robust subsea enclosures for BioScan sensor and Surface Relay units",
+        "cost": 8900
+      },
+      {
+        "name": "Sony UK Technology Centre",
+        "country": "UK",
+        "role": "Co-design, procure components and produce and assemble custom electronics boards/systems for BioScan's imaging, processing, and communication. Includes QC and testing phases.",
+        "cost": 12500
+      },
+      {
+        "name": "Pembrokeshire Coastal Forum (META)",
+        "country": "UK",
+        "role": "Provide access to pre-consented test sites (Milford Haven Waterway) for PEBL system deployment, operation, and validation.",
+        "cost": 5000
+      },
+      {
+        "name": "Robust Boats Ltd",
+        "country": "UK",
+        "role": "Provide trailer transport for PEBL's 5m monitoring vessel to/from deployment sites.",
+        "cost": 1000
+      },
+      {
+        "name": "Oxalis Design Ltd",
+        "country": "UK",
+        "role": "Full-stack development of PCBs to upgrade PEBL’s core firmware for onboard machine vision and sensor fusion with imaging units.",
+        "cost": 8800
+      }
+    ],
+    "totalCost": 36200
+  },
+  "travel": {
+    "trips": [
+      {
+        "purpose": "Petrol for PEBL team to travel deployment location with hardware",
+        "numberOfTimes": 12,
+        "costEach": 100,
+        "total": 1200
+      },
+      {
+        "purpose": "Accomodation for PEBL team during deployment",
+        "numberOfTimes": 3,
+        "costEach": 200,
+        "total": 600
+      }
+    ],
+    "totalCost": 1800
+  },
+  "otherCosts": {
+    "items": [
+      {
+        "description": "Postage of hardware to and from subcontractors and project collaborators (£25 per package approx 4/month for 10month of project)",
+        "estimatedCost": 1000
+      },
+      {
+        "description": "Van rental for transporting mooring equipment and hardware",
+        "estimatedCost": 500
+      }
+    ],
+    "totalCost": 1500
+  }
+}

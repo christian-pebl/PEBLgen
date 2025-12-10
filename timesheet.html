@@ -726,29 +726,57 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
         <!-- Section 2: Forecast Data -->
         <div class="section forecast-section">
             <h2>Forecast Data</h2>
-            <p class="instructions">Paste tab-separated data (no headers)</p>
+            <p class="instructions">Select project and months from Labour Allocation table</p>
 
-            <!-- Fixed Header Table -->
-            <table class="preview-table" style="margin-bottom: 8px;">
-                <thead>
-                    <tr>
-                        <th>Month</th>
-                        <th>Staff</th>
-                        <th>Days</th>
-                        <th>Rate</th>
-                        <th>Hrs</th>
-                        <th>Remaining</th>
-                        <th>Spent</th>
-                        <th>Ref</th>
-                        <th>Cost</th>
-                    </tr>
-                </thead>
-            </table>
+            <!-- Project Selection -->
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 12px; color: #374151;">Select Project:</label>
+                <select id="forecastProjectSelect" onchange="onForecastProjectChange()" style="width: 100%; max-width: 350px; padding: 6px; font-size: 13px; border: 1px solid #ff9800; border-radius: 4px;">
+                    <option value="">-- Select a project --</option>
+                </select>
+            </div>
 
-            <!-- Paste Area -->
-            <textarea id="forecastPasteArea" placeholder="Apr    Hardware / Lead / CW    7.92    162.00    63.33    0.00    63.33        1282.43" style="width: 100%; min-height: 80px; padding: 6px; border: 1px solid #ff9800; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11px; resize: vertical; margin-bottom: 6px;"></textarea>
+            <!-- Month Selection -->
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 12px; color: #374151;">Select Months:</label>
 
-            <button class="btn btn-primary" onclick="parseForecastData()">Parse Forecast Data</button>
+                <!-- Quarter Quick Select -->
+                <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                    <button type="button" onclick="selectQuarter(1)" class="btn" style="background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; padding: 4px 12px; font-size: 11px;">Q1 (Jan-Mar)</button>
+                    <button type="button" onclick="selectQuarter(2)" class="btn" style="background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 4px 12px; font-size: 11px;">Q2 (Apr-Jun)</button>
+                    <button type="button" onclick="selectQuarter(3)" class="btn" style="background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 4px 12px; font-size: 11px;">Q3 (Jul-Sep)</button>
+                    <button type="button" onclick="selectQuarter(4)" class="btn" style="background: #fce4ec; color: #c2185b; border: 1px solid #f48fb1; padding: 4px 12px; font-size: 11px;">Q4 (Oct-Dec)</button>
+                    <button type="button" onclick="clearMonthSelection()" class="btn" style="background: #f5f5f5; color: #666; border: 1px solid #ccc; padding: 4px 12px; font-size: 11px;">Clear</button>
+                </div>
+
+                <!-- Month Checkboxes -->
+                <div id="monthCheckboxContainer" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px;">
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="01" data-quarter="1"> Jan</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="02" data-quarter="1"> Feb</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="03" data-quarter="1"> Mar</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="04" data-quarter="2"> Apr</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="05" data-quarter="2"> May</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="06" data-quarter="2"> Jun</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="07" data-quarter="3"> Jul</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="08" data-quarter="3"> Aug</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="09" data-quarter="3"> Sep</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="10" data-quarter="4"> Oct</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="11" data-quarter="4"> Nov</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;"><input type="checkbox" class="month-checkbox" value="12" data-quarter="4"> Dec</label>
+                </div>
+
+                <!-- Year Selection -->
+                <div style="margin-top: 8px;">
+                    <label style="font-size: 11px; color: #666; margin-right: 6px;">Year:</label>
+                    <select id="forecastYearSelect" style="padding: 4px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="2024">2024</option>
+                        <option value="2025" selected>2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="loadAllocationData()">Load Allocation Data</button>
 
             <!-- Preview Table -->
             <div id="forecastPreview"></div>
@@ -804,6 +832,42 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
             <button class="btn btn-warning" onclick="downloadCSV()">CSV</button>
             <button class="btn btn-success" onclick="showHistory()">History</button>
             <button class="btn btn-danger" onclick="clearTimesheet()">Clear</button>
+        </div>
+
+        <!-- Section 7b: Approve & Save -->
+        <div class="section" style="background-color: #e3f2fd; border-left: 3px solid #2196f3;">
+            <h2>Approve & Save</h2>
+            <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Add signatures to approve timesheets, then save for later recall.</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn" id="addSignaturesBtn" onclick="showSignatureModal()" style="background: #7c4dff; color: white;" disabled>✍️ Add Signatures</button>
+                <button class="btn" id="approveAllBtn" onclick="approveAllTimesheets()" style="background: #00c853; color: white;" disabled>✅ Approve All</button>
+                <button class="btn" onclick="saveTimesheetToDatabase()" style="background: #2196f3; color: white;">💾 Save</button>
+                <button class="btn" onclick="showLoadTimesheetModal()" style="background: #ff9800; color: white;">📂 Load</button>
+            </div>
+            <div id="signatureStatus" style="margin-top: 8px; font-size: 11px; color: #666;"></div>
+        </div>
+
+        <!-- Signature Management Modal -->
+        <div id="signatureModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+            <div style="background:white; margin:30px auto; padding:20px; max-width:700px; border-radius:8px; max-height:85vh; overflow-y:auto;">
+                <h2 style="margin-top:0;">✍️ Manage Signatures</h2>
+                <p style="font-size: 12px; color: #666;">Upload PNG images or paste signatures from clipboard for each staff member.</p>
+                <div id="signatureList" style="margin: 15px 0;"></div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <button class="btn btn-secondary" onclick="closeSignatureModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load Timesheet Modal -->
+        <div id="loadTimesheetModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+            <div style="background:white; margin:50px auto; padding:20px; max-width:600px; border-radius:8px; max-height:80vh; overflow-y:auto;">
+                <h2 style="margin-top:0;">📂 Load Saved Timesheet</h2>
+                <div id="savedTimesheetList" style="margin: 15px 0;"></div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 15px;">
+                    <button class="btn btn-secondary" onclick="closeLoadTimesheetModal()">Close</button>
+                </div>
+            </div>
         </div>
 
         <!-- History Modal (hidden by default) -->
@@ -1327,6 +1391,7 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
 
         let ganttData = null;
         let timesheetData = [];
+        let currentTimesheetProject = ''; // Store the project name for the current timesheet
 
         // Tab switching
         function switchTab(tabName) {
@@ -1343,6 +1408,8 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
             if (tabName === 'timesheets') {
                 document.getElementById('timesheets-tab').classList.add('active');
                 document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                // Populate the forecast project dropdown with labour projects
+                populateForecastProjectDropdown();
             } else if (tabName === 'allocation') {
                 document.getElementById('allocation-tab').classList.add('active');
                 document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
@@ -1369,9 +1436,134 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
             localStorage.setItem('timesheet_system_prompt', prompt);
         }
 
-        // Parse forecast data from textarea
+        // Populate forecast project dropdown from labourProjects
+        function populateForecastProjectDropdown() {
+            const dropdown = document.getElementById('forecastProjectSelect');
+            if (!dropdown) return;
+
+            dropdown.innerHTML = '<option value="">-- Select a project --</option>';
+
+            if (labourProjects && labourProjects.length > 0) {
+                labourProjects.forEach((project, idx) => {
+                    // Skip hidden projects
+                    if (hiddenProjects.has(project.name)) return;
+
+                    const option = document.createElement('option');
+                    option.value = idx;
+                    option.textContent = project.name;
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+
+        // Handle project selection change
+        function onForecastProjectChange() {
+            // Clear the preview when project changes
+            document.getElementById('forecastPreview').innerHTML = '';
+            forecastData = [];
+            updateCostEstimate();
+        }
+
+        // Select months for a specific quarter (1=Q1, 2=Q2, 3=Q3, 4=Q4)
+        function selectQuarter(quarter) {
+            const checkboxes = document.querySelectorAll('.month-checkbox');
+            checkboxes.forEach(cb => {
+                if (parseInt(cb.dataset.quarter) === quarter) {
+                    cb.checked = true;
+                }
+            });
+        }
+
+        // Clear all month selections
+        function clearMonthSelection() {
+            const checkboxes = document.querySelectorAll('.month-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+        }
+
+        // Month number to short name mapping (for forecast display)
+        const monthShortNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Load allocation data from labourRows
+        function loadAllocationData() {
+            const projectIdx = parseInt(document.getElementById('forecastProjectSelect').value);
+            const selectedYear = document.getElementById('forecastYearSelect').value;
+            const selectedMonths = Array.from(document.querySelectorAll('.month-checkbox:checked')).map(cb => cb.value);
+
+            if (isNaN(projectIdx)) {
+                showToast('Please select a project first', 'error');
+                return;
+            }
+
+            if (selectedMonths.length === 0) {
+                showToast('Please select at least one month', 'error');
+                return;
+            }
+
+            const projectName = labourProjects[projectIdx]?.name || '';
+            forecastData = [];
+
+            // Build list of YYYY-MM strings for filtering
+            const targetMonths = selectedMonths.map(m => `${selectedYear}-${m}`);
+
+            // Scan labourRows for matching entries
+            labourRows.forEach(row => {
+                // Check if row's month matches selected year-months
+                if (!row.month || !targetMonths.includes(row.month)) return;
+
+                // Check if this row has allocation for the selected project
+                const projectAllocation = row.projects[projectIdx];
+                if (!projectAllocation) return;
+
+                const days = projectAllocation.days || 0;
+                const rate = projectAllocation.rate || 0;
+                const total = projectAllocation.total || (days * rate);
+
+                // Only include rows with actual allocation (days > 0)
+                if (days <= 0) return;
+
+                // Calculate hours (days * hoursPerDay)
+                const hours = days * hoursPerDay;
+
+                // Parse month for display (YYYY-MM -> "Apr")
+                const monthNum = parseInt(row.month.split('-')[1]);
+                const monthShort = monthShortNames[monthNum] || row.month;
+
+                forecastData.push({
+                    month: monthShort,
+                    staff: row.staff || '',
+                    daysForecast: days,
+                    ratePerDay: rate,
+                    hrsForecast: hours,
+                    hrsRemaining: 0, // Not applicable from allocation
+                    hrsSpent: 0,     // Not applicable from allocation
+                    ref: '',
+                    costPerMonth: total
+                });
+            });
+
+            if (forecastData.length === 0) {
+                showToast(`No allocation data found for "${projectName}" in selected months`, 'warning');
+                return;
+            }
+
+            // Sort by month then staff
+            const monthOrder = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12};
+            forecastData.sort((a, b) => {
+                const monthDiff = (monthOrder[a.month] || 0) - (monthOrder[b.month] || 0);
+                if (monthDiff !== 0) return monthDiff;
+                return a.staff.localeCompare(b.staff);
+            });
+
+            displayForecastPreview();
+            updateCostEstimate();
+            showToast(`Loaded ${forecastData.length} allocation entries for "${projectName}"`, 'success');
+        }
+
+        // Legacy: Parse forecast data from textarea (kept for backwards compatibility)
         function parseForecastData() {
-            const input = document.getElementById('forecastPasteArea').value.trim();
+            const input = document.getElementById('forecastPasteArea')?.value?.trim();
             if (!input) {
                 showToast('Please paste forecast data first', 'error');
                 return;
@@ -1411,17 +1603,46 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
         function displayForecastPreview() {
             const preview = document.getElementById('forecastPreview');
 
-            let html = '<table class="preview-table" style="margin-top: 8px;">';
-            html += '<thead><tr><th>Month</th><th>Staff</th><th>Hrs</th></tr></thead>';
+            // Calculate totals
+            let totalDays = 0;
+            let totalHours = 0;
+            let totalCost = 0;
+            forecastData.forEach(item => {
+                totalDays += item.daysForecast || 0;
+                totalHours += item.hrsForecast || 0;
+                totalCost += item.costPerMonth || 0;
+            });
+
+            let html = '<table class="preview-table" style="margin-top: 8px; font-size: 11px;">';
+            html += '<thead><tr>';
+            html += '<th style="padding: 6px;">Month</th>';
+            html += '<th style="padding: 6px;">Staff</th>';
+            html += '<th style="padding: 6px; text-align: right;">Days</th>';
+            html += '<th style="padding: 6px; text-align: right;">Rate</th>';
+            html += '<th style="padding: 6px; text-align: right; background: #e8f5e9;">Hrs</th>';
+            html += '<th style="padding: 6px; text-align: right;">Cost</th>';
+            html += '</tr></thead>';
             html += '<tbody>';
 
             forecastData.forEach(item => {
                 html += `<tr>
-                    <td>${item.month}</td>
-                    <td>${item.staff}</td>
-                    <td style="background-color: #c8e6c9; font-weight: bold;">${item.hrsForecast}</td>
+                    <td style="padding: 4px 6px;">${item.month}</td>
+                    <td style="padding: 4px 6px;">${item.staff}</td>
+                    <td style="padding: 4px 6px; text-align: right;">${item.daysForecast.toFixed(2)}</td>
+                    <td style="padding: 4px 6px; text-align: right;">£${item.ratePerDay.toFixed(2)}</td>
+                    <td style="padding: 4px 6px; text-align: right; background-color: #c8e6c9; font-weight: bold;">${item.hrsForecast.toFixed(2)}</td>
+                    <td style="padding: 4px 6px; text-align: right;">£${item.costPerMonth.toFixed(2)}</td>
                 </tr>`;
             });
+
+            // Add totals row
+            html += `<tr style="font-weight: bold; background: #f5f5f5; border-top: 2px solid #333;">
+                <td style="padding: 6px;" colspan="2">Total (${forecastData.length} entries)</td>
+                <td style="padding: 6px; text-align: right;">${totalDays.toFixed(2)}</td>
+                <td style="padding: 6px;"></td>
+                <td style="padding: 6px; text-align: right; background-color: #a5d6a7;">${totalHours.toFixed(2)}</td>
+                <td style="padding: 6px; text-align: right;">£${totalCost.toFixed(2)}</td>
+            </tr>`;
 
             html += '</tbody></table>';
             preview.innerHTML = html;
@@ -1557,6 +1778,10 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                 showToast('Please load a Gantt project first', 'error');
                 return;
             }
+
+            // Store the project name
+            const projectSelect = document.getElementById('forecastProjectSelect');
+            currentTimesheetProject = projectSelect.options[projectSelect.selectedIndex]?.text || 'Unknown Project';
 
             saveSystemPrompt();
             clearLog();
@@ -1862,7 +2087,7 @@ Return JSON:
 
             let html = '<table class="timesheet-table">';
             html += '<thead><tr>';
-            html += '<th>Forecast</th><th>Generated</th><th>Diff</th>'; // Validation columns
+            html += '<th>Forecast</th><th>Spent</th><th>Diff</th>'; // Validation columns
             html += '<th>Month</th><th>Staff</th>';
             html += '<th>Week 1 In/Out</th><th>Week 1 Hrs</th><th>Week 1 Description</th>';
             html += '<th>Week 2 In/Out</th><th>Week 2 Hrs</th><th>Week 2 Description</th>';
@@ -1906,7 +2131,9 @@ Return JSON:
 
                 weeks.forEach((week, weekIndex) => {
                     html += `<td class="editable week-group">${week.inOut || ''}</td>`;
-                    html += `<td class="editable week-group">${week.hours || ''}</td>`;
+                    // Format hours to 2 decimal places
+                    const hoursDisplay = week.hours ? parseFloat(week.hours).toFixed(2) : '';
+                    html += `<td class="editable week-group">${hoursDisplay}</td>`;
                     html += `<td class="editable week-group">${week.description || ''}</td>`;
                 });
 
@@ -1948,6 +2175,9 @@ Return JSON:
                     });
                 });
             }, 0);
+
+            // Update signature buttons after displaying output
+            updateSignatureButtons();
         }
 
         // Validate timesheet hours against forecast
@@ -2074,9 +2304,609 @@ Return JSON:
             }
 
             timesheetData = [];
+            timesheetApproved = false;
             document.getElementById('timesheetOutput').innerHTML = '<p class="empty-state">Generate timesheet data to see output here.</p>';
             document.getElementById('validationWarnings').innerHTML = '';
+            updateSignatureButtons();
             showToast('Timesheet cleared', 'success');
+        }
+
+        // ============================================
+        // SIGNATURE & APPROVAL SYSTEM
+        // ============================================
+
+        // Store signatures in localStorage (keyed by staff name)
+        let staffSignatures = JSON.parse(localStorage.getItem('timesheet_staff_signatures') || '{}');
+        let timesheetApproved = false;
+
+        // Save signatures to localStorage
+        function saveSignatures() {
+            localStorage.setItem('timesheet_staff_signatures', JSON.stringify(staffSignatures));
+        }
+
+        // Update signature button states
+        function updateSignatureButtons() {
+            const addSignaturesBtn = document.getElementById('addSignaturesBtn');
+            const approveAllBtn = document.getElementById('approveAllBtn');
+            const statusEl = document.getElementById('signatureStatus');
+
+            if (timesheetData.length === 0) {
+                addSignaturesBtn.disabled = true;
+                approveAllBtn.disabled = true;
+                statusEl.textContent = '';
+                return;
+            }
+
+            addSignaturesBtn.disabled = false;
+
+            // Get unique staff from timesheet
+            const staffList = [...new Set(timesheetData.map(entry => entry.staff))];
+            const missingSignatures = staffList.filter(staff => !staffSignatures[staff]);
+
+            if (missingSignatures.length === 0) {
+                approveAllBtn.disabled = false;
+                statusEl.innerHTML = `<span style="color: #00c853;">✓ All ${staffList.length} staff have signatures</span>`;
+            } else {
+                approveAllBtn.disabled = true;
+                statusEl.innerHTML = `<span style="color: #ff9800;">⚠ ${missingSignatures.length} of ${staffList.length} staff missing signatures</span>`;
+            }
+        }
+
+        // Show signature management modal
+        function showSignatureModal() {
+            if (timesheetData.length === 0) {
+                showToast('Generate timesheet first', 'error');
+                return;
+            }
+
+            const staffList = [...new Set(timesheetData.map(entry => entry.staff))];
+            const listEl = document.getElementById('signatureList');
+
+            let html = '';
+            staffList.forEach(staff => {
+                const hasSignature = staffSignatures[staff];
+                html += `
+                <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-bottom: 10px; background: ${hasSignature ? '#e8f5e9' : '#fff3e0'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="font-size: 13px;">${staff}</strong>
+                        ${hasSignature ? '<span style="color: #00c853; font-size: 11px;">✓ Signature saved</span>' : '<span style="color: #ff9800; font-size: 11px;">⚠ No signature</span>'}
+                    </div>
+
+                    ${hasSignature ? `
+                        <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 8px; margin-bottom: 8px; text-align: center;">
+                            <img src="${staffSignatures[staff]}" style="max-height: 60px; max-width: 200px;" alt="Signature">
+                        </div>
+                        <button class="btn btn-danger" onclick="removeSignature('${staff}')" style="font-size: 11px; padding: 4px 10px;">Remove</button>
+                    ` : `
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                            <input type="file" id="sigFile_${staff.replace(/[^a-zA-Z0-9]/g, '_')}" accept="image/png,image/jpeg" onchange="handleSignatureUpload('${staff}', this)" style="display: none;">
+                            <button class="btn" onclick="document.getElementById('sigFile_${staff.replace(/[^a-zA-Z0-9]/g, '_')}').click()" style="background: #2196f3; color: white; font-size: 11px; padding: 4px 10px;">📁 Upload PNG</button>
+                            <span style="color: #999; font-size: 11px;">or</span>
+                            <button class="btn" onclick="showPasteArea('${staff}')" style="background: #9c27b0; color: white; font-size: 11px; padding: 4px 10px;">📋 Paste</button>
+                        </div>
+                        <div id="pasteArea_${staff.replace(/[^a-zA-Z0-9]/g, '_')}" style="display: none; margin-top: 8px;">
+                            <div contenteditable="true" id="pasteBox_${staff.replace(/[^a-zA-Z0-9]/g, '_')}"
+                                style="border: 2px dashed #9c27b0; border-radius: 4px; padding: 15px; min-height: 60px; background: #f3e5f5; text-align: center; font-size: 11px; color: #666;"
+                                onpaste="handleSignaturePaste('${staff}', event)">
+                                Click here and press Ctrl+V to paste signature image
+                            </div>
+                        </div>
+                    `}
+                </div>
+                `;
+            });
+
+            listEl.innerHTML = html;
+            document.getElementById('signatureModal').style.display = 'block';
+        }
+
+        // Close signature modal
+        function closeSignatureModal() {
+            document.getElementById('signatureModal').style.display = 'none';
+            updateSignatureButtons();
+        }
+
+        // Show paste area for a staff member
+        function showPasteArea(staff) {
+            const safeId = staff.replace(/[^a-zA-Z0-9]/g, '_');
+            const pasteArea = document.getElementById(`pasteArea_${safeId}`);
+            pasteArea.style.display = 'block';
+            document.getElementById(`pasteBox_${safeId}`).focus();
+        }
+
+        // Handle signature file upload
+        function handleSignatureUpload(staff, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast('Please upload an image file', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                staffSignatures[staff] = e.target.result;
+                saveSignatures();
+                showToast(`Signature saved for ${staff}`, 'success');
+                showSignatureModal(); // Refresh modal
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Handle signature paste
+        function handleSignaturePaste(staff, event) {
+            event.preventDefault();
+            const items = event.clipboardData.items;
+
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        staffSignatures[staff] = e.target.result;
+                        saveSignatures();
+                        showToast(`Signature pasted for ${staff}`, 'success');
+                        showSignatureModal(); // Refresh modal
+                    };
+                    reader.readAsDataURL(file);
+                    return;
+                }
+            }
+
+            showToast('No image found in clipboard. Try copying an image first.', 'error');
+        }
+
+        // Remove signature for a staff member
+        function removeSignature(staff) {
+            if (confirm(`Remove signature for ${staff}?`)) {
+                delete staffSignatures[staff];
+                saveSignatures();
+                showToast(`Signature removed for ${staff}`, 'success');
+                showSignatureModal(); // Refresh modal
+            }
+        }
+
+        // Approve all timesheets (add signature columns)
+        function approveAllTimesheets() {
+            if (timesheetData.length === 0) {
+                showToast('No timesheet data to approve', 'error');
+                return;
+            }
+
+            const staffList = [...new Set(timesheetData.map(entry => entry.staff))];
+            const missingSignatures = staffList.filter(staff => !staffSignatures[staff]);
+
+            if (missingSignatures.length > 0) {
+                showToast(`Missing signatures for: ${missingSignatures.join(', ')}`, 'error');
+                return;
+            }
+
+            // Mark as approved with today's date
+            const approvalDate = new Date().toLocaleDateString('en-GB');
+            timesheetData.forEach(entry => {
+                entry.signatureImage = staffSignatures[entry.staff];
+                entry.signedOn = approvalDate;
+            });
+
+            timesheetApproved = true;
+            displayTimesheetOutputWithSignatures();
+            showToast('All timesheets approved with signatures!', 'success');
+        }
+
+        // Display timesheet with signature columns
+        function displayTimesheetOutputWithSignatures() {
+            const output = document.getElementById('timesheetOutput');
+
+            if (timesheetData.length === 0) {
+                output.innerHTML = '<p class="empty-state">No timesheet data to display.</p>';
+                return;
+            }
+
+            // Check if any entry has Week 5 data
+            const hasWeek5Data = timesheetData.some(entry => {
+                const week5 = entry.weeks.find(w => w.weekNum === 5);
+                return week5 && (week5.hours || week5.inOut || week5.description);
+            });
+
+            let html = '<table class="timesheet-table">';
+            html += '<thead><tr>';
+            html += '<th>Forecast</th><th>Spent</th><th>Diff</th>';
+            html += '<th>Month</th><th>Staff</th>';
+            html += '<th>Week 1 In/Out</th><th>Week 1 Hrs</th><th>Week 1 Description</th>';
+            html += '<th>Week 2 In/Out</th><th>Week 2 Hrs</th><th>Week 2 Description</th>';
+            html += '<th>Week 3 In/Out</th><th>Week 3 Hrs</th><th>Week 3 Description</th>';
+            html += '<th>Week 4 In/Out</th><th>Week 4 Hrs</th><th>Week 4 Description</th>';
+            if (hasWeek5Data) {
+                html += '<th>Week 5 In/Out</th><th>Week 5 Hrs</th><th>Week 5 Description</th>';
+            }
+            html += '<th>Signature</th><th>Signed On</th>';
+            html += '</tr></thead><tbody>';
+
+            timesheetData.forEach((entry, entryIndex) => {
+                html += '<tr>';
+
+                const generatedHours = entry.weeks.reduce((sum, week) => {
+                    const hours = parseFloat(week.hours) || 0;
+                    return sum + hours;
+                }, 0);
+
+                const forecastHours = entry.forecastHours || 0;
+                const diff = generatedHours - forecastHours;
+                const diffPercent = forecastHours > 0 ? Math.abs(diff / forecastHours * 100) : 0;
+
+                let bgcolor = '#c8e6c9';
+                if (diffPercent > 10) bgcolor = '#ffcdd2';
+                else if (diffPercent > 5) bgcolor = '#fff9c4';
+
+                html += `<td style="background:${bgcolor};font-weight:bold">${forecastHours.toFixed(2)}</td>`;
+                html += `<td style="background:${bgcolor};font-weight:bold">${generatedHours.toFixed(2)}</td>`;
+                html += `<td style="background:${bgcolor};font-weight:bold">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}</td>`;
+
+                html += `<td>${entry.month}</td>`;
+                html += `<td>${entry.staff}</td>`;
+
+                // Determine how many weeks to show (4 or 5)
+                const weeksToShow = hasWeek5Data ? 5 : 4;
+                const weeks = Array(weeksToShow).fill(null).map((_, i) => {
+                    return entry.weeks.find(w => w.weekNum === i + 1) || { inOut: '', hours: '', description: '' };
+                });
+
+                weeks.forEach((week) => {
+                    html += `<td>${week.inOut || ''}</td>`;
+                    const hoursDisplay = week.hours ? parseFloat(week.hours).toFixed(2) : '';
+                    html += `<td>${hoursDisplay}</td>`;
+                    html += `<td>${week.description || ''}</td>`;
+                });
+
+                // Signature columns - white background for clean signature display
+                if (entry.signatureImage) {
+                    html += `<td style="background: white; text-align: center;"><img src="${entry.signatureImage}" style="max-height: 40px; max-width: 100px;" alt="Signature"></td>`;
+                } else {
+                    html += '<td style="background: white;">-</td>';
+                }
+                html += `<td style="background: white;">${entry.signedOn || '-'}</td>`;
+
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            output.innerHTML = html;
+
+            // Update the approve section to show PDF download button
+            updateApproveSection();
+        }
+
+        // Update approve section after approval
+        function updateApproveSection() {
+            const statusEl = document.getElementById('signatureStatus');
+            if (timesheetApproved && timesheetData.length > 0) {
+                statusEl.innerHTML = `
+                    <span style="color: #00c853;">✓ Timesheet approved</span>
+                    <button class="btn" onclick="downloadTimesheetPDF()" style="background: #e91e63; color: white; margin-left: 10px; font-size: 11px; padding: 4px 12px;">📄 Download PDF</button>
+                `;
+            }
+        }
+
+        // Download timesheet as PDF
+        async function downloadTimesheetPDF() {
+            if (timesheetData.length === 0) {
+                showToast('No timesheet data to download', 'error');
+                return;
+            }
+
+            showToast('Generating PDF...', 'info');
+
+            // Use stored project name, or fall back to dropdown
+            const projectName = currentTimesheetProject ||
+                (document.getElementById('forecastProjectSelect').options[document.getElementById('forecastProjectSelect').selectedIndex]?.text) ||
+                'Unknown Project';
+
+            // Get unique months from timesheet data
+            const months = [...new Set(timesheetData.map(e => e.month))].sort();
+            const monthsText = months.join(', ');
+
+            // Check if any entry has Week 5 data
+            const hasWeek5Data = timesheetData.some(entry => {
+                const week5 = entry.weeks.find(w => w.weekNum === 5);
+                return week5 && (week5.hours || week5.inOut || week5.description);
+            });
+
+            // Build HTML for PDF
+            let pdfHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Timesheet - ${projectName}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; font-size: 9px; margin: 15px; }
+                    h1 { font-size: 16px; margin-bottom: 5px; }
+                    .subtitle { font-size: 11px; color: #666; margin-bottom: 15px; }
+                    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+                    th, td { border: 1px solid #ccc; padding: 3px 4px; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+                    th { background: #c62828; color: white; font-weight: bold; font-size: 8px; }
+                    .narrow { width: 26px; text-align: right; }
+                    .month-col { width: 22px; }
+                    .staff-col { width: 70px; }
+                    .inout-col { width: 50px; font-size: 8px; }
+                    .hrs-col { width: 30px; text-align: right; }
+                    .desc-col { width: 90px; font-size: 8px; }
+                    .sig-col { width: 70px; text-align: center; background: white; }
+                    .date-col { width: 49px; background: white; }
+                    .signature-img { max-height: 30px; max-width: 65px; }
+                    .green { background: #c8e6c9; }
+                    .yellow { background: #fff9c4; }
+                    .red { background: #ffcdd2; }
+                    .footer { margin-top: 15px; font-size: 8px; color: #666; }
+                    @media print { body { margin: 10px; } }
+                </style>
+            </head>
+            <body>
+                <h1>Timesheet: ${projectName}</h1>
+                <p class="subtitle">Months: ${monthsText}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="narrow">Forec.</th><th class="narrow">Spent</th><th class="narrow">Diff</th>
+                            <th class="month-col">Mth</th><th class="staff-col">Staff</th>
+                            <th class="inout-col">W1 In/Out</th><th class="hrs-col">W1</th><th class="desc-col">W1 Desc</th>
+                            <th class="inout-col">W2 In/Out</th><th class="hrs-col">W2</th><th class="desc-col">W2 Desc</th>
+                            <th class="inout-col">W3 In/Out</th><th class="hrs-col">W3</th><th class="desc-col">W3 Desc</th>
+                            <th class="inout-col">W4 In/Out</th><th class="hrs-col">W4</th><th class="desc-col">W4 Desc</th>
+                            ${hasWeek5Data ? '<th class="inout-col">W5 In/Out</th><th class="hrs-col">W5</th><th class="desc-col">W5 Desc</th>' : ''}
+                            <th class="sig-col">Signature</th><th class="date-col">Signed On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            timesheetData.forEach(entry => {
+                const generatedHours = entry.weeks.reduce((sum, week) => sum + (parseFloat(week.hours) || 0), 0);
+                const forecastHours = entry.forecastHours || 0;
+                const diff = generatedHours - forecastHours;
+                const diffPercent = forecastHours > 0 ? Math.abs(diff / forecastHours * 100) : 0;
+
+                let colorClass = 'green';
+                if (diffPercent > 10) colorClass = 'red';
+                else if (diffPercent > 5) colorClass = 'yellow';
+
+                const weeksToShow = hasWeek5Data ? 5 : 4;
+                const weeks = Array(weeksToShow).fill(null).map((_, i) => {
+                    return entry.weeks.find(w => w.weekNum === i + 1) || { inOut: '', hours: '', description: '' };
+                });
+
+                pdfHtml += `<tr>`;
+                pdfHtml += `<td class="narrow ${colorClass}">${forecastHours.toFixed(2)}</td>`;
+                pdfHtml += `<td class="narrow ${colorClass}">${generatedHours.toFixed(2)}</td>`;
+                pdfHtml += `<td class="narrow ${colorClass}">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}</td>`;
+                pdfHtml += `<td class="month-col">${entry.month}</td>`;
+                pdfHtml += `<td class="staff-col">${entry.staff}</td>`;
+
+                weeks.forEach(week => {
+                    pdfHtml += `<td class="inout-col">${week.inOut || ''}</td>`;
+                    pdfHtml += `<td class="hrs-col">${week.hours ? parseFloat(week.hours).toFixed(2) : ''}</td>`;
+                    pdfHtml += `<td class="desc-col">${week.description || ''}</td>`;
+                });
+
+                if (entry.signatureImage) {
+                    pdfHtml += `<td class="sig-col"><img src="${entry.signatureImage}" class="signature-img"></td>`;
+                } else {
+                    pdfHtml += `<td class="sig-col">-</td>`;
+                }
+                pdfHtml += `<td class="date-col">${entry.signedOn || '-'}</td>`;
+                pdfHtml += `</tr>`;
+            });
+
+            pdfHtml += `
+                    </tbody>
+                </table>
+                <div class="footer">
+                    <p>Total entries: ${timesheetData.length} | Staff: ${[...new Set(timesheetData.map(e => e.staff))].length}</p>
+                </div>
+            </body>
+            </html>
+            `;
+
+            // Open in new window for printing/saving as PDF
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(pdfHtml);
+            printWindow.document.close();
+
+            // Trigger print dialog (user can save as PDF)
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+
+            showToast('PDF ready - use Print dialog to save', 'success');
+        }
+
+        // ============================================
+        // SAVE / LOAD TIMESHEETS
+        // ============================================
+
+        // Save timesheet to database (Supabase)
+        async function saveTimesheetToDatabase() {
+            if (timesheetData.length === 0) {
+                showToast('No timesheet data to save', 'error');
+                return;
+            }
+
+            try {
+                await ensureAuthenticated();
+
+                // Use stored project name, or fall back to dropdown
+                const projectName = currentTimesheetProject ||
+                    (document.getElementById('forecastProjectSelect').options[document.getElementById('forecastProjectSelect').selectedIndex]?.text) ||
+                    'Unknown Project';
+
+                const saveData = {
+                    user_id: currentUser.id,
+                    project_name: projectName,
+                    timesheet_data: timesheetData,
+                    is_approved: timesheetApproved,
+                    created_at: new Date().toISOString(),
+                    metadata: {
+                        staff_count: [...new Set(timesheetData.map(e => e.staff))].length,
+                        total_entries: timesheetData.length,
+                        total_hours: timesheetData.reduce((sum, e) => sum + e.weeks.reduce((s, w) => s + (parseFloat(w.hours) || 0), 0), 0)
+                    }
+                };
+
+                const { data, error } = await supabaseClient
+                    .from('saved_timesheets')
+                    .insert([saveData])
+                    .select();
+
+                if (error) throw error;
+
+                showToast('Timesheet saved to database!', 'success');
+                console.log('Timesheet saved:', data);
+
+            } catch (error) {
+                console.error('Failed to save timesheet:', error);
+
+                // Fallback to localStorage
+                const saved = JSON.parse(localStorage.getItem('saved_timesheets') || '[]');
+
+                // Use stored project name, or fall back to dropdown
+                const projectName = currentTimesheetProject ||
+                    (document.getElementById('forecastProjectSelect').options[document.getElementById('forecastProjectSelect').selectedIndex]?.text) ||
+                    'Unknown Project';
+
+                saved.push({
+                    id: Date.now(),
+                    project_name: projectName,
+                    timesheet_data: timesheetData,
+                    is_approved: timesheetApproved,
+                    created_at: new Date().toISOString(),
+                    metadata: {
+                        staff_count: [...new Set(timesheetData.map(e => e.staff))].length,
+                        total_entries: timesheetData.length
+                    }
+                });
+
+                localStorage.setItem('saved_timesheets', JSON.stringify(saved));
+                showToast('Timesheet saved locally (database unavailable)', 'warning');
+            }
+        }
+
+        // Show load timesheet modal
+        async function showLoadTimesheetModal() {
+            const listEl = document.getElementById('savedTimesheetList');
+            listEl.innerHTML = '<p style="color: #666;">Loading...</p>';
+            document.getElementById('loadTimesheetModal').style.display = 'block';
+
+            let savedTimesheets = [];
+
+            try {
+                await ensureAuthenticated();
+
+                const { data, error } = await supabaseClient
+                    .from('saved_timesheets')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+
+                if (!error && data) {
+                    savedTimesheets = data;
+                }
+            } catch (error) {
+                console.error('Failed to load from database:', error);
+            }
+
+            // Also load from localStorage
+            const localSaved = JSON.parse(localStorage.getItem('saved_timesheets') || '[]');
+            savedTimesheets = [...savedTimesheets, ...localSaved];
+
+            if (savedTimesheets.length === 0) {
+                listEl.innerHTML = '<p style="color: #999; text-align: center;">No saved timesheets found.</p>';
+                return;
+            }
+
+            let html = '';
+            savedTimesheets.forEach((ts, idx) => {
+                const date = new Date(ts.created_at).toLocaleString('en-GB');
+                const meta = ts.metadata || {};
+                html += `
+                <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-bottom: 10px; background: ${ts.is_approved ? '#e8f5e9' : '#fafafa'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="font-size: 13px;">${ts.project_name || 'Unnamed'}</strong>
+                            ${ts.is_approved ? '<span style="color: #00c853; font-size: 10px; margin-left: 8px;">✓ APPROVED</span>' : ''}
+                            <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                                ${date} | ${meta.total_entries || '?'} entries | ${meta.staff_count || '?'} staff
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn" onclick="loadSavedTimesheet(${idx}, ${ts.id ? `'db'` : `'local'`})" style="background: #2196f3; color: white; font-size: 11px; padding: 4px 10px;">Load</button>
+                            <button class="btn" onclick="deleteSavedTimesheet(${ts.id || idx}, ${ts.id ? `'db'` : `'local'`})" style="background: #f44336; color: white; font-size: 11px; padding: 4px 10px;">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+
+            listEl.innerHTML = html;
+
+            // Store for loading
+            window.savedTimesheetsCache = savedTimesheets;
+        }
+
+        // Close load timesheet modal
+        function closeLoadTimesheetModal() {
+            document.getElementById('loadTimesheetModal').style.display = 'none';
+        }
+
+        // Load a saved timesheet
+        function loadSavedTimesheet(index, source) {
+            const ts = window.savedTimesheetsCache[index];
+            if (!ts) {
+                showToast('Timesheet not found', 'error');
+                return;
+            }
+
+            timesheetData = ts.timesheet_data;
+            timesheetApproved = ts.is_approved;
+            currentTimesheetProject = ts.project_name || 'Unknown Project'; // Restore project name
+
+            if (timesheetApproved) {
+                displayTimesheetOutputWithSignatures();
+            } else {
+                displayTimesheetOutput();
+            }
+
+            updateSignatureButtons();
+            closeLoadTimesheetModal();
+            showToast(`Loaded timesheet: ${ts.project_name}`, 'success');
+        }
+
+        // Delete a saved timesheet
+        async function deleteSavedTimesheet(id, source) {
+            if (!confirm('Delete this saved timesheet?')) return;
+
+            if (source === 'db') {
+                try {
+                    await ensureAuthenticated();
+                    const { error } = await supabaseClient
+                        .from('saved_timesheets')
+                        .delete()
+                        .eq('id', id);
+
+                    if (error) throw error;
+                    showToast('Timesheet deleted', 'success');
+                } catch (error) {
+                    console.error('Failed to delete:', error);
+                    showToast('Failed to delete timesheet', 'error');
+                }
+            } else {
+                const saved = JSON.parse(localStorage.getItem('saved_timesheets') || '[]');
+                saved.splice(id, 1);
+                localStorage.setItem('saved_timesheets', JSON.stringify(saved));
+                showToast('Timesheet deleted', 'success');
+            }
+
+            showLoadTimesheetModal(); // Refresh list
         }
 
         // Show toast notification
@@ -7729,6 +8559,7 @@ Return JSON:
                     await syncGrantNamesWithDatabase();
 
                     renderLabourTable();
+                    populateForecastProjectDropdown(); // Update timesheets forecast dropdown
                     showToast('☁️ Labour data loaded from cloud', 'success');
                     console.log('☁️ Labour data loaded from Supabase');
                     return;
@@ -7756,6 +8587,7 @@ Return JSON:
                 await syncGrantNamesWithDatabase();
 
                 renderLabourTable();
+                populateForecastProjectDropdown(); // Update timesheets forecast dropdown
                 showToast('Labour data loaded from local storage', 'success');
                 console.log('💾 Labour data loaded from localStorage');
             } else {

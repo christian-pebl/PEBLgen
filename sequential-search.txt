@@ -1,0 +1,70 @@
+New functions to add before executeSearchStage:
+
+        /**
+         * Prompt user if they want to search the next account
+         */
+        async function promptUserToSearchNextAccount(accountNum, accountEmail, current, total) {
+            return new Promise((resolve) => {
+                const resultsContainer = document.getElementById('searchResultsContainer');
+                resultsContainer.style.display = 'block';
+                resultsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 30px; background: #f0f9ff; border-radius: 8px; border: 2px solid #3b82f6;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📧</div>
+                        <h4 style="margin: 0 0 10px 0; color: #1e3a8a;">No Invoices Found in Previous Account(s)</h4>
+                        <p style="color: #1e40af; margin: 0 0 10px 0;">
+                            Would you like to search <strong>Account ${accountNum}</strong>?
+                        </p>
+                        <p style="color: #64748b; margin: 0 0 20px 0; font-size: 13px;">
+                            ${accountEmail} (${current} of ${total} accounts)
+                        </p>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button onclick="window.__searchNextAccountCallback(true)" class="btn-primary" style="padding: 12px 24px;">
+                                Yes, Search Account ${accountNum}
+                            </button>
+                            <button onclick="window.__searchNextAccountCallback(false)" class="btn-secondary" style="padding: 12px 24px;">
+                                No, Stop Search
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Store callback
+                window.__searchNextAccountCallback = (shouldContinue) => {
+                    delete window.__searchNextAccountCallback;
+                    resultsContainer.style.display = 'none';
+                    resolve(shouldContinue);
+                };
+            });
+        }
+
+        /**
+         * Execute search stage for a single account
+         */
+        async function executeSearchStageForAccount(context, stage, aiKeywords, account, accountNum) {
+            const queries = buildStageQueries(context, stage, aiKeywords);
+            const allResults = [];
+
+            for (let i = 0; i < queries.length; i++) {
+                const query = queries[i];
+                searchLogger.logProgress(`${query.description}...`, 'info');
+                console.log('📧 [Gmail Query]:', query.query);
+
+                try {
+                    const messages = await searchGmailWithQuery(query.query, account, context.date, stage.dateWindow);
+
+                    if (messages.length > 0) {
+                        searchLogger.logProgress(`  ✅ Found ${messages.length} email(s) in Account ${accountNum}`, 'success');
+                        allResults.push(...messages.map(m => ({ ...m, accountEmail: account.email, accountAccessToken: account.accessToken })));
+                    } else {
+                        searchLogger.logProgress(`  No results in Account ${accountNum}`, 'info');
+                    }
+                } catch (error) {
+                    searchLogger.logProgress(`  Query failed: ${error.message}`, 'error');
+                    console.error('Gmail search error:', error);
+                }
+            }
+
+            // Deduplicate by message ID
+            const uniqueResults = deduplicateMessages(allResults);
+            return uniqueResults;
+        }

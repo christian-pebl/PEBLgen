@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resetting Authentication...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 10px;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .status {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="message">🔄 Resetting Authentication...</div>
+        <div class="spinner"></div>
+        <div class="status" id="status">Clearing old credentials...</div>
+    </div>
+
+    <script>
+        // Wait a moment for page to load
+        setTimeout(() => {
+            document.getElementById('status').textContent = 'Removing old device ID...';
+
+            // Clear old authentication data
+            localStorage.removeItem('peblgen_device_id');
+            localStorage.removeItem('peblgen_device_password');
+
+            setTimeout(() => {
+                document.getElementById('status').textContent = 'Redirecting to grants.html...';
+
+                setTimeout(() => {
+                    // Redirect to grants.html
+                    window.location.href = 'grants.html';
+                }, 1000);
+            }, 1000);
+        }, 500);
+    </script>
+</body>
+</html>

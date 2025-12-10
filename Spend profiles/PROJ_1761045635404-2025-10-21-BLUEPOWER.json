@@ -1,0 +1,124 @@
+{
+  "projectId": 3,
+  "projectName": "BluePower",
+  "projectNumber": "PROJ-1761045635404",
+  "lastModified": "2025-10-21T11:21:20.076Z",
+  "financeSummary": {
+    "projectDuration": "7 months",
+    "totalCosts": 61208,
+    "fundingLevel": 70,
+    "fundingSought": 42846,
+    "otherPublicFunding": 0,
+    "contribution": 18362
+  },
+  "labour": {
+    "workingDaysPerYear": 232,
+    "hasPAYE": true,
+    "staff": [
+      {
+        "role": "Project Manager",
+        "grossCost": 39440,
+        "ratePerDay": 170,
+        "days": 60,
+        "totalCost": 10200
+      },
+      {
+        "role": "Lead Systems Engineer",
+        "grossCost": 39440,
+        "ratePerDay": 170,
+        "days": 80,
+        "totalCost": 13600
+      },
+      {
+        "role": "Battery/Power Engineer",
+        "grossCost": 39440,
+        "ratePerDay": 170,
+        "days": 112,
+        "totalCost": 19040
+      }
+    ],
+    "totalCost": 42840
+  },
+  "overheads": {
+    "percentage": 20,
+    "labourCosts": 42840,
+    "totalCost": 8568
+  },
+  "materials": {
+    "items": [
+      {
+        "item": "Environmental testing sensor components (wind, light, temp)",
+        "quantity": 1,
+        "costPerItem": 500,
+        "total": 500
+      },
+      {
+        "item": "Test solar-battery system to validate renewable charging rate",
+        "quantity": 1,
+        "costPerItem": 750,
+        "total": 750
+      },
+      {
+        "item": "Acoustic and vibration testing equipment",
+        "quantity": 1,
+        "costPerItem": 500,
+        "total": 500
+      },
+      {
+        "item": "Electrical test equipment",
+        "quantity": 1,
+        "costPerItem": 250,
+        "total": 250
+      }
+    ],
+    "totalCost": 2000
+  },
+  "capitalUsage": {
+    "items": [],
+    "totalCost": 0
+  },
+  "subcontracting": {
+    "contractors": [
+      {
+        "name": "Robust Boats Ltd",
+        "country": "UK",
+        "role": "Specialist vessel integration/retrofit expertise (WP3/WP7) 10 days throughout project at 300/day for technical input on vessel mechanical and electrical design, regulations, certifications and market scoping",
+        "cost": 3000
+      },
+      {
+        "name": "Oxalis Design Ltd",
+        "country": "UK",
+        "role": "Specialist design/simulation support to validate feasibility of retrofit electrified power system including regulatory compliance review (WP3/WP4) 16 days throughout project at 250/day.",
+        "cost": 4000
+      }
+    ],
+    "totalCost": 7000
+  },
+  "travel": {
+    "trips": [
+      {
+        "purpose": "Transport for Project Meetings/Site Visits for 2x PEBL staff members to visit project partners (160-miles return swansea - st. davids at 0.45p/mile)",
+        "numberOfTimes": 4,
+        "costEach": 81,
+        "total": 324
+      },
+      {
+        "purpose": "Accommodation for Project Meetings/Site Visits for 2x PEBL staff members to visit project partners (accommodation for 2x PEBL staff 1x night stay)",
+        "numberOfTimes": 4,
+        "costEach": 100,
+        "total": 400
+      },
+      {
+        "purpose": "Subsistence for Project Meetings/Site Visits for 2x PEBL staff members to visit project partners",
+        "numberOfTimes": 1,
+        "costEach": 76,
+        "total": 76
+      }
+    ],
+    "totalCost": 800
+  },
+  "otherCosts": {
+    "items": [],
+    "totalCost": 0
+  }
+}

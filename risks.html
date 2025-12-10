@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Register - PEBLGen</title>
+    <!-- Google Fonts - PEBL Brand Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
+    <!-- ExcelJS library for Excel file support with full style preservation -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <!-- SheetJS library for export compatibility -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- pdf-lib for PDF export functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <!-- jsPDF for better PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* Navigation Banner - PEBL Brand Colors */
+        .nav-banner { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 30px; margin-bottom: 0; z-index: 100; }
+        .nav-banner h1 { color: white; font-size: 28px; font-weight: 700; margin: 0; font-family: 'Roboto', sans-serif; letter-spacing: 0.5px; }
+        .nav-buttons { display: flex; gap: 8px; }
+        .nav-btn { background-color: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s ease; display: inline-block; font-family: 'Roboto', sans-serif; }
+        .nav-btn:hover { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); }
+        .nav-btn.active { background-color: rgba(255, 255, 255, 0.9); color: #2B7A78; border-color: rgba(255, 255, 255, 0.9); }
+
+        /* Split Screen Mode */
+        .split-screen-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1e293b; z-index: 9999; }
+        .split-screen-overlay.active { display: flex; flex-direction: column; }
+        .split-screen-header { background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); padding: 10px 20px; display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+        .split-screen-header h2 { color: white; margin: 0; font-size: 18px; font-weight: 600; }
+        .split-screen-controls { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .split-pane-selector { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; }
+        .split-pane-selector label { color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500; }
+        .split-pane-selector select { padding: 6px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-size: 13px; cursor: pointer; min-width: 120px; }
+        .split-screen-close { margin-left: auto; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .split-screen-close:hover { background: #dc2626; }
+        .split-screen-container { display: flex; flex: 1; gap: 4px; padding: 4px; background: #1e293b; overflow: hidden; }
+        .split-pane { flex: 1; display: flex; flex-direction: column; background: white; border-radius: 6px; overflow: hidden; }
+        .split-pane-header { background: #f1f5f9; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+        .split-pane-content { flex: 1; position: relative; }
+        .split-pane-content iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+        .split-divider { width: 6px; background: #475569; cursor: col-resize; border-radius: 3px; flex-shrink: 0; }
+        .split-divider:hover { background: #3AAFA9; }
+        .split-orientation-btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .split-orientation-btn:hover { background: rgba(255,255,255,0.25); }
+        .split-screen-container.vertical { flex-direction: column; }
+        .split-screen-container.vertical .split-divider { width: auto; height: 6px; cursor: row-resize; }
+        .split-btn-icon { font-size: 16px; }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 300;
+            background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%);
+            min-height: 100vh;
+            padding: 0;
+            padding-top: 90px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 15px 25px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed #3AAFA9;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #f8fffe;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #2B7A78;
+            background: #e8f5f4;
+        }
+
+        .upload-area.drag-over {
+            border-color: #2B7A78;
+            background: #d4efed;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #3AAFA9;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .upload-subtext {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            padding: 0 10px;
+            border-right: 1px solid #ddd;
+        }
+
+        .toolbar-group:last-child {
+            border-right: none;
+        }
+
+        .toolbar-btn {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: #e8f5f4;
+            border-color: #3AAFA9;
+        }
+
+        .toolbar-btn.active {
+            background: #3AAFA9;
+            color: white;
+            border-color: #3AAFA9;
+        }
+
+        .toolbar-select {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .color-input {
+            width: 40px;
+            height: 32px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Spreadsheet Container */
+        .spreadsheet-container {
+            overflow: auto;
+            max-height: calc(100vh - 350px);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .spreadsheet-table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .spreadsheet-table th,
+        .spreadsheet-table td {
+            border: 1px solid #e0e0e0;
+            padding: 6px 8px;
+            min-width: 100px;
+            max-width: 500px;
+            position: relative;
+            background: white;
+            box-sizing: border-box;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .spreadsheet-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .spreadsheet-table td {
+            cursor: cell;
+            user-select: none;
+        }
+
+        .spreadsheet-table td.selected {
+            outline: 2px solid #3AAFA9;
+            outline-offset: -1px;
+            z-index: 5;
+        }
+
+        .spreadsheet-table td.range-selected {
+            background: #e8f5f4 !important;
+        }
+
+        .spreadsheet-table td input {
+            width: 100%;
+            border: none;
+            outline: none;
+            padding: 4px;
+            font-family: inherit;
+            font-size: inherit;
+            background: transparent;
+        }
+
+        .resize-handle {
+            position: absolute;
+            right: -3px;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            cursor: col-resize;
+            background: transparent;
+            z-index: 15;
+        }
+
+        .resize-handle:hover {
+            background: #3AAFA9;
+        }
+
+        /* Export Controls */
+        .export-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #3AAFA9;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #2B7A78;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #3AAFA9;
+            padding: 10px 20px;
+            border: 1px solid #3AAFA9;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #e8f5f4;
+        }
+
+        .file-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #e8f5f4;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            background: #4CAF50;
+        }
+
+        .toast.error {
+            background: #f44336;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3AAFA9;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Banner -->
+    <div class="nav-banner">
+        <h1>PEBLGen</h1>
+        <div class="nav-buttons">
+            <a href="grants.html" class="nav-btn">Grants</a>
+            <a href="spend.html" class="nav-btn">Spend</a>
+            <a href="gantt.html" class="nav-btn">Gantt</a>
+            <a href="timesheet.html" class="nav-btn">Labour</a>
+            <a href="index.html" class="nav-btn">Sketcher</a>
+            <a href="exploit.html" class="nav-btn">Exploit</a>
+            <a href="risks.html" class="nav-btn active">Risks</a>
+            <a href="quote.html" class="nav-btn">Quote</a>
+            <button onclick="openSplitScreenMode()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Split Screen Mode"><span class="split-btn-icon">⫿</span> Split</button>
+            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Scroll to top">↑ Top</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">Risk Register</h1>
+            </div>
+
+            <!-- Upload Area -->
+            <div id="uploadArea" class="upload-area">
+                <div class="upload-icon">📊</div>
+                <div class="upload-text">Drop Excel file here or click to browse</div>
+                <div class="upload-subtext">Supports .xlsx and .xls files</div>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+            </div>
+
+            <!-- File Info -->
+            <div id="fileInfo" class="file-info" style="display: none;">
+                <span class="file-name" id="fileName"></span>
+                <div class="file-actions">
+                    <button class="btn-secondary" onclick="toggleFormatInfo()">📋 Format Info</button>
+                    <button class="btn-secondary" onclick="saveToSupabase()">💾 Save</button>
+                    <button class="btn-secondary" onclick="loadNewFile()">📁 Load New File</button>
+                </div>
+            </div>
+
+            <!-- Format Info Panel -->
+            <div id="formatInfo" style="display: none; padding: 15px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px; font-size: 13px;">
+                <div style="font-weight: 600; margin-bottom: 8px; color: #2B7A78;">📊 Detected Formatting:</div>
+                <div id="formatInfoContent" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;"></div>
+            </div>
+
+            <!-- Toolbar -->
+            <div id="toolbar" class="toolbar" style="display: none;">
+                <!-- Font Controls -->
+                <div class="toolbar-group">
+                    <select id="fontFamily" class="toolbar-select" onchange="applyFormat('fontFamily')">
+                        <option value="Roboto">Roboto</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Verdana">Verdana</option>
+                    </select>
+                    <select id="fontSize" class="toolbar-select" onchange="applyFormat('fontSize')">
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12" selected>12</option>
+                        <option value="14">14</option>
+                        <option value="16">16</option>
+                        <option value="18">18</option>
+                        <option value="20">20</option>
+                        <option value="24">24</option>
+                    </select>
+                </div>
+
+                <!-- Text Style -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="applyFormat('bold')" title="Bold"><strong>B</strong></button>
+                    <button class="toolbar-btn" onclick="applyFormat('italic')" title="Italic"><em>I</em></button>
+                    <button class="toolbar-btn" onclick="applyFormat('underline')" title="Underline"><u>U</u></button>
+                </div>
+
+                <!-- Alignment -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="applyFormat('alignLeft')" title="Align Left">⬅</button>
+                    <button class="toolbar-btn" onclick="applyFormat('alignCenter')" title="Align Center">⬌</button>
+                    <button class="toolbar-btn" onclick="applyFormat('alignRight')" title="Align Right">➡</button>
+                </div>
+
+                <!-- Colors -->
+                <div class="toolbar-group">
+                    <label>Text: <input type="color" id="textColor" class="color-input" value="#000000" onchange="applyFormat('textColor')"></label>
+                    <label>Background: <input type="color" id="bgColor" class="color-input" value="#ffffff" onchange="applyFormat('bgColor')"></label>
+                </div>
+
+                <!-- Borders -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="applyFormat('borderAll')" title="All Borders">▦</button>
+                    <button class="toolbar-btn" onclick="applyFormat('borderNone')" title="No Borders">□</button>
+                    <select id="borderColor" class="toolbar-select" onchange="applyFormat('borderColor')">
+                        <option value="#000000">Black</option>
+                        <option value="#cccccc" selected>Gray</option>
+                        <option value="#3AAFA9">Teal</option>
+                        <option value="#ff0000">Red</option>
+                    </select>
+                </div>
+
+                <!-- Cell Size -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="adjustColumnWidth(-10)" title="Decrease Width">◀ W</button>
+                    <button class="toolbar-btn" onclick="adjustColumnWidth(10)" title="Increase Width">W ▶</button>
+                    <button class="toolbar-btn" onclick="adjustRowHeight(-5)" title="Decrease Height">▲ H</button>
+                    <button class="toolbar-btn" onclick="adjustRowHeight(5)" title="Increase Height">H ▼</button>
+                </div>
+            </div>
+
+            <!-- Spreadsheet -->
+            <div id="spreadsheetContainer" class="spreadsheet-container" style="display: none;">
+                <table id="spreadsheet" class="spreadsheet-table"></table>
+            </div>
+
+            <!-- Export Controls -->
+            <div id="exportControls" class="export-controls" style="display: none;">
+                <button class="btn-primary" onclick="exportToPDF()">📄 Export Selected to PDF</button>
+                <button class="btn-secondary" onclick="exportToExcel()">📊 Export to Excel</button>
+                <button class="btn-secondary" onclick="selectAllCells()">✓ Select All</button>
+                <button class="btn-secondary" onclick="clearSelection()">✕ Clear Selection</button>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <div>Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Supabase Client -->
+    <script src="supabase-client.js"></script>
+
+    <script>
+        // Global state
+        let workbook = null;
+        let currentSheet = null;
+        let selectedCells = new Set();
+        let isSelecting = false;
+        let selectionStart = null;
+        let currentFileName = '';
+        let cellFormats = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            // Click to upload
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('drag-over');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            // Mouse selection for cells
+            document.addEventListener('mouseup', () => {
+                isSelecting = false;
+            });
+        });
+
+        // Handle file upload using ExcelJS for better style support
+        async function handleFile(file) {
+            if (!file.name.match(/\.(xlsx|xls)$/)) {
+                showToast('Please upload an Excel file (.xlsx or .xls)', 'error');
+                return;
+            }
+
+            showLoading(true);
+            currentFileName = file.name;
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+
+                // Use ExcelJS for style parsing
+                const excelWorkbook = new ExcelJS.Workbook();
+                await excelWorkbook.xlsx.load(arrayBuffer);
+
+                // Get first worksheet
+                const excelWorksheet = excelWorkbook.worksheets[0];
+
+                // Also load with SheetJS for export functionality
+                workbook = XLSX.read(arrayBuffer, {
+                    type: 'array',
+                    cellStyles: true,
+                    cellNF: true
+                });
+                currentSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+                // Store ExcelJS worksheet for style information
+                window.excelWorksheet = excelWorksheet;
+
+                // Analyze formatting
+                analyzeFormattingExcelJS(excelWorksheet);
+
+                renderSpreadsheetExcelJS(excelWorksheet);
+                showLoading(false);
+                showToast('File loaded successfully with full formatting!', 'success');
+
+                // Show UI elements
+                document.getElementById('uploadArea').style.display = 'none';
+                document.getElementById('fileInfo').style.display = 'flex';
+                document.getElementById('fileName').textContent = currentFileName;
+                document.getElementById('toolbar').style.display = 'flex';
+                document.getElementById('spreadsheetContainer').style.display = 'block';
+                document.getElementById('exportControls').style.display = 'flex';
+            } catch (error) {
+                console.error('❌ Error reading file:', error);
+                showToast('Error reading file: ' + error.message, 'error');
+                showLoading(false);
+            }
+        }
+
+        // Render spreadsheet using ExcelJS data
+        function renderSpreadsheetExcelJS(worksheet) {
+            const table = document.getElementById('spreadsheet');
+            table.innerHTML = '';
+
+            const rowCount = worksheet.rowCount;
+            const colCount = worksheet.columnCount;
+
+            // Create header row with column letters
+            const headerRow = document.createElement('tr');
+            headerRow.appendChild(document.createElement('th')); // Empty corner cell
+            for (let c = 1; c <= colCount; c++) {
+                const th = document.createElement('th');
+                th.textContent = XLSX.utils.encode_col(c - 1);
+
+                // Apply column width
+                const col = worksheet.getColumn(c);
+                if (col.width) {
+                    // ExcelJS width is in characters, convert to pixels (approx 7px per char)
+                    const widthPx = col.width * 7;
+                    th.style.width = widthPx + 'px';
+                    th.style.minWidth = widthPx + 'px';
+                    th.style.maxWidth = widthPx + 'px';
+                }
+
+                headerRow.appendChild(th);
+            }
+            table.appendChild(headerRow);
+
+            // Create data rows
+            for (let r = 1; r <= rowCount; r++) {
+                const row = document.createElement('tr');
+                const excelRow = worksheet.getRow(r);
+
+                // Apply row height
+                if (excelRow.height) {
+                    // ExcelJS height is in points, convert to pixels (1pt = 1.333px)
+                    row.style.height = (excelRow.height * 1.333) + 'px';
+                }
+
+                // Row number header
+                const th = document.createElement('th');
+                th.textContent = r;
+                row.appendChild(th);
+
+                for (let c = 1; c <= colCount; c++) {
+                    const excelCell = worksheet.getCell(r, c);
+                    const cellAddress = excelCell.address;
+
+                    const td = document.createElement('td');
+                    td.id = cellAddress;
+                    td.contentEditable = true;
+
+                    // Apply column width to cell as well
+                    const col = worksheet.getColumn(c);
+                    if (col.width) {
+                        const widthPx = col.width * 7;
+                        td.style.width = widthPx + 'px';
+                        td.style.minWidth = widthPx + 'px';
+                        td.style.maxWidth = widthPx + 'px';
+                    }
+
+                    // Set cell value
+                    if (excelCell.value !== null && excelCell.value !== undefined) {
+                        if (typeof excelCell.value === 'object' && excelCell.value.richText) {
+                            // Handle rich text
+                            td.textContent = excelCell.value.richText.map(rt => rt.text).join('');
+                        } else if (typeof excelCell.value === 'object' && excelCell.value.result) {
+                            // Handle formula result
+                            td.textContent = excelCell.value.result;
+                        } else if (excelCell.value instanceof Date) {
+                            // Handle dates
+                            td.textContent = excelCell.value.toLocaleDateString();
+                        } else {
+                            td.textContent = excelCell.value.toString();
+                        }
+                    }
+
+                    // Apply cell styles from ExcelJS
+                    applyCellStyleExcelJS(td, excelCell);
+
+                    // Handle merged cells
+                    if (excelCell.isMerged) {
+                        const master = excelCell.master;
+                        if (master.address === cellAddress) {
+                            // This is the master cell of a merge
+                            // Calculate colspan and rowspan from master cell
+                            const masterCell = worksheet.getCell(master.address);
+                            const model = masterCell.model;
+
+                            if (model && model.master) {
+                                // Get merge range from the worksheet's merge list
+                                const merges = worksheet.model.merges || [];
+                                const mergeRange = merges.find(m => {
+                                    const topLeft = worksheet.getCell(m.top, m.left).address;
+                                    return topLeft === cellAddress;
+                                });
+
+                                if (mergeRange) {
+                                    const colspan = mergeRange.right - mergeRange.left + 1;
+                                    const rowspan = mergeRange.bottom - mergeRange.top + 1;
+                                    if (colspan > 1) td.colSpan = colspan;
+                                    if (rowspan > 1) td.rowSpan = rowspan;
+                                }
+                            }
+                        } else {
+                            // Skip cells that are part of a merge but not the master
+                            continue;
+                        }
+                    }
+
+                    // Cell selection handlers
+                    td.addEventListener('mousedown', (e) => handleCellMouseDown(e, cellAddress));
+                    td.addEventListener('mouseenter', (e) => handleCellMouseEnter(e, cellAddress));
+                    td.addEventListener('input', (e) => handleCellInputExcelJS(e, cellAddress, r, c));
+
+                    // Add resize handle
+                    const resizeHandle = document.createElement('div');
+                    resizeHandle.className = 'resize-handle';
+                    resizeHandle.addEventListener('mousedown', (e) => handleResizeStart(e, c - 1));
+                    td.appendChild(resizeHandle);
+
+                    row.appendChild(td);
+                }
+                table.appendChild(row);
+            }
+        }
+
+        // Apply cell styles from ExcelJS
+        function applyCellStyleExcelJS(td, excelCell) {
+            const style = excelCell.style;
+            if (!style) return;
+
+            // Background color (fill)
+            if (style.fill) {
+                if (style.fill.type === 'pattern' && style.fill.pattern) {
+                    // Pattern fill (most common in Excel)
+                    if (style.fill.fgColor && style.fill.fgColor.argb) {
+                        const bgColor = excelColorToArgbHex(style.fill.fgColor.argb);
+                        if (bgColor) {
+                            td.style.backgroundColor = bgColor;
+                        }
+                    }
+                } else if (style.fill.fgColor) {
+                    const bgColor = excelColorToArgbHex(style.fill.fgColor.argb);
+                    if (bgColor) {
+                        td.style.backgroundColor = bgColor;
+                    }
+                } else if (style.fill.bgColor) {
+                    const bgColor = excelColorToArgbHex(style.fill.bgColor.argb);
+                    if (bgColor) {
+                        td.style.backgroundColor = bgColor;
+                    }
+                }
+            }
+
+            // Font styling
+            if (style.font) {
+                if (style.font.name) {
+                    td.style.fontFamily = style.font.name;
+                }
+                if (style.font.size) {
+                    td.style.fontSize = style.font.size + 'pt';
+                }
+                if (style.font.bold) {
+                    td.style.fontWeight = 'bold';
+                }
+                if (style.font.italic) {
+                    td.style.fontStyle = 'italic';
+                }
+                if (style.font.underline) {
+                    td.style.textDecoration = 'underline';
+                }
+                if (style.font.strike) {
+                    td.style.textDecoration = 'line-through';
+                }
+                if (style.font.color && style.font.color.argb) {
+                    const fontColor = excelColorToArgbHex(style.font.color.argb);
+                    if (fontColor) {
+                        td.style.color = fontColor;
+                    }
+                }
+            }
+
+            // Alignment
+            if (style.alignment) {
+                if (style.alignment.horizontal) {
+                    td.style.textAlign = style.alignment.horizontal;
+                }
+                if (style.alignment.vertical) {
+                    const valignMap = { 'top': 'top', 'middle': 'middle', 'bottom': 'bottom' };
+                    td.style.verticalAlign = valignMap[style.alignment.vertical] || 'middle';
+                }
+                if (style.alignment.wrapText) {
+                    td.style.whiteSpace = 'pre-wrap';
+                    td.style.wordWrap = 'break-word';
+                }
+            }
+
+            // Borders
+            if (style.border) {
+                const borderMap = {
+                    'top': 'borderTop',
+                    'bottom': 'borderBottom',
+                    'left': 'borderLeft',
+                    'right': 'borderRight'
+                };
+
+                const styleMap = {
+                    'thin': '1px solid',
+                    'medium': '2px solid',
+                    'thick': '3px solid',
+                    'dotted': '1px dotted',
+                    'dashed': '1px dashed',
+                    'double': '3px double',
+                    'hair': '1px solid',
+                    'dashDot': '1px dashed',
+                    'dashDotDot': '1px dashed',
+                    'mediumDashDot': '2px dashed',
+                    'mediumDashDotDot': '2px dashed',
+                    'slantDashDot': '1px dashed'
+                };
+
+                Object.keys(borderMap).forEach(side => {
+                    const border = style.border[side];
+                    if (border && border.style) {
+                        const borderStyle = styleMap[border.style] || '1px solid';
+                        const borderColor = border.color && border.color.argb
+                            ? excelColorToArgbHex(border.color.argb)
+                            : '#000000';
+                        td.style[borderMap[side]] = `${borderStyle} ${borderColor}`;
+                    }
+                });
+            }
+        }
+
+        // Convert ExcelJS ARGB color to hex
+        function excelColorToArgbHex(argb) {
+            if (!argb) return null;
+
+            // ARGB format: AARRGGBB (8 characters)
+            if (typeof argb === 'string' && argb.length === 8) {
+                // Skip alpha channel, return RGB
+                return '#' + argb.substring(2);
+            } else if (typeof argb === 'string' && argb.length === 6) {
+                // Already RGB
+                return '#' + argb;
+            }
+
+            return null;
+        }
+
+        // Handle cell input for ExcelJS
+        function handleCellInputExcelJS(e, cellAddress, row, col) {
+            const worksheet = window.excelWorksheet;
+            if (worksheet) {
+                const cell = worksheet.getCell(row, col);
+                cell.value = e.target.textContent;
+            }
+
+            // Also update SheetJS version for export
+            const xlsxCell = currentSheet[cellAddress] || (currentSheet[cellAddress] = {});
+            xlsxCell.v = e.target.textContent;
+            xlsxCell.t = 's';
+        }
+
+
+        // Cell selection handlers
+        function handleCellMouseDown(e, cellAddress) {
+            if (e.shiftKey && selectedCells.size > 0) {
+                // Range selection
+                selectRange(selectionStart, cellAddress);
+            } else if (e.ctrlKey || e.metaKey) {
+                // Multi-select
+                toggleCellSelection(cellAddress);
+            } else {
+                // Single select
+                clearSelection();
+                selectCell(cellAddress);
+                selectionStart = cellAddress;
+                isSelecting = true;
+            }
+        }
+
+        function handleCellMouseEnter(e, cellAddress) {
+            if (isSelecting && !e.ctrlKey && !e.metaKey) {
+                clearSelection();
+                selectRange(selectionStart, cellAddress);
+            }
+        }
+
+        function handleCellInput(e, cellAddress) {
+            const cell = currentSheet[cellAddress] || (currentSheet[cellAddress] = {});
+            cell.v = e.target.textContent;
+            cell.t = 's'; // String type
+        }
+
+        function selectCell(cellAddress) {
+            selectedCells.add(cellAddress);
+            const cell = document.getElementById(cellAddress);
+            if (cell) cell.classList.add('selected');
+        }
+
+        function toggleCellSelection(cellAddress) {
+            if (selectedCells.has(cellAddress)) {
+                selectedCells.delete(cellAddress);
+                const cell = document.getElementById(cellAddress);
+                if (cell) cell.classList.remove('selected', 'range-selected');
+            } else {
+                selectCell(cellAddress);
+            }
+        }
+
+        function selectRange(start, end) {
+            const startCell = XLSX.utils.decode_cell(start);
+            const endCell = XLSX.utils.decode_cell(end);
+
+            const minR = Math.min(startCell.r, endCell.r);
+            const maxR = Math.max(startCell.r, endCell.r);
+            const minC = Math.min(startCell.c, endCell.c);
+            const maxC = Math.max(startCell.c, endCell.c);
+
+            for (let R = minR; R <= maxR; R++) {
+                for (let C = minC; C <= maxC; C++) {
+                    const addr = XLSX.utils.encode_cell({ r: R, c: C });
+                    selectedCells.add(addr);
+                    const cell = document.getElementById(addr);
+                    if (cell) cell.classList.add('range-selected');
+                }
+            }
+        }
+
+        function clearSelection() {
+            selectedCells.forEach(addr => {
+                const cell = document.getElementById(addr);
+                if (cell) cell.classList.remove('selected', 'range-selected');
+            });
+            selectedCells.clear();
+        }
+
+        function selectAllCells() {
+            clearSelection();
+            const range = XLSX.utils.decode_range(currentSheet['!ref']);
+            for (let R = range.s.r; R <= range.e.r; R++) {
+                for (let C = range.s.c; C <= range.e.c; C++) {
+                    const addr = XLSX.utils.encode_cell({ r: R, c: C });
+                    selectCell(addr);
+                }
+            }
+        }
+
+        // Format application
+        function applyFormat(formatType) {
+            if (selectedCells.size === 0) {
+                showToast('Please select cells first', 'error');
+                return;
+            }
+
+            selectedCells.forEach(cellAddress => {
+                const cell = document.getElementById(cellAddress);
+                if (!cell) return;
+
+                switch (formatType) {
+                    case 'fontFamily':
+                        cell.style.fontFamily = document.getElementById('fontFamily').value;
+                        break;
+                    case 'fontSize':
+                        cell.style.fontSize = document.getElementById('fontSize').value + 'px';
+                        break;
+                    case 'bold':
+                        cell.style.fontWeight = cell.style.fontWeight === 'bold' ? 'normal' : 'bold';
+                        break;
+                    case 'italic':
+                        cell.style.fontStyle = cell.style.fontStyle === 'italic' ? 'normal' : 'italic';
+                        break;
+                    case 'underline':
+                        cell.style.textDecoration = cell.style.textDecoration === 'underline' ? 'none' : 'underline';
+                        break;
+                    case 'alignLeft':
+                        cell.style.textAlign = 'left';
+                        break;
+                    case 'alignCenter':
+                        cell.style.textAlign = 'center';
+                        break;
+                    case 'alignRight':
+                        cell.style.textAlign = 'right';
+                        break;
+                    case 'textColor':
+                        cell.style.color = document.getElementById('textColor').value;
+                        break;
+                    case 'bgColor':
+                        cell.style.backgroundColor = document.getElementById('bgColor').value;
+                        break;
+                    case 'borderAll':
+                        const borderColor = document.getElementById('borderColor').value;
+                        cell.style.border = `1px solid ${borderColor}`;
+                        break;
+                    case 'borderNone':
+                        cell.style.border = '1px solid #ddd';
+                        break;
+                    case 'borderColor':
+                        const newBorderColor = document.getElementById('borderColor').value;
+                        if (cell.style.border && cell.style.border !== '1px solid #ddd') {
+                            cell.style.border = `1px solid ${newBorderColor}`;
+                        }
+                        break;
+                }
+
+                // Store format for export
+                cellFormats[cellAddress] = {
+                    fontFamily: cell.style.fontFamily,
+                    fontSize: cell.style.fontSize,
+                    fontWeight: cell.style.fontWeight,
+                    fontStyle: cell.style.fontStyle,
+                    textDecoration: cell.style.textDecoration,
+                    textAlign: cell.style.textAlign,
+                    color: cell.style.color,
+                    backgroundColor: cell.style.backgroundColor,
+                    border: cell.style.border
+                };
+            });
+        }
+
+        // Column width adjustment
+        function adjustColumnWidth(delta) {
+            if (selectedCells.size === 0) {
+                showToast('Please select cells first', 'error');
+                return;
+            }
+
+            const columns = new Set();
+            selectedCells.forEach(addr => {
+                const cell = XLSX.utils.decode_cell(addr);
+                columns.add(cell.c);
+            });
+
+            columns.forEach(colIndex => {
+                const cells = document.querySelectorAll(`td:nth-child(${colIndex + 2})`);
+                cells.forEach(cell => {
+                    const currentWidth = cell.offsetWidth;
+                    cell.style.minWidth = Math.max(50, currentWidth + delta) + 'px';
+                    cell.style.width = Math.max(50, currentWidth + delta) + 'px';
+                });
+            });
+        }
+
+        // Row height adjustment
+        function adjustRowHeight(delta) {
+            if (selectedCells.size === 0) {
+                showToast('Please select cells first', 'error');
+                return;
+            }
+
+            const rows = new Set();
+            selectedCells.forEach(addr => {
+                const cell = XLSX.utils.decode_cell(addr);
+                rows.add(cell.r);
+            });
+
+            rows.forEach(rowIndex => {
+                const row = document.querySelector(`#spreadsheet tr:nth-child(${rowIndex + 2})`);
+                if (row) {
+                    const currentHeight = row.offsetHeight;
+                    row.style.height = Math.max(30, currentHeight + delta) + 'px';
+                }
+            });
+        }
+
+        // Column resize
+        let resizingColumn = null;
+        let resizeStartX = 0;
+        let resizeStartWidth = 0;
+
+        function handleResizeStart(e, colIndex) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            resizingColumn = colIndex;
+            resizeStartX = e.clientX;
+            const firstCell = document.querySelector(`td:nth-child(${colIndex + 2})`);
+            resizeStartWidth = firstCell.offsetWidth;
+
+            document.addEventListener('mousemove', handleResize);
+            document.addEventListener('mouseup', handleResizeEnd);
+        }
+
+        function handleResize(e) {
+            if (resizingColumn === null) return;
+
+            const delta = e.clientX - resizeStartX;
+            const newWidth = Math.max(50, resizeStartWidth + delta);
+
+            const cells = document.querySelectorAll(`td:nth-child(${resizingColumn + 2}), th:nth-child(${resizingColumn + 2})`);
+            cells.forEach(cell => {
+                cell.style.minWidth = newWidth + 'px';
+                cell.style.width = newWidth + 'px';
+            });
+        }
+
+        function handleResizeEnd() {
+            resizingColumn = null;
+            document.removeEventListener('mousemove', handleResize);
+            document.removeEventListener('mouseup', handleResizeEnd);
+        }
+
+        // Export to PDF
+        async function exportToPDF() {
+            if (selectedCells.size === 0) {
+                showToast('Please select cells to export', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+
+                // Get selected cell range
+                const cellAddresses = Array.from(selectedCells);
+                const cells = cellAddresses.map(addr => ({
+                    addr: addr,
+                    decoded: XLSX.utils.decode_cell(addr),
+                    element: document.getElementById(addr)
+                }));
+
+                const minR = Math.min(...cells.map(c => c.decoded.r));
+                const maxR = Math.max(...cells.map(c => c.decoded.r));
+                const minC = Math.min(...cells.map(c => c.decoded.c));
+                const maxC = Math.max(...cells.map(c => c.decoded.c));
+
+                // Prepare table data
+                const tableData = [];
+                for (let R = minR; R <= maxR; R++) {
+                    const rowData = [];
+                    for (let C = minC; C <= maxC; C++) {
+                        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+                        const cell = document.getElementById(addr);
+                        rowData.push(cell ? cell.textContent : '');
+                    }
+                    tableData.push(rowData);
+                }
+
+                // Add title
+                doc.setFontSize(16);
+                doc.text(currentFileName.replace('.xlsx', ''), 14, 15);
+
+                // Add table with autoTable
+                doc.autoTable({
+                    head: [],
+                    body: tableData,
+                    startY: 20,
+                    styles: {
+                        fontSize: 10,
+                        cellPadding: 3,
+                    },
+                    didParseCell: function(data) {
+                        const R = data.row.index + minR;
+                        const C = data.column.index + minC;
+                        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+                        const format = cellFormats[addr];
+
+                        if (format) {
+                            if (format.backgroundColor && format.backgroundColor !== 'rgb(255, 255, 255)') {
+                                data.cell.styles.fillColor = format.backgroundColor;
+                            }
+                            if (format.color) {
+                                data.cell.styles.textColor = format.color;
+                            }
+                            if (format.fontWeight === 'bold') {
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                            if (format.textAlign) {
+                                data.cell.styles.halign = format.textAlign;
+                            }
+                        }
+                    }
+                });
+
+                // Save PDF
+                const fileName = currentFileName.replace(/\.(xlsx|xls)$/, '_export.pdf');
+                doc.save(fileName);
+
+                showToast('PDF exported successfully!', 'success');
+            } catch (error) {
+                console.error('Error exporting PDF:', error);
+                showToast('Error exporting PDF', 'error');
+            }
+
+            showLoading(false);
+        }
+
+        // Export to Excel
+        function exportToExcel() {
+            if (!workbook) {
+                showToast('No data to export', 'error');
+                return;
+            }
+
+            try {
+                // Update workbook with current values
+                const table = document.getElementById('spreadsheet');
+                const range = XLSX.utils.decode_range(currentSheet['!ref']);
+
+                for (let R = range.s.r; R <= range.e.r; R++) {
+                    for (let C = range.s.c; C <= range.e.c; C++) {
+                        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+                        const cell = document.getElementById(addr);
+                        if (cell && currentSheet[addr]) {
+                            currentSheet[addr].v = cell.textContent;
+                        }
+                    }
+                }
+
+                const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([wbout], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = currentFileName.replace(/\.(xlsx|xls)$/, '_modified.xlsx');
+                a.click();
+                URL.revokeObjectURL(url);
+
+                showToast('Excel file exported successfully!', 'success');
+            } catch (error) {
+                console.error('Error exporting Excel:', error);
+                showToast('Error exporting Excel file', 'error');
+            }
+        }
+
+        // Save to Supabase
+        async function saveToSupabase() {
+            try {
+                showLoading(true);
+                await ensureAuthenticated();
+
+                // Convert workbook to binary
+                const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+                // Upload to Supabase storage
+                const fileName = `risk_registers/${currentUser.id}/${Date.now()}_${currentFileName}`;
+                const { data, error } = await supabaseClient.storage
+                    .from('documents')
+                    .upload(fileName, blob);
+
+                if (error) throw error;
+
+                // Save metadata to database
+                const { error: dbError } = await supabaseClient
+                    .from('risk_registers')
+                    .insert({
+                        user_id: currentUser.id,
+                        file_name: currentFileName,
+                        file_path: fileName,
+                        uploaded_at: new Date().toISOString()
+                    });
+
+                if (dbError) throw dbError;
+
+                showToast('File saved to Supabase successfully!', 'success');
+            } catch (error) {
+                console.error('Error saving to Supabase:', error);
+                showToast('Error saving file: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Load new file
+        function loadNewFile() {
+            if (confirm('Are you sure? Any unsaved changes will be lost.')) {
+                location.reload();
+            }
+        }
+
+        // Utility functions
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show ' + type;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('show', show);
+        }
+
+        // Analyze and display formatting info using ExcelJS
+        function analyzeFormattingExcelJS(worksheet) {
+            if (!worksheet) return;
+
+            const formatStats = {
+                colors: new Set(),
+                fonts: new Set(),
+                borders: 0,
+                merged: 0,
+                colWidths: 0,
+                rowHeights: 0,
+                styledCells: 0
+            };
+
+            // Count merged cells
+            worksheet.eachRow((row, rowNumber) => {
+                row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+                    if (cell.isMerged && cell.master.address === cell.address) {
+                        formatStats.merged++;
+                    }
+
+                    const style = cell.style;
+                    if (style && (style.fill || style.font || style.border || style.alignment)) {
+                        formatStats.styledCells++;
+
+                        // Track colors
+                        if (style.fill && style.fill.fgColor && style.fill.fgColor.argb) {
+                            formatStats.colors.add(excelColorToArgbHex(style.fill.fgColor.argb));
+                        }
+                        if (style.font && style.font.color && style.font.color.argb) {
+                            formatStats.colors.add(excelColorToArgbHex(style.font.color.argb));
+                        }
+
+                        // Track fonts
+                        if (style.font && style.font.name) {
+                            formatStats.fonts.add(style.font.name);
+                        }
+
+                        // Count borders
+                        if (style.border) {
+                            const hasBorder = Object.values(style.border).some(b => b && b.style);
+                            if (hasBorder) formatStats.borders++;
+                        }
+                    }
+                });
+            });
+
+            // Count custom column widths and row heights
+            for (let c = 1; c <= worksheet.columnCount; c++) {
+                const col = worksheet.getColumn(c);
+                if (col.width) formatStats.colWidths++;
+            }
+
+            for (let r = 1; r <= worksheet.rowCount; r++) {
+                const row = worksheet.getRow(r);
+                if (row.height) formatStats.rowHeights++;
+            }
+
+            // Display formatting info
+            const infoContent = document.getElementById('formatInfoContent');
+            infoContent.innerHTML = `
+                <div>✅ <strong>${formatStats.styledCells}</strong> styled cells</div>
+                <div>🎨 <strong>${formatStats.colors.size}</strong> unique colors</div>
+                <div>🔤 <strong>${formatStats.fonts.size}</strong> fonts: ${Array.from(formatStats.fonts).join(', ') || 'Default'}</div>
+                <div>📏 <strong>${formatStats.borders}</strong> cells with borders</div>
+                <div>🔗 <strong>${formatStats.merged}</strong> merged cell regions</div>
+                <div>📐 <strong>${formatStats.colWidths}</strong> custom column widths</div>
+                <div>📊 <strong>${formatStats.rowHeights}</strong> custom row heights</div>
+                <div style="grid-column: 1 / -1; margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+                    <strong>Color Palette:</strong>
+                    <div style="display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap;">
+                        ${Array.from(formatStats.colors).filter(c => c).map(color =>
+                            `<div style="width: 30px; height: 30px; background: ${color}; border: 1px solid #ccc; border-radius: 3px;" title="${color}"></div>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+
+        }
+
+        // Toggle format info panel
+        function toggleFormatInfo() {
+            const panel = document.getElementById('formatInfo');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+
+    <!-- Split Screen Overlay -->
+    <div id="splitScreenOverlay" class="split-screen-overlay">
+        <div class="split-screen-header">
+            <h2>Split Screen Mode</h2>
+            <div class="split-screen-controls">
+                <div class="split-pane-selector">
+                    <label>Left:</label>
+                    <select id="leftPaneSelect" onchange="updateLeftPane()">
+                        <option value="grants.html">Grants</option>
+                        <option value="spend.html">Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html" selected>Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <div class="split-pane-selector">
+                    <label>Right:</label>
+                    <select id="rightPaneSelect" onchange="updateRightPane()">
+                        <option value="grants.html">Grants</option>
+                        <option value="spend.html">Spend</option>
+                        <option value="gantt.html">Gantt</option>
+                        <option value="timesheet.html">Labour</option>
+                        <option value="index.html">Sketcher</option>
+                        <option value="exploit.html">Exploit</option>
+                        <option value="risks.html">Risks</option>
+                        <option value="quote.html">Quote</option>
+                    </select>
+                </div>
+                <button class="split-orientation-btn" onclick="toggleOrientation()">
+                    <span id="orientationIcon">⇌</span> Toggle Layout
+                </button>
+            </div>
+            <button class="split-screen-close" onclick="closeSplitScreen()">✕ Close</button>
+        </div>
+        <div id="splitScreenContainer" class="split-screen-container">
+            <div class="split-pane">
+                <div class="split-pane-header">
+                    <span id="leftPaneTitle">Risks</span>
+                </div>
+                <div class="split-pane-content">
+                    <iframe id="leftPaneFrame" src="risks.html"></iframe>
+                </div>
+            </div>
+            <div class="split-divider" id="splitDivider"></div>
+            <div class="split-pane">
+                <div class="split-pane-header">
+                    <span id="rightPaneTitle">Grants</span>
+                </div>
+                <div class="split-pane-content">
+                    <iframe id="rightPaneFrame" src="grants.html"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Split Screen Functions
+        function openSplitScreenMode() {
+            const overlay = document.getElementById('splitScreenOverlay');
+            overlay.classList.add('active');
+            // Set left pane to current page (risks.html)
+            document.getElementById('leftPaneSelect').value = 'risks.html';
+            document.getElementById('leftPaneFrame').src = 'risks.html';
+            document.getElementById('leftPaneTitle').textContent = 'Risks';
+        }
+
+        function closeSplitScreen() {
+            const overlay = document.getElementById('splitScreenOverlay');
+            overlay.classList.remove('active');
+        }
+
+        function updateLeftPane() {
+            const select = document.getElementById('leftPaneSelect');
+            const frame = document.getElementById('leftPaneFrame');
+            const title = document.getElementById('leftPaneTitle');
+
+            frame.src = select.value;
+            title.textContent = select.options[select.selectedIndex].text;
+        }
+
+        function updateRightPane() {
+            const select = document.getElementById('rightPaneSelect');
+            const frame = document.getElementById('rightPaneFrame');
+            const title = document.getElementById('rightPaneTitle');
+
+            frame.src = select.value;
+            title.textContent = select.options[select.selectedIndex].text;
+        }
+
+        function toggleOrientation() {
+            const container = document.getElementById('splitScreenContainer');
+            const icon = document.getElementById('orientationIcon');
+
+            if (container.classList.contains('vertical')) {
+                container.classList.remove('vertical');
+                icon.textContent = '⇌';
+            } else {
+                container.classList.add('vertical');
+                icon.textContent = '⇕';
+            }
+        }
+
+        // Draggable divider
+        (function() {
+            const divider = document.getElementById('splitDivider');
+            const container = document.getElementById('splitScreenContainer');
+            let isDragging = false;
+            let startPos = 0;
+            let startSize = 0;
+
+            divider.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                const isVertical = container.classList.contains('vertical');
+                startPos = isVertical ? e.clientY : e.clientX;
+
+                const panes = container.querySelectorAll('.split-pane');
+                const firstPane = panes[0];
+                startSize = isVertical ? firstPane.offsetHeight : firstPane.offsetWidth;
+
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+
+                const isVertical = container.classList.contains('vertical');
+                const currentPos = isVertical ? e.clientY : e.clientX;
+                const delta = currentPos - startPos;
+                const containerSize = isVertical ? container.offsetHeight : container.offsetWidth;
+                const newSize = ((startSize + delta) / containerSize) * 100;
+
+                if (newSize > 10 && newSize < 90) {
+                    const panes = container.querySelectorAll('.split-pane');
+                    panes[0].style.flex = `0 0 ${newSize}%`;
+                    panes[1].style.flex = `0 0 ${100 - newSize}%`;
+                }
+            });
+
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+Cost categories,Costs claimed,Costs you are claiming,Forecast,Forecast,Total,Total eligible costs,Difference
+Period,1,2,3,4,Total,Total eligible costs,Difference
+IAR Due,0,0,0,1,Total,Total eligible costs,Difference
+Month,2025-04-01T01:00:00+01:00,2025-07-01T01:00:00+01:00,2025-10-01T01:00:00+01:00,2026-01-01T00:00:00+00:00,Total,Total eligible costs,Difference
+Labour,9653,0,9986.33,9986,29625.33,39612,-25.211223871554072
+Overheads,1930.6,0,1997.165,1997.099,5924.87,7922,-25.20992173693512
+Materials,5298.48,0,917.17,917.18,7132.83,8050,-11.393416149068324
+Capital usage,0,0,0,0,,0,
+Subcontracting,180,0,10073.33,10073.34,20326.67,30400,-33.13595394736843
+Travel and subsistence,683.89,0,772.04,772.03,2227.96,3000,-25.734666666666666
+Other costs,343.66,0,764.45,764.44,1872.55,2637,-28.989381873340918
+Total,18089.63,,24510.49,24510.09,67110.21,91621,-26.752371181279393
