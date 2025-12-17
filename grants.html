@@ -2481,7 +2481,11 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
 
             const rows = transactions.map(transaction => {
                 const date = transaction.date || '-';
-                const description = transaction.description || '-';
+                // Strip [CUSTOM] prefix from description for display
+                let description = transaction.description || '-';
+                if (description.startsWith('[CUSTOM] ')) {
+                    description = description.substring(9);
+                }
 
                 // Always show GBP amounts, with note if currency-converted
                 const spentAmount = parseAmount(transaction.spent);
@@ -2892,7 +2896,11 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
 
                     items.forEach(({transaction, assignment}) => {
                         const date = transaction.date || '-';
-                        const description = transaction.description || '-';
+                        // Strip [CUSTOM] prefix from description for display
+                        let description = transaction.description || '-';
+                        if (description.startsWith('[CUSTOM] ')) {
+                            description = description.substring(9);
+                        }
 
                         // Always show GBP amounts (even if currency-converted)
                         const spentAmount = parseAmount(transaction.spent);
@@ -4553,7 +4561,7 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                 }
 
                 const assignment = transaction.assignments.find(a =>
-                    a.projectId === projectBudget.projectId &&
+                    String(a.projectId) === String(projectBudget.projectId) &&
                     a.quarter === quarterIndex &&
                     (a.category || 'Other Costs') === categoryName
                 );
@@ -4592,9 +4600,15 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
 
                 categoryTotal += assignment.amount;
 
+                // Strip [CUSTOM] prefix from description for display/export
+                let displayDescription = transaction.description || '';
+                if (displayDescription.startsWith('[CUSTOM] ')) {
+                    displayDescription = displayDescription.substring(9); // Remove '[CUSTOM] ' prefix
+                }
+
                 const txnData = {
                     date: transaction.date || '',
-                    description: transaction.description || '',
+                    description: displayDescription,
                     valueExTax: valueExTax,
                     valueIncTax: spentAmount,
                     allocationPercentage: assignment.percentage ? (assignment.percentage / 100) : 0,
