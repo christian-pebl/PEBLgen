@@ -5742,8 +5742,9 @@
                         itemName = item.description;
                         itemBudget = item.netCost || 0;
                     } else if (selectedCategoryName === 'Subcontracting') {
-                        itemName = item.name;
-                        itemBudget = item.cost || 0;
+                        // Support both old format (name/cost) and new format (item/total)
+                        itemName = item.name || item.item || 'Unnamed';
+                        itemBudget = item.cost || item.total || item.totalCost || 0;
                     } else if (selectedCategoryName === 'Travel') {
                         itemName = item.purpose;
                         itemBudget = item.total || 0;

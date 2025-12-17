@@ -8,6 +8,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
+
+    <!-- Export Libraries -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1014,12 +1020,13 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                 <h2>Labour Allocation</h2>
 
                 <div style="margin-bottom: 10px;">
-                    <button class="btn btn-success" onclick="addStaffRow()">+ Line</button>
+                    <button class="btn btn-success" onclick="showAddLineDialog()">+ Line</button>
                     <button class="btn btn-info" onclick="addProject()">+ Project</button>
                     <button class="btn btn-primary" onclick="showGrantLinkModal()" style="background: #2196F3; color: white;">🔗 Link Grant</button>
                     <button class="btn btn-warning" onclick="showCopyMonthDialog()" style="background: #ff9800; color: white;">📋 Copy Month</button>
                     <button class="btn btn-warning" onclick="showHideMonthDialog()" style="background: #9c27b0; color: white;">👁️ Hide Month</button>
                     <button class="btn btn-secondary" onclick="showAllProjects()" style="background: #607D8B;">Show All</button>
+                    <button class="btn btn-success" onclick="showExportDialog()" style="background: #10b981; color: white;">📤 Export Data</button>
                 </div>
 
                 <!-- Labour Budget Section -->
@@ -1134,6 +1141,26 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                     </div>
                 </div>
 
+                <!-- Add Line Dialog -->
+                <div id="addLineDialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; width: 90%;">
+                        <h3 style="margin-top: 0; color: #10b981;">➕ Add New Line</h3>
+                        <p style="color: #6b7280; font-size: 13px; margin-bottom: 20px;">Select the month where you want to add the new line. The line will be added at the end of that month.</p>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Month:</label>
+                            <select id="addLineMonthSelect" style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                <option value="">-- Select month --</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="closeAddLineDialog()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>
+                            <button id="executeAddLineBtn" onclick="executeAddLine()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Add Line</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Hide Month Dialog -->
                 <div id="hideMonthDialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
                     <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
@@ -1149,6 +1176,72 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
 
                         <div style="display: flex; gap: 10px; justify-content: flex-end;">
                             <button onclick="closeHideMonthDialog()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Close</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Data Dialog -->
+                <div id="exportDataDialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-top: 0; color: #1e40af;">📤 Export Labour Allocation Data</h3>
+
+                        <p style="color: #6b7280; font-size: 13px; margin-bottom: 20px;">
+                            Select the projects and months you want to include in your export. Only staff with allocations in the selected months/projects will be included.
+                        </p>
+
+                        <!-- Project Selection -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h4 style="margin: 0; color: #374151; font-size: 14px;">Select Projects:</h4>
+                                <label style="cursor: pointer; font-size: 13px; color: #3b82f6;">
+                                    <input type="checkbox" id="selectAllProjects" onchange="toggleAllProjects()" style="margin-right: 5px;">
+                                    Select All
+                                </label>
+                            </div>
+                            <div id="exportProjectList" style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 4px; padding: 10px; background: #f9fafb;">
+                                <!-- Project checkboxes populated by showExportDialog() -->
+                            </div>
+                        </div>
+
+                        <!-- Month Selection -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h4 style="margin: 0; color: #374151; font-size: 14px;">Select Months:</h4>
+                                <label style="cursor: pointer; font-size: 13px; color: #3b82f6;">
+                                    <input type="checkbox" id="selectAllMonths" onchange="toggleAllMonths()" style="margin-right: 5px;">
+                                    Select All
+                                </label>
+                            </div>
+                            <div id="exportMonthList" style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 4px; padding: 10px; background: #f9fafb;">
+                                <!-- Month checkboxes populated by showExportDialog() -->
+                            </div>
+                        </div>
+
+                        <!-- Format Selection -->
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: #374151; font-size: 14px;">Export Format:</h4>
+                            <div style="display: flex; gap: 15px;">
+                                <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 2px solid #e5e7eb; border-radius: 6px; background: white; transition: all 0.2s;">
+                                    <input type="radio" name="exportFormat" value="xlsx" style="margin-right: 8px;">
+                                    <span style="font-weight: 500; color: #374151;">📊 Excel (.xlsx)</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 2px solid #e5e7eb; border-radius: 6px; background: white; transition: all 0.2s;">
+                                    <input type="radio" name="exportFormat" value="pdf" checked style="margin-right: 8px;">
+                                    <span style="font-weight: 500; color: #374151;">📄 PDF (Landscape)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Export Preview -->
+                        <div id="exportPreview" style="margin-bottom: 20px; padding: 12px; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 4px; display: none;">
+                            <p style="margin: 0; color: #1e40af; font-size: 13px; font-weight: 600;">Preview:</p>
+                            <p id="exportPreviewText" style="margin: 8px 0 0 0; color: #3b82f6; font-size: 13px;"></p>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="closeExportDialog()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>
+                            <button id="executeExportBtn" onclick="executeExport()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600;">📤 Export</button>
                         </div>
                     </div>
                 </div>
@@ -7634,12 +7727,106 @@ Return JSON:
             saveLabourData();
         }
 
-        // Add staff row
-        function addStaffRow() {
-            labourRows.push(createDefaultRow());
+        // Show add line dialog
+        function showAddLineDialog() {
+            const monthSelect = document.getElementById('addLineMonthSelect');
+            monthSelect.innerHTML = '<option value="">-- Select month --</option>';
+
+            // Generate months from 12 months ago to 24 months in the future
+            const today = new Date();
+            const startDate = new Date(today.getFullYear(), today.getMonth() - 12, 1);
+            const endDate = new Date(today.getFullYear(), today.getMonth() + 24, 1);
+
+            const months = [];
+            let current = new Date(startDate);
+            while (current <= endDate) {
+                const year = current.getFullYear();
+                const month = String(current.getMonth() + 1).padStart(2, '0');
+                const monthValue = `${year}-${month}`;
+                const monthName = current.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+                // Check if this month has existing data
+                const hasData = labourRows.some(row => row.month === monthValue);
+                const displayText = hasData ? `${monthName} (has data)` : monthName;
+
+                months.push({ value: monthValue, text: displayText });
+                current.setMonth(current.getMonth() + 1);
+            }
+
+            // Populate dropdown
+            months.forEach(month => {
+                const option = document.createElement('option');
+                option.value = month.value;
+                option.textContent = month.text;
+                monthSelect.appendChild(option);
+            });
+
+            // Set default to current month
+            const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+            monthSelect.value = currentMonth;
+
+            // Show dialog
+            document.getElementById('addLineDialog').style.display = 'flex';
+        }
+
+        // Execute add line
+        function executeAddLine() {
+            const selectedMonth = document.getElementById('addLineMonthSelect').value;
+
+            if (!selectedMonth) {
+                alert('Please select a month.');
+                return;
+            }
+
+            // Create new row with the selected month
+            const newRow = createDefaultRow();
+            newRow.month = selectedMonth;
+
+            // Find the last index of the selected month
+            let insertIndex = labourRows.length; // Default to end
+            for (let i = labourRows.length - 1; i >= 0; i--) {
+                if (labourRows[i].month === selectedMonth) {
+                    insertIndex = i + 1; // Insert after the last occurrence
+                    break;
+                }
+            }
+
+            // If no existing row with this month, find correct chronological position
+            if (insertIndex === labourRows.length && labourRows.length > 0) {
+                for (let i = 0; i < labourRows.length; i++) {
+                    if (labourRows[i].month > selectedMonth) {
+                        insertIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // Insert at the calculated position
+            labourRows.splice(insertIndex, 0, newRow);
+
+            // Render and save
             renderLabourRows();
             applyMonthStates();
             saveLabourData();
+
+            // Close dialog
+            closeAddLineDialog();
+
+            // Show success message
+            const [year, monthNum] = selectedMonth.split('-');
+            const monthName = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            alert(`✅ Line added to ${monthName}`);
+        }
+
+        // Close add line dialog
+        function closeAddLineDialog() {
+            document.getElementById('addLineDialog').style.display = 'none';
+            document.getElementById('addLineMonthSelect').value = '';
+        }
+
+        // Add staff row (legacy function - keeping for backwards compatibility)
+        function addStaffRow() {
+            showAddLineDialog();
         }
 
         // Delete row
@@ -8004,6 +8191,564 @@ Return JSON:
 
         // ============================================
         // END HIDE MONTH FUNCTIONS
+        // ============================================
+
+        // ============================================
+        // EXPORT DATA FUNCTIONS
+        // ============================================
+
+        // Get all unique months from labour data (sorted chronologically)
+        function getUniqueMonthsFromRows() {
+            const uniqueMonths = [...new Set(labourRows.map(row => row.month))].sort();
+            return uniqueMonths;
+        }
+
+        // Format month string for display (e.g., "2025-09" -> "September 2025")
+        function formatMonthDisplay(monthString) {
+            const [year, monthNum] = monthString.split('-');
+            return new Date(year, parseInt(monthNum) - 1).toLocaleDateString('en-US', {
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        // Filter labour data for export based on selected projects and months
+        // Returns: { filteredRows: [...], selectedProjects: [...] }
+        function filterLabourDataForExport(selectedProjectIndices, selectedMonths) {
+            console.log('[Export] Filtering data...', { selectedProjectIndices, selectedMonths });
+
+            // Filter rows by selected months
+            const monthFilteredRows = labourRows.filter(row => selectedMonths.includes(row.month));
+
+            // Further filter: only include staff who have allocations in selected projects
+            const filteredRows = monthFilteredRows.filter(row => {
+                // Check if this staff member has any non-zero days in selected projects
+                return selectedProjectIndices.some(projectIdx => {
+                    const project = row.projects[projectIdx];
+                    return project && project.days > 0;
+                });
+            });
+
+            // Get selected project objects
+            const selectedProjects = selectedProjectIndices.map(idx => ({
+                index: idx,
+                name: labourProjects[idx].name,
+                color: labourProjects[idx].color
+            }));
+
+            console.log('[Export] Filtered:', {
+                totalRows: labourRows.length,
+                filteredRows: filteredRows.length,
+                selectedProjects: selectedProjects.length
+            });
+
+            return { filteredRows, selectedProjects };
+        }
+
+        // Build table data structure for export
+        // Returns: { headers: [...], rows: [[...], [...]] }
+        function buildExportTableData(filteredData) {
+            const { filteredRows, selectedProjects } = filteredData;
+
+            // Build header row
+            const headers = [
+                'Month',
+                'Staff',
+                'Gross (£)',
+                'FTE',
+                '£/yr (full time)',
+                '£/yr (as paid)',
+                'Daily Rate (£)',
+                'Hourly Rate (£)'
+            ];
+
+            // Add project columns (Days, Rate, Total for each project)
+            selectedProjects.forEach(project => {
+                headers.push(`${project.name} - Days`);
+                headers.push(`${project.name} - Rate (£)`);
+                headers.push(`${project.name} - Total (£)`);
+            });
+
+            // Build data rows
+            const rows = filteredRows.map(row => {
+                const dataRow = [
+                    formatMonthDisplay(row.month),
+                    row.staff || '',
+                    row.gross || 0,
+                    row.fte || 0,
+                    row.yearlyPay || 0,
+                    row.yearlyAsPaid || 0,
+                    row.dailyRate || 0,
+                    row.hourlyRate || 0
+                ];
+
+                // Add project allocation data
+                selectedProjects.forEach(project => {
+                    const projectData = row.projects[project.index] || {};
+                    dataRow.push(projectData.days || 0);
+                    dataRow.push(projectData.rate || 0);
+                    dataRow.push(projectData.total || 0);
+                });
+
+                return dataRow;
+            });
+
+            return { headers, rows };
+        }
+
+        // ============================================
+        // END EXPORT DATA FUNCTIONS (HELPERS)
+        // ============================================
+
+        // Show the export data dialog
+        function showExportDialog() {
+            if (labourRows.length === 0) {
+                alert('No labour allocation data to export. Please add some data first.');
+                return;
+            }
+
+            if (labourProjects.length === 0) {
+                alert('No projects found. Please add at least one project first.');
+                return;
+            }
+
+            const dialog = document.getElementById('exportDataDialog');
+
+            // Populate project list
+            const projectList = document.getElementById('exportProjectList');
+            projectList.innerHTML = '';
+
+            labourProjects.forEach((project, idx) => {
+                const isHidden = hiddenProjects.has(idx);
+
+                const projectDiv = document.createElement('div');
+                projectDiv.style.cssText = 'margin-bottom: 8px; padding: 8px; border-radius: 4px; background: white; border: 1px solid #e5e7eb;';
+
+                const label = document.createElement('label');
+                label.style.cssText = 'display: flex; align-items: center; cursor: pointer;';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'export-project-checkbox';
+                checkbox.dataset.projectIndex = idx;
+                checkbox.checked = false; // Default to unchecked
+                checkbox.onchange = updateExportPreview;
+                checkbox.style.marginRight = '10px';
+
+                const colorBox = document.createElement('span');
+                colorBox.style.cssText = `display: inline-block; width: 16px; height: 16px; background: ${project.color}; border-radius: 3px; margin-right: 8px; border: 1px solid #ddd;`;
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = project.name;
+                nameSpan.style.cssText = 'font-size: 13px; color: #374151;';
+
+                if (project.grantProjectId) {
+                    const linkIcon = document.createElement('span');
+                    linkIcon.textContent = ' 🔗';
+                    linkIcon.style.fontSize = '11px';
+                    linkIcon.title = 'Linked to grant';
+                    nameSpan.appendChild(linkIcon);
+                }
+
+                label.appendChild(checkbox);
+                label.appendChild(colorBox);
+                label.appendChild(nameSpan);
+                projectDiv.appendChild(label);
+                projectList.appendChild(projectDiv);
+            });
+
+            // Populate month list
+            const monthList = document.getElementById('exportMonthList');
+            monthList.innerHTML = '';
+
+            const uniqueMonths = getUniqueMonthsFromRows();
+
+            uniqueMonths.forEach(month => {
+                const monthDiv = document.createElement('div');
+                monthDiv.style.cssText = 'margin-bottom: 8px; padding: 8px; border-radius: 4px; background: white; border: 1px solid #e5e7eb;';
+
+                const label = document.createElement('label');
+                label.style.cssText = 'display: flex; align-items: center; cursor: pointer;';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'export-month-checkbox';
+                checkbox.dataset.month = month;
+                checkbox.checked = false; // Default to unchecked
+                checkbox.onchange = updateExportPreview;
+                checkbox.style.marginRight = '10px';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = formatMonthDisplay(month);
+                nameSpan.style.cssText = 'font-size: 13px; color: #374151;';
+
+                label.appendChild(checkbox);
+                label.appendChild(nameSpan);
+                monthDiv.appendChild(label);
+                monthList.appendChild(monthDiv);
+            });
+
+            // Initialize "Select All" checkboxes
+            document.getElementById('selectAllProjects').checked = false;
+            document.getElementById('selectAllMonths').checked = false;
+
+            // Show initial preview
+            updateExportPreview();
+
+            // Show dialog
+            dialog.style.display = 'flex';
+        }
+
+        // Close the export dialog
+        function closeExportDialog() {
+            const dialog = document.getElementById('exportDataDialog');
+            dialog.style.display = 'none';
+        }
+
+        // Toggle all project checkboxes
+        function toggleAllProjects() {
+            const selectAll = document.getElementById('selectAllProjects').checked;
+            const checkboxes = document.querySelectorAll('.export-project-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+            });
+            updateExportPreview();
+        }
+
+        // Toggle all month checkboxes
+        function toggleAllMonths() {
+            const selectAll = document.getElementById('selectAllMonths').checked;
+            const checkboxes = document.querySelectorAll('.export-month-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+            });
+            updateExportPreview();
+        }
+
+        // Update the export preview based on current selections
+        function updateExportPreview() {
+            // Get selected projects
+            const selectedProjectCheckboxes = Array.from(document.querySelectorAll('.export-project-checkbox:checked'));
+            const selectedProjectCount = selectedProjectCheckboxes.length;
+
+            // Get selected months
+            const selectedMonthCheckboxes = Array.from(document.querySelectorAll('.export-month-checkbox:checked'));
+            const selectedMonthCount = selectedMonthCheckboxes.length;
+
+            // Update "Select All" checkboxes
+            const totalProjects = document.querySelectorAll('.export-project-checkbox').length;
+            const totalMonths = document.querySelectorAll('.export-month-checkbox').length;
+            document.getElementById('selectAllProjects').checked = (selectedProjectCount === totalProjects);
+            document.getElementById('selectAllMonths').checked = (selectedMonthCount === totalMonths);
+
+            // Calculate filtered data
+            if (selectedProjectCount > 0 && selectedMonthCount > 0) {
+                const selectedProjectIndices = selectedProjectCheckboxes.map(cb => parseInt(cb.dataset.projectIndex));
+                const selectedMonths = selectedMonthCheckboxes.map(cb => cb.dataset.month);
+
+                const { filteredRows } = filterLabourDataForExport(selectedProjectIndices, selectedMonths);
+
+                // Show preview
+                const preview = document.getElementById('exportPreview');
+                const previewText = document.getElementById('exportPreviewText');
+                preview.style.display = 'block';
+                previewText.textContent = `${filteredRows.length} staff rows × ${selectedProjectCount} projects × ${selectedMonthCount} months = ${filteredRows.length * selectedMonthCount} total entries`;
+
+                // Enable export button
+                document.getElementById('executeExportBtn').disabled = false;
+            } else {
+                // Hide preview and disable button
+                document.getElementById('exportPreview').style.display = 'none';
+                document.getElementById('executeExportBtn').disabled = true;
+            }
+        }
+
+        // ============================================
+        // END EXPORT DIALOG CONTROL FUNCTIONS
+        // ============================================
+
+        // Export labour allocation data to Excel (.xlsx)
+        function exportToXLSX(tableData, filename) {
+            console.log('[Export XLSX] Starting export...', { filename, rows: tableData.rows.length });
+
+            try {
+                // Create new workbook
+                const wb = XLSX.utils.book_new();
+
+                // Format all numbers in the table data to 2 decimal places
+                const formattedRows = tableData.rows.map(row => {
+                    return row.map(cell => {
+                        if (typeof cell === 'number') {
+                            return Number(cell.toFixed(2));
+                        }
+                        return cell;
+                    });
+                });
+
+                // Build array of arrays (headers + data rows)
+                const aoa = [tableData.headers, ...formattedRows];
+
+                // Convert to worksheet
+                const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+                // Set column widths for better readability
+                const colWidths = [
+                    { wch: 15 },  // Month
+                    { wch: 20 },  // Staff
+                    { wch: 10 },  // Gross
+                    { wch: 8 },   // FTE
+                    { wch: 12 },  // £/yr full time
+                    { wch: 12 },  // £/yr as paid
+                    { wch: 12 },  // Daily Rate
+                    { wch: 12 }   // Hourly Rate
+                ];
+
+                // Add widths for project columns (Days, Rate, Total for each project)
+                const projectCount = (tableData.headers.length - 8) / 3;
+                for (let i = 0; i < projectCount; i++) {
+                    colWidths.push({ wch: 10 }); // Days
+                    colWidths.push({ wch: 10 }); // Rate
+                    colWidths.push({ wch: 12 }); // Total
+                }
+
+                ws['!cols'] = colWidths;
+
+                // Add worksheet to workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Labour Allocation');
+
+                // Write workbook to binary string
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+
+                // Convert to blob (helper function)
+                function s2ab(s) {
+                    const buf = new ArrayBuffer(s.length);
+                    const view = new Uint8Array(buf);
+                    for (let i = 0; i < s.length; i++) {
+                        view[i] = s.charCodeAt(i) & 0xFF;
+                    }
+                    return buf;
+                }
+
+                const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
+
+                // Create download link
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Cleanup
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+
+                console.log('[Export XLSX] Successfully downloaded:', filename);
+                showToast('Excel file downloaded successfully', 'success');
+
+            } catch (error) {
+                console.error('[Export XLSX] Export failed:', error);
+                alert('Failed to export Excel file. See console for details.');
+            }
+        }
+
+        // ============================================
+        // END XLSX EXPORT FUNCTION
+        // ============================================
+
+        // Export labour allocation data to PDF (landscape orientation)
+        function exportToPDF(tableData, filename, projectNames, selectedMonths) {
+            console.log('[Export PDF] Starting export...', { filename, rows: tableData.rows.length });
+
+            try {
+                // Initialize jsPDF in landscape mode
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4'); // 'l' = landscape, A4 size (297mm x 210mm)
+
+                // PEBL brand colors
+                const peblTeal = [58, 175, 169];
+                const peblDarkTeal = [43, 122, 120];
+
+                // Title section
+                doc.setFillColor(...peblTeal);
+                doc.rect(0, 0, 297, 35, 'F');
+
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Labour Allocation Export', 14, 10);
+
+                // Project names
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                const projectText = projectNames.length > 3
+                    ? `${projectNames.slice(0, 3).join(', ')} +${projectNames.length - 3} more`
+                    : projectNames.join(', ');
+                doc.text(projectText, 14, 19);
+
+                // Generated date in smaller text
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                const exportDate = new Date().toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+                doc.text(`Generated on: ${exportDate}`, 14, 25);
+
+                // Format and display months
+                const monthsFormatted = selectedMonths.map(m => {
+                    const [year, monthNum] = m.split('-');
+                    return new Date(year, parseInt(monthNum) - 1).toLocaleDateString('en-US', { month: 'short' });
+                });
+                const uniqueYears = [...new Set(selectedMonths.map(m => m.split('-')[0]))];
+                const monthsText = `${monthsFormatted.join(', ')} ${uniqueYears.join(', ')}`;
+                doc.text(monthsText, 14, 30);
+
+                // Calculate appropriate font size based on number of columns
+                const columnCount = tableData.headers.length;
+                let fontSize = 7;
+                if (columnCount > 15) fontSize = 6;
+                if (columnCount > 20) fontSize = 5;
+
+                // Format all numbers in the table data to 2 decimal places
+                const formattedRows = tableData.rows.map(row => {
+                    return row.map(cell => {
+                        if (typeof cell === 'number') {
+                            return Number(cell.toFixed(2));
+                        }
+                        return cell;
+                    });
+                });
+
+                // Generate table using autoTable plugin
+                doc.autoTable({
+                    startY: 40,
+                    head: [tableData.headers],
+                    body: formattedRows,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: peblTeal,
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        fontSize: fontSize,
+                        halign: 'center',
+                        cellPadding: 2
+                    },
+                    bodyStyles: {
+                        fontSize: fontSize - 1,
+                        cellPadding: 2
+                    },
+                    alternateRowStyles: {
+                        fillColor: [248, 249, 250]
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 25, halign: 'left' },   // Month
+                        1: { cellWidth: 30, halign: 'left' },   // Staff
+                        2: { cellWidth: 15, halign: 'right' },  // Gross
+                        3: { cellWidth: 12, halign: 'center' }, // FTE
+                        4: { cellWidth: 18, halign: 'right' },  // £/yr full time
+                        5: { cellWidth: 18, halign: 'right' },  // £/yr as paid
+                        6: { cellWidth: 15, halign: 'right' },  // Daily Rate
+                        7: { cellWidth: 15, halign: 'right' }   // Hourly Rate
+                        // Project columns auto-sized by autoTable
+                    },
+                    margin: { left: 10, right: 10 },
+                    styles: {
+                        overflow: 'linebreak',
+                        cellWidth: 'wrap'
+                    },
+                    didDrawPage: function(data) {
+                        // Footer with page numbers
+                        const pageCount = doc.internal.getNumberOfPages();
+                        const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
+
+                        doc.setFontSize(8);
+                        doc.setTextColor(150);
+                        doc.text(
+                            `Page ${currentPage} of ${pageCount}`,
+                            doc.internal.pageSize.getWidth() / 2,
+                            doc.internal.pageSize.getHeight() - 10,
+                            { align: 'center' }
+                        );
+                    }
+                });
+
+                // Save PDF
+                doc.save(filename);
+
+                console.log('[Export PDF] Successfully downloaded:', filename);
+                showToast('PDF file downloaded successfully', 'success');
+
+            } catch (error) {
+                console.error('[Export PDF] Export failed:', error);
+                alert('Failed to export PDF file. See console for details.');
+            }
+        }
+
+        // ============================================
+        // END PDF EXPORT FUNCTION
+        // ============================================
+
+        // Execute the export operation
+        function executeExport() {
+            console.log('[Export] Starting export...');
+
+            // Get selected projects
+            const selectedProjectCheckboxes = Array.from(document.querySelectorAll('.export-project-checkbox:checked'));
+            const selectedProjectIndices = selectedProjectCheckboxes.map(cb => parseInt(cb.dataset.projectIndex));
+
+            // Get selected months
+            const selectedMonthCheckboxes = Array.from(document.querySelectorAll('.export-month-checkbox:checked'));
+            const selectedMonths = selectedMonthCheckboxes.map(cb => cb.dataset.month);
+
+            // Validation
+            if (selectedProjectIndices.length === 0) {
+                alert('Please select at least one project to export.');
+                return;
+            }
+
+            if (selectedMonths.length === 0) {
+                alert('Please select at least one month to export.');
+                return;
+            }
+
+            // Get selected format
+            const format = document.querySelector('input[name="exportFormat"]:checked').value;
+
+            // Filter data
+            const filteredData = filterLabourDataForExport(selectedProjectIndices, selectedMonths);
+
+            if (filteredData.filteredRows.length === 0) {
+                alert('No data matches your selection. Please ensure staff have allocations in the selected months/projects.');
+                return;
+            }
+
+            // Build table data
+            const tableData = buildExportTableData(filteredData);
+
+            // Get project names for PDF header
+            const projectNames = selectedProjectIndices.map(idx => labourProjects[idx].name);
+
+            // Generate filename
+            const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const filename = `labour_allocation_export_${timestamp}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`;
+
+            // Execute export based on format
+            if (format === 'xlsx') {
+                exportToXLSX(tableData, filename);
+            } else if (format === 'pdf') {
+                exportToPDF(tableData, filename, projectNames, selectedMonths);
+            }
+
+            // Close dialog
+            closeExportDialog();
+        }
+
+        // ============================================
+        // END EXPORT MAIN EXECUTION FUNCTION
         // ============================================
 
         // Add project (manual - not linked to grant)

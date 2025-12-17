@@ -26,6 +26,78 @@
         .nav-btn:hover { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); }
         .nav-btn.active { background-color: rgba(255, 255, 255, 0.9); color: #2B7A78; border-color: rgba(255, 255, 255, 0.9); }
 
+        /* Sticky Context Bar */
+        .sticky-context-bar {
+            position: sticky;
+            top: 60px;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #f0fdfa 0%, #e0f2f1 100%);
+            padding: 8px 40px;
+            z-index: 90;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .context-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .context-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .context-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2B7A78;
+        }
+
+        .context-value.project {
+            color: #1e40af;
+            font-size: 18px;
+        }
+
+        .context-value.quarter {
+            background: #ff9800;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .quarter-selector-btn {
+            padding: 6px 12px;
+            background: white;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #475569;
+            transition: all 0.2s;
+        }
+
+        .quarter-selector-btn:hover {
+            border-color: #3AAFA9;
+            background: #f0fdfa;
+        }
+
+        .quarter-selector-btn.active {
+            background: #ff9800;
+            color: white;
+            border-color: #ff9800;
+        }
+
         /* Split Screen Mode */
         .split-screen-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1e293b; z-index: 9999; }
         .split-screen-overlay.active { display: flex; flex-direction: column; }
@@ -56,7 +128,7 @@
             background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%);
             min-height: 100vh;
             padding: 0;
-            padding-top: 90px;
+            padding-top: 140px;
         }
 
         .container {
@@ -1175,11 +1247,86 @@
         </div>
     </div>
 
+    <!-- Sticky Context Bar -->
+    <div class="sticky-context-bar" id="stickyContextBar">
+        <!-- Active Project Dropdown -->
+        <div class="context-item" style="position: relative;">
+            <span class="context-label">Active Project:</span>
+            <button class="btn-secondary" onclick="toggleSavedProjectsDropdown()" id="savedProjectsBtnSticky" style="padding: 6px 12px; font-size: 0.9em; white-space: nowrap; display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #cbd5e1;">
+                <span id="currentProjectName">Select Project</span>
+                <span style="font-size: 0.7em;">▼</span>
+            </button>
+            <div id="savedProjectsDropdown" class="projects-dropdown" style="display: none;">
+                <div class="projects-dropdown-content" id="projectsDropdownList">
+                    <!-- Projects will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Funding Body Selector -->
+        <div class="context-item" style="position: relative;">
+            <button id="fundingBodyBtn" onclick="toggleFundingBodyDropdown()"
+                    style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.1em; background: white; cursor: pointer; display: flex; align-items: center;"
+                    title="Funding Body Format">
+                <span id="fundingBodyIcon">🔍</span>
+            </button>
+            <div id="fundingBodyDropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 5px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; min-width: 180px;">
+                <div onclick="selectFundingBody('auto', '🔍', 'Auto-Detect')" style="padding: 8px 12px; cursor: pointer; font-size: 0.9em;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">🔍 Auto-Detect</div>
+                <div onclick="selectFundingBody('iuk', '🇬🇧', 'Innovate UK')" style="padding: 8px 12px; cursor: pointer; font-size: 0.9em; border-top: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">🇬🇧 Innovate UK</div>
+                <div onclick="selectFundingBody('welshgov', '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Welsh Gov')" style="padding: 8px 12px; cursor: pointer; font-size: 0.9em; border-top: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">🏴󠁧󠁢󠁷󠁬󠁳󠁿 Welsh Gov</div>
+                <div onclick="selectFundingBody('simple_summary', '📋', 'Simple Summary (WWF)')" style="padding: 8px 12px; cursor: pointer; font-size: 0.9em; border-top: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">📋 Simple Summary (WWF)</div>
+            </div>
+        </div>
+
+        <!-- Current Quarter Dropdown -->
+        <div class="context-item" style="position: relative;">
+            <span class="context-label">Current Quarter:</span>
+            <button class="btn-secondary" onclick="toggleQuarterDropdown()" id="quarterDropdownBtn" style="padding: 6px 12px; font-size: 0.9em; white-space: nowrap; display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #cbd5e1;">
+                <span id="stickyQuarter">Q1</span>
+                <span style="font-size: 0.7em;">▼</span>
+            </button>
+            <div id="quarterDropdownMenu" class="projects-dropdown" style="display: none; min-width: 120px;">
+                <div style="padding: 8px 0;">
+                    <div onclick="setActiveQuarter(1); toggleQuarterDropdown();" style="padding: 8px 16px; cursor: pointer; font-size: 0.9em;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">Q1</div>
+                    <div onclick="setActiveQuarter(2); toggleQuarterDropdown();" style="padding: 8px 16px; cursor: pointer; font-size: 0.9em;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">Q2</div>
+                    <div onclick="setActiveQuarter(3); toggleQuarterDropdown();" style="padding: 8px 16px; cursor: pointer; font-size: 0.9em;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">Q3</div>
+                    <div onclick="setActiveQuarter(4); toggleQuarterDropdown();" style="padding: 8px 16px; cursor: pointer; font-size: 0.9em;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">Q4</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Cog -->
+        <div class="context-item" style="position: relative; margin-left: auto;">
+            <button onclick="toggleSettingsDropdown()" id="settingsCogBtn" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.2em; background: white; cursor: pointer; display: flex; align-items: center;">
+                <span>⚙️</span>
+            </button>
+            <div id="settingsDropdownMenu" class="projects-dropdown" style="display: none; right: 0; left: auto; min-width: 200px;">
+                <div style="padding: 8px 0;">
+                    <div onclick="toggleParseBudgetSection(); toggleSettingsDropdown();" style="padding: 10px 16px; cursor: pointer; font-size: 0.9em; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <span>📊</span><span>Parse Budget</span>
+                    </div>
+                    <div onclick="clearAll(); toggleSettingsDropdown();" style="padding: 10px 16px; cursor: pointer; font-size: 0.9em; display: flex; align-items: center; gap: 8px; border-top: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <span>🗑️</span><span>Clear</span>
+                    </div>
+                    <div onclick="exportProjectJSON(); toggleSettingsDropdown();" style="padding: 10px 16px; cursor: pointer; font-size: 0.9em; display: flex; align-items: center; gap: 8px; border-top: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <span>💾</span><span>Download JSON</span>
+                    </div>
+                    <div onclick="document.getElementById('loadProjectInput').click(); toggleSettingsDropdown();" style="padding: 10px 16px; cursor: pointer; font-size: 0.9em; display: flex; align-items: center; gap: 8px; border-top: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <span>📂</span><span>Load Project</span>
+                    </div>
+                    <div onclick="toggleLog(); toggleSettingsDropdown();" style="padding: 10px 16px; cursor: pointer; font-size: 0.9em; display: flex; align-items: center; gap: 8px; border-top: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <span>📋</span><span>System Log</span><span class="badge" id="logCountSticky" style="padding: 2px 6px; font-size: 0.7em; margin-left: auto;">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Input Section with System Log -->
         <div class="card compact">
-            <!-- Top toolbar with flexible wrapping -->
-            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+            <!-- Top toolbar with flexible wrapping (HIDDEN - moved to sticky bar) -->
+            <div style="display: none; flex-wrap: wrap; align-items: center; gap: 10px;">
                 <!-- Row 1: Title and Project Selection -->
                 <span style="font-weight: 600; font-size: 0.95em; white-space: nowrap;">💰 Budget Manager</span>
 
@@ -1294,19 +1441,19 @@
             </div>
 
             <!-- Summary Cards -->
-            
-let activeQuarter = 2; // Default to Q2 as current claiming period
+
+let activeQuarter = 1; // Default quarter (will be set to previous quarter when project loads)
             <!-- Active Quarter Selector -->
             <div style="margin-bottom: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border: 2px solid #ff9800;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <span style="font-weight: 600; color: #e65100;">📅 Active Claiming Period:</span>
                     <div style="display: flex; gap: 10px;">
                         <button class="quarter-btn" data-quarter="1" onclick="setActiveQuarter(1)" style="padding: 8px 16px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 500;">Q1</button>
-                        <button class="quarter-btn active-quarter" data-quarter="2" onclick="setActiveQuarter(2)" style="padding: 8px 16px; border: 2px solid #ff9800; border-radius: 6px; background: #ff9800; color: white; cursor: pointer; font-weight: 500;">Q2</button>
+                        <button class="quarter-btn" data-quarter="2" onclick="setActiveQuarter(2)" style="padding: 8px 16px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 500;">Q2</button>
                         <button class="quarter-btn" data-quarter="3" onclick="setActiveQuarter(3)" style="padding: 8px 16px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 500;">Q3</button>
                         <button class="quarter-btn" data-quarter="4" onclick="setActiveQuarter(4)" style="padding: 8px 16px; border: 2px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-weight: 500;">Q4</button>
                     </div>
-                    <span id="activeQuarterLabel" style="color: #e65100; font-weight: 600;">← Currently claiming for Q2</span>
+                    <span id="activeQuarterLabel" style="color: #e65100; font-weight: 600;">← Currently claiming for quarter</span>
                 </div>
             </div>
 
@@ -1659,6 +1806,35 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
     <script>
         console.log('=== GRANTS.HTML SCRIPT LOADING ===');
+
+        // Update sticky context bar display
+        function updateStickyContextBar() {
+            const quarterElement = document.getElementById('stickyQuarter');
+
+            // Update active quarter display (use activeQuarterIndex which is project-based)
+            // Safe access to global variables
+            let displayQuarter = 1; // default
+            if (typeof window.activeQuarterIndex !== 'undefined' && window.activeQuarterIndex !== null) {
+                displayQuarter = window.activeQuarterIndex;
+            } else if (typeof window.activeQuarter !== 'undefined' && window.activeQuarter !== null) {
+                displayQuarter = window.activeQuarter;
+            }
+
+            if (quarterElement) {
+                quarterElement.textContent = `Q${displayQuarter}`;
+            }
+
+            // Project name is already synced via currentProjectName element which is in both locations
+
+            console.log(`[Sticky Bar] Updated - Quarter: Q${displayQuarter}`);
+        }
+
+        // Initialize sticky bar on page load (quarter will be set when project loads)
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log(`[Init] Page loaded - sticky bar will update when project loads`);
+            // Don't set quarter here - let displayDetailedBudget() initialize it based on project
+            updateStickyContextBar();
+        });
 
         // Get API key from localStorage (user must set it via UI)
         function getAPIKey() {
@@ -2511,12 +2687,32 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             console.log(`[renderActiveQuarterTransactions] Looking for Q${quarterIndex} in project ${projectBudget.projectId}`);
             console.log(`[renderActiveQuarterTransactions] Total transactions available: ${allTransactions.length}`);
 
+            // Debug: Show custom transactions
+            const customTxns = allTransactions.filter(t => t.isCustom);
+            console.log(`[renderActiveQuarterTransactions] Custom transactions available: ${customTxns.length}`);
+            customTxns.forEach(t => {
+                console.log(`  - Custom: ${t.description}, Assignments:`, t.assignments);
+            });
+
             const quarterTransactions = allTransactions.filter(transaction => {
                 if (!transaction.assignments || transaction.assignments.length === 0) return false;
-                return transaction.assignments.some(assignment =>
-                    assignment.projectId === projectBudget.projectId &&
+                const matches = transaction.assignments.some(assignment =>
+                    String(assignment.projectId) === String(projectBudget.projectId) &&
                     assignment.quarter === quarterIndex
                 );
+
+                // Debug custom transactions
+                if (transaction.isCustom) {
+                    console.log(`[renderActiveQuarterTransactions] Custom transaction filter result:`, {
+                        description: transaction.description,
+                        matches,
+                        searchingForQuarter: quarterIndex,
+                        searchingForProject: projectBudget.projectId,
+                        assignments: transaction.assignments
+                    });
+                }
+
+                return matches;
             });
 
             console.log(`[renderActiveQuarterTransactions] Found ${quarterTransactions.length} transactions for Q${quarterIndex}`);
@@ -2525,9 +2721,10 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             const categorizedTransactions = {};
             quarterTransactions.forEach(transaction => {
                 transaction.assignments.forEach(assignment => {
-                    if (assignment.projectId === projectBudget.projectId && assignment.quarter === quarterIndex) {
+                    if (String(assignment.projectId) === String(projectBudget.projectId) && assignment.quarter === quarterIndex) {
                         const category = assignment.category || 'Other Costs';
-                        console.log(`[renderActiveQuarterTransactions] Transaction: ${transaction.description?.substring(0, 30)} -> Category: ${category}, Quarter: ${assignment.quarter}, Amount: £${assignment.amount}`);
+                        const logPrefix = transaction.isCustom ? '[CUSTOM TX]' : '[renderActiveQuarterTransactions]';
+                        console.log(`${logPrefix} Transaction: ${transaction.description?.substring(0, 30)} -> Category: ${category}, Quarter: ${assignment.quarter}, Amount: £${assignment.amount}`);
                         if (!categorizedTransactions[category]) {
                             categorizedTransactions[category] = [];
                         }
@@ -2536,11 +2733,32 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                             transaction,
                             assignment
                         });
+
+                        if (transaction.isCustom && category === 'Travel') {
+                            console.log(`✅ [CUSTOM TX] Successfully added to Travel category!`, {
+                                description: transaction.description,
+                                spent: transaction.spent,
+                                assignment: assignment
+                            });
+                        }
                     }
                 });
             });
 
             console.log(`[renderActiveQuarterTransactions] Categories found:`, Object.keys(categorizedTransactions));
+
+            // Debug: Show Travel category specifically
+            if (categorizedTransactions['Travel']) {
+                console.log(`[renderActiveQuarterTransactions] Travel category has ${categorizedTransactions['Travel'].length} transactions:`,
+                    categorizedTransactions['Travel'].map(item => ({
+                        description: item.transaction.description,
+                        isCustom: item.transaction.isCustom,
+                        amount: item.assignment.amount
+                    }))
+                );
+            } else {
+                console.log(`[renderActiveQuarterTransactions] ⚠️ Travel category is empty or doesn't exist`);
+            }
 
             // Define category order to match budget layout
             // Note: Category names must match exactly what's used in transaction assignments from Spend page
@@ -2924,7 +3142,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                 if (!transaction.assignments || transaction.assignments.length === 0) return false;
 
                 return transaction.assignments.some(assignment =>
-                    assignment.projectId === projectBudget.projectId &&
+                    String(assignment.projectId) === String(projectBudget.projectId) &&
                     assignment.quarter === quarterIndex &&
                     assignment.category === category
                 );
@@ -3589,7 +3807,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             const quarterTransactions = cachedTransactions.filter(transaction => {
                 if (!transaction.assignments || transaction.assignments.length === 0) return false;
                 return transaction.assignments.some(assignment =>
-                    assignment.projectId === projectBudget.projectId &&
+                    String(assignment.projectId) === String(projectBudget.projectId) &&
                     assignment.quarter === quarterIndex
                 );
             });
@@ -3598,7 +3816,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             const categorizedTransactions = {};
             quarterTransactions.forEach(transaction => {
                 transaction.assignments.forEach(assignment => {
-                    if (assignment.projectId === projectBudget.projectId && assignment.quarter === quarterIndex) {
+                    if (String(assignment.projectId) === String(projectBudget.projectId) && assignment.quarter === quarterIndex) {
                         const category = assignment.category || 'Other Costs';
                         if (!categorizedTransactions[category]) {
                             categorizedTransactions[category] = [];
@@ -4296,25 +4514,60 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             // Filter transactions for this quarter and category
             const categoryTransactions = cachedTransactions.filter(transaction => {
                 if (!transaction.assignments || transaction.assignments.length === 0) return false;
-                return transaction.assignments.some(assignment =>
-                    assignment.projectId === projectBudget.projectId &&
+                const matches = transaction.assignments.some(assignment =>
+                    String(assignment.projectId) === String(projectBudget.projectId) &&
                     assignment.quarter === quarterIndex &&
                     (assignment.category || 'Other Costs') === categoryName
                 );
+
+                // Debug custom transactions that don't match
+                if (transaction.isCustom && !matches) {
+                    console.log(`[DEBUG] Custom transaction excluded:`, {
+                        date: transaction.date,
+                        desc: transaction.description,
+                        category: categoryName,
+                        quarterIndex,
+                        projectId: projectBudget.projectId,
+                        assignments: transaction.assignments
+                    });
+                }
+
+                return matches;
             });
 
             // Build transaction data
             const transactions = [];
             let categoryTotal = 0;
 
+            console.log(`[TABLE BUILD] Building transaction table for category: ${categoryName}, quarter: ${quarterIndex}`);
+            console.log(`[TABLE BUILD] Total categoryTransactions to process: ${categoryTransactions.length}`);
+
             categoryTransactions.forEach(transaction => {
+                if (transaction.isCustom) {
+                    console.log(`[TABLE BUILD] Processing custom transaction:`, {
+                        date: transaction.date,
+                        description: transaction.description,
+                        spent: transaction.spent,
+                        assignments: transaction.assignments
+                    });
+                }
+
                 const assignment = transaction.assignments.find(a =>
                     a.projectId === projectBudget.projectId &&
                     a.quarter === quarterIndex &&
                     (a.category || 'Other Costs') === categoryName
                 );
 
-                if (!assignment) return;
+                if (!assignment) {
+                    if (transaction.isCustom) {
+                        console.log(`[TABLE BUILD] ❌ Custom transaction skipped - no matching assignment found`);
+                    }
+                    return;
+                }
+
+                if (transaction.isCustom) {
+                    console.log(`[TABLE BUILD] ✅ Custom transaction matched! Assignment:`, assignment);
+                }
 
                 const spentAmount = parseAmount(transaction.spent);
 
@@ -4339,7 +4592,7 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
 
                 categoryTotal += assignment.amount;
 
-                transactions.push({
+                const txnData = {
                     date: transaction.date || '',
                     description: transaction.description || '',
                     valueExTax: valueExTax,
@@ -4348,8 +4601,19 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     detail: detail,
                     hasPDF: !!getInvoiceForTransaction(transaction, cachedInvoices),
                     amount: assignment.amount
-                });
+                };
+
+                transactions.push(txnData);
+
+                if (transaction.isCustom) {
+                    console.log(`[TABLE BUILD] ✅ Custom transaction added to table:`, txnData);
+                }
             });
+
+            console.log(`[TABLE BUILD] ✅ Finished building table. Total transactions added: ${transactions.length}`);
+            if (categoryName === 'Travel' || categoryName === 'Travel and Subsistence') {
+                console.log(`[TABLE BUILD] Travel transactions:`, transactions.map(t => ({ date: t.date, desc: t.description, amount: t.amount })));
+            }
 
             const displayName = categoryName === 'Travel' ? 'Travel and Subsistence' : categoryName;
 
@@ -5419,6 +5683,28 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             }
         }
 
+        function toggleQuarterDropdown() {
+            const dropdown = document.getElementById('quarterDropdownMenu');
+            if (!dropdown) return;
+
+            if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+                dropdown.style.display = 'block';
+            } else {
+                dropdown.style.display = 'none';
+            }
+        }
+
+        function toggleSettingsDropdown() {
+            const dropdown = document.getElementById('settingsDropdownMenu');
+            if (!dropdown) return;
+
+            if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+                dropdown.style.display = 'block';
+            } else {
+                dropdown.style.display = 'none';
+            }
+        }
+
         // Load projects on startup to verify database has existing data
         async function loadProjectsOnStartup() {
             console.log('📂 [LOAD STARTUP] loadProjectsOnStartup() called');
@@ -5561,6 +5847,9 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
                     const projectDisplayName = project.projectName || project.projectNumber || `Project ${projectId}`;
                     currentProjectNameElement.textContent = projectDisplayName;
                     console.log(`📌 [LOAD] Updated dropdown to show: ${projectDisplayName}`);
+
+                    // Update sticky context bar
+                    updateStickyContextBar();
                 }
 
                 await displayDetailedBudget();
@@ -7386,6 +7675,8 @@ let activeQuarter = 2; // Default to Q2 as current claiming period
             ).join('');
 
             document.getElementById('logCount').textContent = `${logs.length} entries`;
+            const logCountSticky = document.getElementById('logCountSticky');
+            if (logCountSticky) logCountSticky.textContent = logs.length;
             logContainer.scrollTop = logContainer.scrollHeight;
         }
 
@@ -7749,6 +8040,26 @@ Rules:
                 });
 
                 financeHTML += `
+                            <button
+                                onclick="fixCustomTransactionQuarters()"
+                                style="
+                                    padding: 6px 14px;
+                                    border-radius: 6px;
+                                    border: 2px solid #10b981;
+                                    background: #10b981;
+                                    color: white;
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                    font-size: 0.85em;
+                                    margin-left: auto;
+                                "
+                                onmouseover="this.style.background='#059669'; this.style.borderColor='#059669'"
+                                onmouseout="this.style.background='#10b981'; this.style.borderColor='#10b981'"
+                                title="Fix custom transaction quarter assignments"
+                            >
+                                🔧 Fix Custom TX Quarters
+                            </button>
                         </div>
                 `;
 
@@ -9565,11 +9876,22 @@ ${inputText}`
 
             console.log(`[DISPLAY] Ready to render with ${cachedTransactions.length} transactions and ${cachedInvoices.length} invoices`);
 
+            // Debug: Show custom transactions
+            const customTransactions = cachedTransactions.filter(t => t.isCustom);
+            console.log(`[DEBUG] Found ${customTransactions.length} custom transactions:`);
+            customTransactions.forEach(t => {
+                console.log(`  - Date: ${t.date}, Desc: ${t.description}, Assignments:`, t.assignments);
+            });
+
             // Initialize active quarter to previous quarter if not set
             if (activeQuarterIndex === null) {
                 activeQuarterIndex = getPreviousQuarter();
                 if (activeQuarterIndex) {
                     console.log(`[DISPLAY] Initialized active quarter to Q${activeQuarterIndex} (previous quarter)`);
+                    // Sync the old activeQuarter variable for backwards compatibility
+                    activeQuarter = activeQuarterIndex;
+                    // Update sticky context bar with the initialized quarter
+                    updateStickyContextBar();
                 }
             }
 
@@ -9774,6 +10096,26 @@ ${inputText}`
                     });
 
                     quarterControlsHTML += `
+                            <button
+                                onclick="fixCustomTransactionQuarters()"
+                                style="
+                                    padding: 6px 14px;
+                                    border-radius: 6px;
+                                    border: 2px solid #10b981;
+                                    background: #10b981;
+                                    color: white;
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                    font-size: 0.85em;
+                                    margin-left: auto;
+                                "
+                                onmouseover="this.style.background='#059669'; this.style.borderColor='#059669'"
+                                onmouseout="this.style.background='#10b981'; this.style.borderColor='#10b981'"
+                                title="Fix custom transaction quarter assignments"
+                            >
+                                🔧 Fix Custom TX Quarters
+                            </button>
                             </div>
                     `;
 
@@ -11425,6 +11767,9 @@ ${inputText}`
             // Update label
             document.getElementById('activeQuarterLabel').textContent = `← Currently claiming for Q${quarter}`;
             addLog(`Active claiming period changed to Q${quarter}`);
+
+            // Update sticky context bar
+            updateStickyContextBar();
         }
 
         function updateProjectName(value) {
@@ -12623,7 +12968,7 @@ ${inputText}`
                         if (!transaction.assignments) return;
 
                         transaction.assignments.forEach(assignment => {
-                            const projectMatch = assignment.projectId === projectBudget.projectId;
+                            const projectMatch = String(assignment.projectId) === String(projectBudget.projectId);
                             const categoryMatch = assignment.category === category;
                             // STRICT MATCH - only count assignments specifically for this item
                             const itemMatch = assignment.itemKey === itemKey;
@@ -13260,11 +13605,15 @@ ${inputText}`
 
         async function setActiveQuarter(quarterIndex) {
             activeQuarterIndex = quarterIndex;
+            activeQuarter = quarterIndex; // Update global activeQuarter as well
 
             // Refresh the entire budget display to update button states and summary
             await displayDetailedBudget();
 
             addLog(`✅ Active quarter set to Q${quarterIndex}`);
+
+            // Update sticky context bar
+            updateStickyContextBar();
 
             // Scroll to the quarterly tracking section
             const quarterSection = document.getElementById('quarterControlsSection');
@@ -13386,6 +13735,8 @@ ${inputText}`
             // Clear logs display
             document.getElementById('logContainer').innerHTML = '<div class="log-empty">No logs yet...</div>';
             document.getElementById('logCount').textContent = '0 entries';
+            const logCountSticky = document.getElementById('logCountSticky');
+            if (logCountSticky) logCountSticky.textContent = '0';
 
             // Hide results section
             const results = document.getElementById('results');
@@ -14014,10 +14365,16 @@ ${inputText}`
                 const editData = customTransactionEditData[formId];
                 const isEditMode = !!editData;
                 const originalDate = editData?.date || '';
-                const originalDescription = editData?.description || '';
+                let originalDescription = editData?.description || '';
+
+                // Strip [CUSTOM] prefix from original description for matching
+                if (originalDescription.startsWith('[CUSTOM] ')) {
+                    originalDescription = originalDescription.substring(9);
+                }
 
                 console.log('💾 [CUSTOM TX] Mode:', isEditMode ? 'EDIT' : 'ADD');
-                console.log('💾 [CUSTOM TX] Original:', { originalDate, originalDescription });
+                console.log('💾 [CUSTOM TX] Edit data:', editData);
+                console.log('💾 [CUSTOM TX] Original (stripped):', { originalDate, originalDescription });
 
                 // Validate required fields
                 if (!dateInput.value || !descriptionInput.value || !amountInput.value) {
@@ -14028,7 +14385,13 @@ ${inputText}`
                 // Parse values
                 const date = dateInput.value; // YYYY-MM-DD format
                 const transactionRef = refInput.value.trim() || '';
-                const description = descriptionInput.value.trim();
+                let description = descriptionInput.value.trim();
+
+                // Strip [CUSTOM] prefix if it exists (for edit mode)
+                if (description.startsWith('[CUSTOM] ')) {
+                    description = description.substring(9); // Remove '[CUSTOM] ' prefix
+                }
+
                 const amountIncVat = parseFloat(amountInput.value) || 0;
 
                 // DEBUG: Log VAT select details
@@ -14042,6 +14405,8 @@ ${inputText}`
                 const quarter = parseInt(quarterSelect.value) || 1;
                 const splitPercentage = parseFloat(splitInput.value) || 100;
                 const detail = detailInput.value.trim() || '';
+
+                console.log('💾 [CUSTOM TX] New values from form:', { date, description, quarter, splitPercentage });
 
                 // Calculate ex-VAT amount
                 let amountExVat;
@@ -14081,7 +14446,13 @@ ${inputText}`
                     }]
                 };
 
-                console.log('📝 [CUSTOM TX] Transaction object:', customTransaction);
+                console.log('📝 [CUSTOM TX] Transaction object to save:', customTransaction);
+                console.log('📝 [CUSTOM TX] Assignment details:', {
+                    quarter,
+                    splitPercentage,
+                    quarterType: typeof quarter,
+                    splitType: typeof splitPercentage
+                });
 
                 // Save to IndexedDB
                 if (!db) await initIndexedDB();
@@ -14109,10 +14480,17 @@ ${inputText}`
                     // EDIT MODE: Find and update the existing transaction
                     const txIndex = customFile.transactions.findIndex(t => {
                         const dateMatch = t.date === originalDate;
-                        const descMatch = t.description === originalDescription;
+
+                        // Strip [CUSTOM] prefix from stored description for comparison
+                        let storedDesc = t.description || '';
+                        if (storedDesc.startsWith('[CUSTOM] ')) {
+                            storedDesc = storedDesc.substring(9);
+                        }
+
+                        const descMatch = storedDesc === originalDescription;
                         console.log('💾 [CUSTOM TX] Comparing:', {
                             txDate: t.date, originalDate, dateMatch,
-                            txDesc: t.description, originalDescription, descMatch
+                            storedDesc, originalDescription, descMatch
                         });
                         return dateMatch && descMatch;
                     });
@@ -14123,13 +14501,19 @@ ${inputText}`
                         // Preserve the original createdAt timestamp
                         customTransaction.createdAt = customFile.transactions[txIndex].createdAt || customTransaction.createdAt;
                         customTransaction.updatedAt = new Date().toISOString();
-                        console.log('✅ [CUSTOM TX] BEFORE UPDATE - old transaction:', JSON.stringify(customFile.transactions[txIndex]));
+                        console.log('✅ [CUSTOM TX] BEFORE UPDATE - old transaction:', JSON.stringify(customFile.transactions[txIndex], null, 2));
                         customFile.transactions[txIndex] = customTransaction;
-                        console.log('✅ [CUSTOM TX] AFTER UPDATE - new transaction:', JSON.stringify(customTransaction));
+                        console.log('✅ [CUSTOM TX] AFTER UPDATE - new transaction:', JSON.stringify(customTransaction, null, 2));
                         console.log('✅ [CUSTOM TX] Updated existing transaction at index:', txIndex);
+                        console.log('✅ [CUSTOM TX] NEW Quarter:', customTransaction.assignments[0].quarter, 'NEW Split:', customTransaction.assignments[0].percentage);
                     } else {
                         // Transaction not found, add as new
-                        console.warn('⚠️ [CUSTOM TX] Original transaction not found, adding as new');
+                        console.error('⚠️ [CUSTOM TX] Original transaction NOT FOUND! Adding as new instead of updating');
+                        console.error('⚠️ [CUSTOM TX] Searched for:', { originalDate, originalDescription });
+                        console.error('⚠️ [CUSTOM TX] Available transactions:', customFile.transactions.map(t => ({
+                            date: t.date,
+                            desc: t.description?.substring(0, 50)
+                        })));
                         customFile.transactions.push(customTransaction);
                     }
                 } else {
@@ -14179,7 +14563,7 @@ ${inputText}`
                     };
                 });
 
-                console.log('✅ [CUSTOM TX] Transaction saved successfully');
+                console.log('✅ [CUSTOM TX] Transaction saved successfully to database');
 
                 // Close the form and clean up edit data
                 const container = document.getElementById(formId);
@@ -14190,14 +14574,32 @@ ${inputText}`
                 delete customTransactionEditData[formId];
 
                 // Refresh cached transactions
+                console.log('🔄 [CUSTOM TX] Reloading all transactions...');
                 cachedTransactions = await loadAllTransactions();
+                console.log('🔄 [CUSTOM TX] Transactions reloaded. Count:', cachedTransactions?.length);
+
+                // Find the transaction we just updated/created
+                const savedTx = cachedTransactions.find(t =>
+                    t.date === date && t.description === `[CUSTOM] ${description}`
+                );
+                if (savedTx) {
+                    console.log('✅ [CUSTOM TX] Found saved transaction in cache:', {
+                        date: savedTx.date,
+                        desc: savedTx.description,
+                        quarter: savedTx.assignments[0]?.quarter,
+                        percentage: savedTx.assignments[0]?.percentage
+                    });
+                } else {
+                    console.error('❌ [CUSTOM TX] Could not find saved transaction in cache!');
+                }
 
                 // Re-render the grants page
+                console.log('🎨 [CUSTOM TX] Re-rendering grants page...');
                 if (typeof renderBudgetBreakdown === 'function') {
                     renderBudgetBreakdown();
                 }
 
-                alert(isEditMode ? 'Custom transaction updated successfully!' : 'Custom transaction added successfully!');
+                alert(isEditMode ? '✅ Custom transaction updated successfully!' : '✅ Custom transaction added successfully!');
 
             } catch (error) {
                 console.error('❌ [CUSTOM TX] Failed to save custom transaction:', error);
@@ -14211,8 +14613,16 @@ ${inputText}`
         async function deleteCustomTransaction(transactionDate, transactionDescription, projectId, category, itemKey) {
             console.log('🗑️ [CUSTOM TX] Deleting custom transaction:', { transactionDate, transactionDescription, projectId, category, itemKey });
 
+            // Strip [CUSTOM] prefix from description for display and matching
+            let displayDescription = transactionDescription;
+            let matchDescription = transactionDescription;
+            if (matchDescription.startsWith('[CUSTOM] ')) {
+                matchDescription = matchDescription.substring(9);
+                displayDescription = matchDescription;
+            }
+
             // Confirm with user
-            if (!confirm(`Delete this custom transaction?\n\nTransaction: ${transactionDescription}\nDate: ${transactionDate}\n\nThis will permanently remove the custom transaction.`)) {
+            if (!confirm(`Delete this custom transaction?\n\nTransaction: ${displayDescription}\nDate: ${transactionDate}\n\nThis will permanently remove the custom transaction.`)) {
                 return;
             }
 
@@ -14236,10 +14646,16 @@ ${inputText}`
                     throw new Error('Custom transactions file not found');
                 }
 
-                // Find and remove the transaction
-                const txIndex = customFile.transactions.findIndex(t =>
-                    t.date === transactionDate && t.description === transactionDescription
-                );
+                // Find and remove the transaction - compare with stripped descriptions
+                const txIndex = customFile.transactions.findIndex(t => {
+                    const dateMatch = t.date === transactionDate;
+                    let storedDesc = t.description || '';
+                    if (storedDesc.startsWith('[CUSTOM] ')) {
+                        storedDesc = storedDesc.substring(9);
+                    }
+                    const descMatch = storedDesc === matchDescription;
+                    return dateMatch && descMatch;
+                });
 
                 if (txIndex === -1) {
                     throw new Error('Transaction not found');
@@ -14267,6 +14683,109 @@ ${inputText}`
             } catch (error) {
                 console.error('❌ [CUSTOM TX] Failed to delete custom transaction:', error);
                 alert(`Failed to delete custom transaction: ${error.message}`);
+            }
+        }
+
+        /**
+         * Fix custom transaction quarter assignments
+         * This utility function ensures all custom transactions are assigned to Q1 with 100% split
+         */
+        async function fixCustomTransactionQuarters() {
+            console.log('🔧 [FIX] Fixing custom transaction quarters...');
+
+            try {
+                if (!db) await initIndexedDB();
+                if (!db) throw new Error('Database not available');
+
+                const txn = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const store = txn.objectStore(CSV_STORE_NAME);
+
+                // Find custom transactions file
+                const allFiles = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                const customFile = allFiles.find(f => f.name === 'custom_transactions.csv');
+
+                if (!customFile || !customFile.transactions || customFile.transactions.length === 0) {
+                    alert('ℹ️ No custom transactions found to fix.');
+                    return;
+                }
+
+                // Fix all custom transactions
+                let fixedCount = 0;
+                const fixes = [];
+
+                customFile.transactions.forEach(tx => {
+                    if (tx.assignments) {
+                        tx.assignments.forEach(assignment => {
+                            const needsFix = assignment.quarter !== 1 || assignment.percentage !== 100;
+
+                            if (needsFix) {
+                                const old = {
+                                    quarter: assignment.quarter,
+                                    percentage: assignment.percentage
+                                };
+
+                                assignment.quarter = 1;
+                                assignment.percentage = 100;
+
+                                fixes.push({
+                                    description: tx.description,
+                                    old,
+                                    new: { quarter: 1, percentage: 100 }
+                                });
+
+                                fixedCount++;
+                            }
+                        });
+                    }
+                });
+
+                if (fixedCount === 0) {
+                    alert('✅ All custom transactions already have correct quarter assignments (Q1, 100%)');
+                    return;
+                }
+
+                console.log(`🔧 [FIX] Fixing ${fixedCount} assignment(s):`);
+                fixes.forEach(fix => {
+                    console.log(`  ${fix.description}: Q${fix.old.quarter} ${fix.old.percentage}% → Q${fix.new.quarter} ${fix.new.percentage}%`);
+                });
+
+                // Save back to IndexedDB
+                const writeTxn = db.transaction([CSV_STORE_NAME], 'readwrite');
+                const writeStore = writeTxn.objectStore(CSV_STORE_NAME);
+
+                await new Promise((resolve, reject) => {
+                    const putRequest = writeStore.put(customFile);
+                    putRequest.onsuccess = () => resolve();
+                    putRequest.onerror = () => reject(putRequest.error);
+                });
+
+                await new Promise((resolve, reject) => {
+                    writeTxn.oncomplete = () => resolve();
+                    writeTxn.onerror = () => reject(writeTxn.error);
+                });
+
+                console.log('✅ [FIX] Database updated');
+
+                // Refresh cached transactions
+                cachedTransactions = await loadAllTransactions();
+                console.log('✅ [FIX] Transactions reloaded');
+
+                // Re-render the grants page
+                if (typeof renderBudgetBreakdown === 'function') {
+                    renderBudgetBreakdown();
+                }
+                console.log('✅ [FIX] Page re-rendered');
+
+                alert(`✅ Fixed ${fixedCount} custom transaction(s)!\n\nAll custom transactions are now:\n  • Quarter: Q1\n  • Split: 100%\n\nThey should now appear in "Q1 Transactions by Category"`);
+
+            } catch (error) {
+                console.error('❌ [FIX] Failed to fix custom transactions:', error);
+                alert(`Failed to fix custom transactions: ${error.message}`);
             }
         }
 
