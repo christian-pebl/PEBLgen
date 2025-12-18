@@ -2,10 +2,12 @@
 *_backup.html
 *.backup
 *.backup_*
+*.backup*.html
 *.bak*
 *_temp.html
 *_working.html
 *.today_changes
+*_before_*.html
 
 # Large PDF files
 *.pdf
