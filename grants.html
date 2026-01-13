@@ -1337,11 +1337,7 @@
                         <span id="currentProjectName">Select Project</span>
                         <span style="font-size: 0.7em;">▼</span>
                     </button>
-                    <div id="savedProjectsDropdown" class="projects-dropdown" style="display: none;">
-                        <div class="projects-dropdown-content" id="projectsDropdownList">
-                            <!-- Projects will be loaded here -->
-                        </div>
-                    </div>
+                    <!-- Dropdown removed - using sticky bar dropdown instead to avoid ID conflicts -->
                 </div>
 
                 <!-- Compact Funding Body Selector -->
@@ -2566,6 +2562,11 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                     ? `<button class="view-pdf-btn" data-invoice-id="${invoice.id}" onclick="viewInvoicePDF(${invoice.id})" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85em;">📎 View PDF</button>`
                     : '<span style="color: #94a3b8;">-</span>';
 
+                // If there's no invoice and no detail, show "Missing invoice" in italics
+                if (!invoice && detail === '-') {
+                    detail = '<span style="font-style: italic; color: #94a3b8;">Missing invoice</span>';
+                }
+
                 // Create unique identifier for this transaction row
                 const transactionId = `transaction-${transaction.date}-${transaction.description?.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '')}`;
 
@@ -2620,7 +2621,7 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                         <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${currencySymbol}${valueExTax}</td>
                         <td style="padding: 6px 10px; text-align: right; white-space: nowrap;">${currencySymbol}${valueIncTax}</td>
                         <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">${(percentage / 100).toFixed(2)}</td>
-                        <td style="padding: 6px 10px; max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(detail)}</td>
+                        <td style="padding: 6px 10px; max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${detail.startsWith('<span') ? detail : escapeHtml(detail)}</td>
                         <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">${pdfCell}</td>
                         <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">Q${assignedQuarter}</td>
                         <td style="padding: 6px 10px; text-align: center; white-space: nowrap;">${splitPercentage}</td>
@@ -2787,9 +2788,9 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                                 style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; transition: all 0.2s; font-weight: 500;"
                                 onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.15)';"
                                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';"
-                                title="Export quarterly breakdown to Excel">
+                                title="Export all expenses for this quarter">
                             <span>📊</span>
-                            <span>Export to Excel</span>
+                            <span>Export all expenses for this quarter</span>
                         </button>
                     </div>
             `;
@@ -3881,15 +3882,21 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                         detail = detailParts.join(' | ');
                     }
 
+                    // Calculate VAT
+                    const vat = spentAmount - valueExTax;
+
                     return {
                         date: transaction.date || '',
-                        description: transaction.description || '',
-                        valueExTax: valueExTax,
+                        supplierName: transaction.description || '',
+                        descriptionOfCost: detail || '',
                         valueIncTax: spentAmount,
+                        vat: vat,
+                        valueExTax: valueExTax,
                         allocationPercentage: assignment.percentage ? (assignment.percentage / 100) : 1,
-                        detail: detail,
-                        hasPDF: !!getInvoiceForTransaction(transaction, cachedInvoices),
-                        amount: assignment.amount
+                        totalAssigned: assignment.amount,
+                        transactionRef: assignment.transactionRef || '',
+                        costHeading: displayName,
+                        hasInvoice: !!getInvoiceForTransaction(transaction, cachedInvoices)
                     };
                 });
 
@@ -3933,44 +3940,50 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                         wsData.push([`No claims for this category in Q${data.quarterIndex}`]);
                         wsData.push([]);
                     } else {
-                        // Column headers
-                        wsData.push(['Date', 'Description', 'Value ex Tax', 'Value Inc Tax', '% Allocation', 'Detail', 'PDF', 'Amount']);
+                        // Column headers - NEW ORDER
+                        wsData.push(['Date', 'Supplier Name', 'Description of cost', 'Inc Vat', 'VAT', 'Ex Vat', '% allocation', 'Total Assigned (exc vat)', 'Transaction Ref', 'Cost Heading', 'Invoice']);
 
                         // Transaction rows
                         category.transactions.forEach(txn => {
                             wsData.push([
-                    txn.date,
-                    txn.description,
-                    txn.valueExTax,
-                    txn.valueIncTax,
-                    txn.allocationPercentage || 0,
-                    txn.detail,
-                    txn.hasPDF ? 'PDF' : '',
-                    txn.amount
-                ]);
+                                txn.date,
+                                txn.supplierName,
+                                txn.descriptionOfCost,
+                                txn.valueIncTax,
+                                txn.vat,
+                                txn.valueExTax,
+                                txn.allocationPercentage || 0,
+                                txn.totalAssigned,
+                                txn.transactionRef,
+                                txn.costHeading,
+                                txn.hasInvoice ? 'Yes' : 'No'
+                            ]);
                         });
 
                         // Category total
-                        wsData.push(['', '', '', '', '', `Total ${category.name}:`, category.total]);
+                        wsData.push(['', '', '', '', '', '', '', `Total ${category.name}:`, '', '', category.total]);
                         wsData.push([]);
                     }
                 });
 
-                // Grand total
-                wsData.push(['', '', '', '', '', 'Grand Total:', data.grandTotal]);
+                // Grand total - NEW ORDER (11 columns)
+                wsData.push(['', '', '', '', '', '', '', data.grandTotal, '', 'Grand Total:', '']);
 
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-                // Set column widths
+                // Set column widths - NEW ORDER
                 ws['!cols'] = [
                     {wch: 12},  // Date
-                    {wch: 35},  // Description
-                    {wch: 15},  // Value ex Tax
-                    {wch: 15},  // Value Inc Tax
-                    {wch: 12},  // % Allocation
-                    {wch: 40},  // Detail
-                    {wch: 8},   // PDF
-                    {wch: 15}   // Amount
+                    {wch: 35},  // Supplier Name
+                    {wch: 40},  // Description of cost
+                    {wch: 12},  // Inc Vat
+                    {wch: 12},  // VAT
+                    {wch: 12},  // Ex Vat
+                    {wch: 12},  // % allocation
+                    {wch: 18},  // Total Assigned (exc vat)
+                    {wch: 15},  // Transaction Ref
+                    {wch: 20},  // Cost Heading
+                    {wch: 10}   // Invoice
                 ];
 
                 XLSX.utils.book_append_sheet(wb, ws, `Q${data.quarterIndex} Breakdown`);
@@ -3981,18 +3994,19 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                 // Title row
                 wsData.push([`Q${data.quarterIndex} ${new Date().getFullYear()} (mm/dd/yyyy)`]);
 
-                // Headers
+                // Headers - NEW ORDER
                 wsData.push([
                     'Date',
-                    'Transaction Ref',
+                    'Supplier Name',
                     'Description of cost',
                     'Inc Vat',
                     'VAT',
                     'Ex Vat',
-                    '%',
-                    'Total Assigned (exc VAT)',
-                    'Supplier Name',
-                    'Cost Heading'
+                    '% allocation',
+                    'Total Assigned (exc vat)',
+                    'Transaction Ref',
+                    'Cost Heading',
+                    'Invoice'
                 ]);
 
                 // Flatten all transactions into one list
@@ -4017,64 +4031,55 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                 allTransactions.forEach(txn => {
                     const vatAmount = txn.valueIncTax - txn.valueExTax;
 
-                    // Map category to abbreviated heading
-                    let costHeading = txn.categoryName;
-                    if (txn.categoryName === 'Travel and Subsistence') costHeading = 'Travel/Subs';
-                    if (txn.categoryName === 'Capital Usage') costHeading = 'CapUse';
-                    if (txn.categoryName === 'Subcontracting') costHeading = 'Subcon';
-
-                    // Calculate Transaction Ref: yymmdd-Supplier(7chars)-Amount
-                    const dateParts = txn.date.split('/');
-                    let transactionRef = '';
-                    if (dateParts.length === 3) {
-                        const day = dateParts[0].padStart(2, '0');
-                        const month = dateParts[1].padStart(2, '0');
-                        const year = dateParts[2].slice(-2); // Last 2 digits of year
-                        const yymmdd = year + month + day;
-
-                        const supplier = txn.description || '';
-                        const supplierPrefix = supplier.substring(0, 7); // First 7 characters
-
-                        const amount = txn.valueIncTax; // Total amount inc VAT
-
-                        transactionRef = `${yymmdd}-${supplierPrefix}-${amount}`;
+                    // Use stored transactionRef or calculate if not available
+                    let transactionRef = txn.transactionRef || '';
+                    if (!transactionRef) {
+                        const dateParts = txn.date.split('/');
+                        if (dateParts.length === 3) {
+                            const day = dateParts[0].padStart(2, '0');
+                            const month = dateParts[1].padStart(2, '0');
+                            const year = dateParts[2].slice(-2); // Last 2 digits of year
+                            const yymmdd = year + month + day;
+                            const supplier = txn.supplierName || '';
+                            const supplierPrefix = supplier.substring(0, 7);
+                            const amount = txn.valueIncTax;
+                            transactionRef = `${yymmdd}-${supplierPrefix}-${amount}`;
+                        }
                     }
 
-                    // Calculate Total Assigned (exc VAT) = Ex Vat × %
-                    // Always calculate from Ex VAT to ensure accuracy
-                    const totalAssigned = txn.valueExTax * (txn.allocationPercentage || 1);
-
                     wsData.push([
-                        txn.date, // Keep as date string for display
+                        txn.date,
+                        txn.supplierName,
+                        txn.descriptionOfCost,
+                        txn.valueIncTax,
+                        txn.vat,
+                        txn.valueExTax,
+                        txn.allocationPercentage || 1,
+                        txn.totalAssigned,
                         transactionRef,
-                        txn.detail || txn.description,
-                        txn.valueIncTax, // Inc Vat
-                        vatAmount, // VAT
-                        txn.valueExTax, // Ex Vat
-                        txn.allocationPercentage || 1, // %
-                        totalAssigned, // Total Assigned (exc VAT)
-                        txn.description, // Supplier from description column
-                        costHeading
+                        txn.costHeading,
+                        txn.hasInvoice ? 'Yes' : 'No'
                     ]);
                 });
 
-                // Add grand total row
+                // Add grand total row - NEW ORDER (11 columns)
                 wsData.push([
-                    '',
-                    '',
-                    'Grand Total:',
-                    '',
-                    '',
-                    '',
-                    '',
-                    data.grandTotal,
-                    '',
-                    ''
+                    '',              // Date
+                    '',              // Supplier Name
+                    '',              // Description of cost
+                    '',              // Inc Vat
+                    '',              // VAT
+                    '',              // Ex Vat
+                    '',              // % allocation
+                    data.grandTotal, // Total Assigned (exc vat)
+                    '',              // Transaction Ref
+                    '',              // Cost Heading
+                    ''               // Invoice
                 ]);
 
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-                // Format cells explicitly
+                // Format cells explicitly - UPDATED for new column order
                 const range = XLSX.utils.decode_range(ws['!ref']);
                 for (let R = 2; R < range.e.r; R++) { // Start from row 2 (skip title and header)
                     // Format date cells (column A) as date with mm/dd/yyyy display
@@ -4084,7 +4089,7 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                         ws[dateCell].z = 'mm/dd/yyyy'; // Display format
                     }
 
-                    // Format numeric columns with 2 decimal places (Inc Vat, VAT, Ex Vat, Total Assigned)
+                    // Format numeric columns with 2 decimal places (Inc Vat=3, VAT=4, Ex Vat=5, Total Assigned=7)
                     [3, 4, 5, 7].forEach(col => {
                         const numCell = XLSX.utils.encode_cell({r: R, c: col});
                         if (ws[numCell] && typeof ws[numCell].v === 'number') {
@@ -4093,7 +4098,7 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                         }
                     });
 
-                    // Format % column with 2 decimal places
+                    // Format % allocation column (column 6) with 2 decimal places
                     const pctCell = XLSX.utils.encode_cell({r: R, c: 6});
                     if (ws[pctCell] && typeof ws[pctCell].v === 'number') {
                         ws[pctCell].t = 'n';
@@ -4101,18 +4106,19 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                     }
                 }
 
-                // Set column widths
+                // Set column widths - NEW ORDER
                 ws['!cols'] = [
                     {wch: 12},  // Date
-                    {wch: 30},  // Transaction Ref
-                    {wch: 45},  // Description of cost
+                    {wch: 35},  // Supplier Name
+                    {wch: 40},  // Description of cost
                     {wch: 12},  // Inc Vat
                     {wch: 12},  // VAT
                     {wch: 12},  // Ex Vat
-                    {wch: 8},   // %
-                    {wch: 20},  // Total Assigned (exc VAT)
-                    {wch: 30},  // Supplier Name
-                    {wch: 15}   // Cost Heading
+                    {wch: 12},  // % allocation
+                    {wch: 18},  // Total Assigned (exc vat)
+                    {wch: 15},  // Transaction Ref
+                    {wch: 20},  // Cost Heading
+                    {wch: 10}   // Invoice
                 ];
 
                 XLSX.utils.book_append_sheet(wb, ws, `Q${data.quarterIndex} Alt Format`);
@@ -4158,12 +4164,22 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                             </div>
                         </div>
 
-                        <div class="modal-footer" style="padding: 15px 20px; background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0;">
+                        <div class="modal-footer" style="padding: 15px 20px; background: #f8fafc; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid #e2e8f0;">
                             <button class="btn-secondary" onclick="closeXLSPreviewModal()" style="padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95em; font-weight: 600; cursor: pointer; background: #f1f5f9; color: #475569;">Cancel</button>
-                            <button class="btn-primary" onclick="downloadQuarterlyXLS()" style="padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95em; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; display: flex; align-items: center; gap: 8px;">
-                                <span>💾</span>
-                                <span>Download Excel File</span>
-                            </button>
+                            <div style="display: flex; gap: 10px;">
+                                <button onclick="copyQuarterlyDataToClipboard()" style="padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95em; font-weight: 600; cursor: pointer; background: #6366f1; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span>📋</span>
+                                    <span>Copy All</span>
+                                </button>
+                                <button onclick="downloadQuarterlyCSV()" style="padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95em; font-weight: 600; cursor: pointer; background: #10b981; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span>📄</span>
+                                    <span>Export to CSV</span>
+                                </button>
+                                <button onclick="downloadQuarterlyXLS()" style="padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95em; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; display: flex; align-items: center; gap: 8px;">
+                                    <span>💾</span>
+                                    <span>Export to Excel</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4203,12 +4219,16 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                                 <thead>
                                     <tr style="background: #f1f5f9;">
                                         <th style="padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Date</th>
-                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Description</th>
-                                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Value ex Tax</th>
-                                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Value Inc Tax</th>
-                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Detail</th>
-                                        <th style="padding: 8px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 600;">PDF</th>
-                                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Amount</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Supplier Name</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Description of cost</th>
+                                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Inc Vat</th>
+                                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 600;">VAT</th>
+                                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Ex Vat</th>
+                                        <th style="padding: 8px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 600;">% allocation</th>
+                                        <th style="padding: 8px; text-align: right; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Total Assigned (exc vat)</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Transaction Ref</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Cost Heading</th>
+                                        <th style="padding: 8px; text-align: center; border-bottom: 2px solid #cbd5e1; font-weight: 600;">Invoice</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -4218,20 +4238,25 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                             html += `
                                 <tr style="border-bottom: 1px solid #f1f5f9;">
                                     <td style="padding: 8px;">${txn.date || '-'}</td>
-                                    <td style="padding: 8px;">${txn.description || '-'}</td>
-                                    <td style="padding: 8px; text-align: right;">£${txn.valueExTax.toFixed(2)}</td>
+                                    <td style="padding: 8px;">${txn.supplierName || '-'}</td>
+                                    <td style="padding: 8px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${txn.descriptionOfCost || '-'}</td>
                                     <td style="padding: 8px; text-align: right;">£${txn.valueIncTax.toFixed(2)}</td>
-                                    <td style="padding: 8px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${txn.detail || '-'}</td>
-                                    <td style="padding: 8px; text-align: center;">${txn.hasPDF ? 'PDF' : '-'}</td>
-                                    <td style="padding: 8px; text-align: right;">£${txn.amount.toFixed(2)}</td>
+                                    <td style="padding: 8px; text-align: right;">£${txn.vat.toFixed(2)}</td>
+                                    <td style="padding: 8px; text-align: right;">£${txn.valueExTax.toFixed(2)}</td>
+                                    <td style="padding: 8px; text-align: center;">${((txn.allocationPercentage || 0) * 100).toFixed(0)}%</td>
+                                    <td style="padding: 8px; text-align: right;">£${txn.totalAssigned.toFixed(2)}</td>
+                                    <td style="padding: 8px;">${txn.transactionRef || '-'}</td>
+                                    <td style="padding: 8px;">${txn.costHeading || '-'}</td>
+                                    <td style="padding: 8px; text-align: center;">${txn.hasInvoice ? 'Yes' : 'No'}</td>
                                 </tr>
                             `;
                         });
 
                         html += `
                                     <tr style="border-top: 2px solid #cbd5e1; background: #f8fafc;">
-                                        <td colspan="6" style="padding: 10px; text-align: right; font-weight: 700;">Total ${category.name}:</td>
+                                        <td colspan="7" style="padding: 10px; text-align: right; font-weight: 700;">Total ${category.name}:</td>
                                         <td style="padding: 10px; text-align: right; font-weight: 700;">£${category.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                        <td colspan="3"></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -4437,6 +4462,100 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
             } catch (error) {
                 console.error('[XLS Export] Download failed:', error);
                 alert('Failed to download Excel file. See console for details.');
+            }
+        }
+
+        // Copy quarterly data to clipboard
+        function copyQuarterlyDataToClipboard() {
+            if (!quarterlyExportData) {
+                alert('No data available to copy');
+                return;
+            }
+
+            try {
+                // Build tab-separated text for clipboard
+                let clipboardText = '';
+
+                // Header row
+                clipboardText += 'Date\tSupplier Name\tDescription of cost\tInc Vat\tVAT\tEx Vat\t% allocation\tTotal Assigned (exc vat)\tTransaction Ref\tCost Heading\tInvoice\n';
+
+                // Add all transactions
+                quarterlyExportData.categories.forEach(category => {
+                    category.transactions.forEach(txn => {
+                        clipboardText += `${txn.date}\t${txn.supplierName}\t${txn.descriptionOfCost}\t${txn.valueIncTax.toFixed(2)}\t${txn.vat.toFixed(2)}\t${txn.valueExTax.toFixed(2)}\t${((txn.allocationPercentage || 0) * 100).toFixed(0)}%\t${txn.totalAssigned.toFixed(2)}\t${txn.transactionRef || ''}\t${txn.costHeading}\t${txn.hasInvoice ? 'Yes' : 'No'}\n`;
+                    });
+                });
+
+                // Copy to clipboard
+                navigator.clipboard.writeText(clipboardText).then(() => {
+                    alert('✅ Data copied to clipboard! You can paste it into Excel or any spreadsheet application.');
+                }).catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
+                    alert('Failed to copy to clipboard. Please try again.');
+                });
+
+            } catch (error) {
+                console.error('[Copy] Failed:', error);
+                alert('Failed to copy data. See console for details.');
+            }
+        }
+
+        // Download quarterly data as CSV
+        function downloadQuarterlyCSV() {
+            if (!quarterlyExportData) {
+                alert('No data available to download');
+                return;
+            }
+
+            try {
+                // Build CSV content
+                let csvContent = '';
+
+                // Header row
+                csvContent += 'Date,Supplier Name,Description of cost,Inc Vat,VAT,Ex Vat,% allocation,Total Assigned (exc vat),Transaction Ref,Cost Heading,Invoice\n';
+
+                // Add all transactions
+                quarterlyExportData.categories.forEach(category => {
+                    category.transactions.forEach(txn => {
+                        // Escape fields that might contain commas or quotes
+                        const escapeCSV = (field) => {
+                            if (field === null || field === undefined) return '';
+                            const str = String(field);
+                            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                                return `"${str.replace(/"/g, '""')}"`;
+                            }
+                            return str;
+                        };
+
+                        csvContent += `${escapeCSV(txn.date)},${escapeCSV(txn.supplierName)},${escapeCSV(txn.descriptionOfCost)},${txn.valueIncTax.toFixed(2)},${txn.vat.toFixed(2)},${txn.valueExTax.toFixed(2)},${((txn.allocationPercentage || 0) * 100).toFixed(0)}%,${txn.totalAssigned.toFixed(2)},${escapeCSV(txn.transactionRef || '')},${escapeCSV(txn.costHeading)},${txn.hasInvoice ? 'Yes' : 'No'}\n`;
+                    });
+                });
+
+                // Create blob and download
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const projectName = quarterlyExportData.projectName.replace(/[^a-z0-9]/gi, '_');
+                const filename = `Q${quarterlyExportData.quarterIndex}_${projectName}_Breakdown.csv`;
+
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+
+                console.log(`[CSV Export] Downloaded: ${filename}`);
+                alert(`CSV file downloaded: ${filename}`);
+
+                // Close modal
+                closeXLSPreviewModal();
+
+            } catch (error) {
+                console.error('[CSV Export] Download failed:', error);
+                alert('Failed to download CSV file. See console for details.');
             }
         }
 
@@ -5655,15 +5774,7 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                     console.log('✅ [LIST] Setting dropdown display to block');
                     dropdown.style.display = 'block';
 
-                    // Position dropdown below the button (fixed positioning)
-                    const btn = document.getElementById('savedProjectsBtn');
-                    if (btn) {
-                        const rect = btn.getBoundingClientRect();
-                        dropdown.style.top = (rect.bottom + 10) + 'px';
-                        dropdown.style.left = rect.left + 'px';
-                        console.log('✅ [LIST] Positioned dropdown at:', { top: dropdown.style.top, left: dropdown.style.left });
-                    }
-
+                    // Positioning is now handled in toggleSavedProjectsDropdown()
                     console.log('✅ [LIST] Dropdown display is now:', dropdown.style.display);
                     console.log('✅ [LIST] Dropdown element:', dropdown);
                 };
@@ -5679,7 +5790,9 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
 
         function toggleSavedProjectsDropdown() {
             console.log('🔽 [DROPDOWN] Toggle clicked');
+            // Use the sticky bar dropdown (the visible one)
             const dropdown = document.getElementById('savedProjectsDropdown');
+            const btn = document.getElementById('savedProjectsBtnSticky');
 
             if (!dropdown) {
                 console.error('❌ [DROPDOWN] Dropdown element not found');
@@ -5690,6 +5803,15 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
 
             if (dropdown.style.display === 'none' || dropdown.style.display === '') {
                 console.log('🔽 [DROPDOWN] Opening dropdown, calling listSavedProjects()');
+
+                // Position the dropdown relative to the button BEFORE calling listSavedProjects
+                if (btn) {
+                    const rect = btn.getBoundingClientRect();
+                    dropdown.style.top = (rect.bottom + 5) + 'px';
+                    dropdown.style.left = rect.left + 'px';
+                    console.log('📍 [DROPDOWN] Positioned at:', { top: dropdown.style.top, left: dropdown.style.left });
+                }
+
                 listSavedProjects(); // This will set display to 'block'
             } else {
                 console.log('🔽 [DROPDOWN] Closing dropdown');
@@ -14186,8 +14308,8 @@ ${inputText}`
                 cachedTransactions = await loadAllTransactions();
 
                 // Re-render the grants page to reflect the change
-                if (typeof renderBudgetBreakdown === 'function') {
-                    renderBudgetBreakdown();
+                if (typeof displayDetailedBudget === 'function') {
+                    await displayDetailedBudget();
                 }
 
                 console.log(`✅ [UNASSIGN] Successfully unassigned transaction: ${transactionDescription}`);
@@ -14609,8 +14731,8 @@ ${inputText}`
 
                 // Re-render the grants page
                 console.log('🎨 [CUSTOM TX] Re-rendering grants page...');
-                if (typeof renderBudgetBreakdown === 'function') {
-                    renderBudgetBreakdown();
+                if (typeof displayDetailedBudget === 'function') {
+                    await displayDetailedBudget();
                 }
 
                 alert(isEditMode ? '✅ Custom transaction updated successfully!' : '✅ Custom transaction added successfully!');
@@ -14690,8 +14812,8 @@ ${inputText}`
                 cachedTransactions = await loadAllTransactions();
 
                 // Re-render the grants page
-                if (typeof renderBudgetBreakdown === 'function') {
-                    renderBudgetBreakdown();
+                if (typeof displayDetailedBudget === 'function') {
+                    await displayDetailedBudget();
                 }
 
             } catch (error) {
@@ -14790,8 +14912,8 @@ ${inputText}`
                 console.log('✅ [FIX] Transactions reloaded');
 
                 // Re-render the grants page
-                if (typeof renderBudgetBreakdown === 'function') {
-                    renderBudgetBreakdown();
+                if (typeof displayDetailedBudget === 'function') {
+                    await displayDetailedBudget();
                 }
                 console.log('✅ [FIX] Page re-rendered');
 

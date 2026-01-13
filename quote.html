@@ -192,7 +192,7 @@
 
         .price-table th,
         .price-table td {
-            padding: 10px 12px;
+            padding: 6px 12px;
             text-align: left;
             border-bottom: 1px solid #e2e8f0;
         }
@@ -203,10 +203,30 @@
             color: #475569;
             font-size: 0.85em;
             text-transform: uppercase;
+            padding: 8px 12px;
+        }
+
+        .price-table tbody tr {
+            height: 42px;
         }
 
         .price-table tbody tr:hover {
             background: #f8fafc;
+        }
+
+        /* Filter buttons */
+        .filter-btn {
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            opacity: 0.8;
+        }
+
+        .filter-btn.active {
+            background: #2B7A78 !important;
+            color: white !important;
+            border-color: #2B7A78 !important;
         }
 
         .price-table input {
@@ -631,8 +651,15 @@
     </div>
 
     <div class="container">
-        <!-- Tabs -->
-        <div class="tabs">
+        <!-- Mode Toggle -->
+        <div style="background: #f8fafc; padding: 15px 30px; border-bottom: 2px solid #e2e8f0; display: flex; gap: 15px; align-items: center;">
+            <span style="font-weight: 600; color: #64748b; font-size: 14px;">MODE:</span>
+            <button id="quoteModeBtn" class="tab active" onclick="switchMode('quote')" style="padding: 10px 20px; border-radius: 6px;">📋 Quote System</button>
+            <button id="invoiceModeBtn" class="tab" onclick="switchMode('invoice')" style="padding: 10px 20px; border-radius: 6px;">📄 Invoice System</button>
+        </div>
+
+        <!-- Tabs (dynamic based on mode) -->
+        <div class="tabs" id="mainTabs">
             <button class="tab active" onclick="showTab('create')">Create Quote</button>
             <button class="tab" onclick="showTab('saved')">Saved Quotes</button>
             <button class="tab" onclick="showTab('pricelist')">Price List</button>
@@ -682,6 +709,11 @@
                         <div class="form-group" style="margin-top: 15px;">
                             <label>Client Address</label>
                             <textarea id="clientAddress" rows="3" placeholder="Address will be auto-filled or enter manually..."></textarea>
+                        </div>
+                        <div class="btn-group" style="margin-top: 10px;">
+                            <button class="btn btn-primary btn-sm" onclick="saveClientManually()" style="background: #10b981;">
+                                💾 Save Client
+                            </button>
                         </div>
                     </div>
 
@@ -851,8 +883,16 @@
                 </p>
                 <div class="btn-group" style="margin-bottom: 15px;">
                     <button class="btn btn-primary btn-sm" onclick="addPriceItem()">+ Add Item</button>
+                    <button class="btn btn-primary btn-sm" onclick="bulkImportBudgetItems()" style="background: #10b981;">📋 Import Budget Items</button>
                     <button class="btn btn-secondary btn-sm" onclick="savePriceList()">Save Price List</button>
                     <button class="btn btn-secondary btn-sm" onclick="loadPriceList()">Refresh</button>
+                </div>
+                <div style="margin-bottom: 15px; display: flex; gap: 8px; align-items: center;">
+                    <span style="color: #666; font-weight: 600; font-size: 0.9em;">Filter:</span>
+                    <button class="filter-btn active" data-filter="all" onclick="filterPriceList('all')" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; background: #2B7A78; color: white; cursor: pointer; font-size: 0.85em; font-weight: 600;">All</button>
+                    <button class="filter-btn" data-filter="R" onclick="filterPriceList('R')" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; background: white; color: #3b82f6; cursor: pointer; font-size: 0.85em; font-weight: 600; border-color: #3b82f6;">🔧 Rental</button>
+                    <button class="filter-btn" data-filter="P" onclick="filterPriceList('P')" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; background: white; color: #8b5cf6; cursor: pointer; font-size: 0.85em; font-weight: 600; border-color: #8b5cf6;">🛒 Purchase</button>
+                    <button class="filter-btn" data-filter="S" onclick="filterPriceList('S')" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; background: white; color: #10b981; cursor: pointer; font-size: 0.85em; font-weight: 600; border-color: #10b981;">⚙️ Service</button>
                 </div>
                 <table class="price-table" id="priceListTable">
                     <thead>
@@ -869,6 +909,138 @@
                 </table>
             </div>
         </div>
+
+        <!-- INVOICE TABS (Hidden by default) -->
+        <!-- Create Invoice Tab -->
+        <div id="tab-invoice-create" class="tab-content" style="display: none;">
+            <!-- Import Sample Invoice Card (Discrete) -->
+            <div class="card" style="margin-bottom: 20px;">
+                <div style="font-weight: 700; font-size: 18px; color: #1e293b; margin-bottom: 10px;">Load Sample Invoice</div>
+                <p style="margin: 0 0 15px 0; color: #64748b; font-size: 14px;">
+                    Import a complete Algapelago invoice (17 items, £15,548.94) as a starting template
+                </p>
+                <button class="btn" onclick="importAlgapelagoInvoice()" style="background: #3AAFA9; color: white; font-weight: 600; padding: 10px 20px;">
+                    📄 Import Sample
+                </button>
+            </div>
+
+            <!-- Top Section: Invoice Details and Client Details Side by Side -->
+            <div class="grid-2col" style="gap: 20px; margin-bottom: 20px;">
+                <!-- Invoice Details Card -->
+                <div class="card">
+                    <div class="card-title">Invoice Details</div>
+                    <div class="form-group">
+                        <label>Invoice Number *</label>
+                        <input type="text" id="invoiceNumber" placeholder="INV-2025-001">
+                        <small style="color: #64748b; display: block; margin-top: 5px;">Enter invoice number or leave blank for auto-generation</small>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Invoice Date *</label>
+                            <input type="date" id="invoiceDate">
+                        </div>
+                        <div class="form-group">
+                            <label>Due Date *</label>
+                            <input type="date" id="invoiceDueDate">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Project Name</label>
+                        <input type="text" id="invoiceProjectName" placeholder="e.g., Marine Monitoring 2025">
+                    </div>
+                    <div class="form-group">
+                        <label>Reference Quote (optional)</label>
+                        <input type="text" id="linkedQuoteRef" placeholder="Q-2025-015">
+                        <small style="color: #64748b; display: block; margin-top: 5px;">Enter quote reference if applicable</small>
+                    </div>
+                </div>
+
+                <!-- Client Details Card -->
+                <div class="card">
+                    <div class="card-title">Client Details</div>
+                    <div class="form-group">
+                        <label>Client Name *</label>
+                        <input type="text" id="invoiceClientName" placeholder="e.g., Algapelago">
+                    </div>
+                    <div class="form-group">
+                        <label>Organisation</label>
+                        <input type="text" id="invoiceClientOrg" placeholder="e.g., Nestle">
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <textarea id="invoiceClientAddress" rows="3" placeholder="Client's billing address..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Line Items Card - Full Width -->
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-title">Line Items</div>
+                <div id="invoiceLineItemsContainer">
+                    <!-- Line items will be rendered here -->
+                </div>
+                <button class="btn btn-secondary" onclick="addInvoiceLineItem()">+ Add Line Item</button>
+            </div>
+
+            <!-- Additional Notes Card - Full Width -->
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-title">Additional Notes</div>
+                <div class="form-group">
+                    <textarea id="invoiceAdditionalNotes" rows="4" placeholder="Payment terms, additional information, etc."></textarea>
+                </div>
+            </div>
+
+            <!-- Summary Panel - Full Width at Bottom -->
+            <div class="card" style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border: 2px solid #10b981;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; color: #1e293b; font-size: 20px;">Invoice Summary</h3>
+                    <div style="text-align: right;">
+                        <div style="font-size: 14px; color: #64748b; margin-bottom: 4px;">Total Amount</div>
+                        <div id="invoiceTotal" style="font-weight: 700; font-size: 28px; color: #059669;">£0.00</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px;">
+                    <div style="text-align: center; padding: 15px; border-right: 1px solid #e2e8f0;">
+                        <div style="font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 600;">Subtotal (ex VAT)</div>
+                        <div id="invoiceSubtotal" style="font-size: 22px; font-weight: 700; color: #333;">£0.00</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; border-right: 1px solid #e2e8f0;">
+                        <div style="font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 600;">VAT (<span id="invoiceVatRate">20</span>%)</div>
+                        <div id="invoiceVat" style="font-size: 22px; font-weight: 700; color: #333;">£0.00</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px;">
+                        <div style="font-size: 13px; color: #059669; margin-bottom: 8px; font-weight: 700;">TOTAL (inc VAT)</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #059669;" id="invoiceTotalDuplicate">£0.00</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                    <button class="btn btn-primary" onclick="saveInvoice()" style="width: 100%; font-size: 15px; padding: 14px; background: #059669;">
+                        💾 Save Invoice
+                    </button>
+                    <button class="btn btn-secondary" onclick="previewInvoicePDF()" style="width: 100%; font-size: 15px; padding: 14px; background: #3b82f6; color: white;">
+                        👁️ Preview PDF
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearInvoiceForm()" style="width: 100%; padding: 14px;">
+                        🗑️ Clear Form
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Invoices Tab -->
+        <div id="tab-invoice-saved" class="tab-content" style="display: none;">
+            <div class="card">
+                <div class="card-title">
+                    Saved Invoices
+                    <span class="badge" id="invoiceCount" style="background: #e0f2f1; color: #2B7A78; padding: 4px 12px; border-radius: 12px; font-size: 0.75em; font-weight: 600; margin-left: 10px;">0</span>
+                </div>
+                <div id="savedInvoicesList" style="padding: 20px;">
+                    <p style="color: #999; text-align: center; padding: 40px;">No invoices yet. Create your first invoice in the Create Invoice tab.</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Price Item Modal -->
@@ -878,6 +1050,14 @@
             <div class="form-group">
                 <label>Service/Item Name</label>
                 <input type="text" id="modalItemName" placeholder="e.g., Hatchery Design Consultancy">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="modalItemCategory" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; width: 100%;">
+                    <option value="S">⚙️ Service (data analysis, reports, consulting)</option>
+                    <option value="R">🔧 Rental (equipment, temporary use)</option>
+                    <option value="P">🛒 Purchase (buy equipment, one-time purchase)</option>
+                </select>
             </div>
             <div class="form-group">
                 <label>Description</label>
@@ -898,15 +1078,33 @@
         </div>
     </div>
 
+    <!-- PDF Preview Modal -->
+    <div class="modal-overlay" id="pdfPreviewModal" style="display: none;">
+        <div class="modal" style="max-width: 950px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Invoice PDF Preview</span>
+                <button onclick="closePDFPreviewModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #64748b; padding: 0; line-height: 1;">&times;</button>
+            </div>
+            <div id="pdfPreviewContent" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 20px; background: #ffffff; max-height: 65vh; overflow-y: auto;">
+                <p style="color: #94a3b8; text-align: center; padding: 40px;">Click "Preview PDF" to see how your invoice will look</p>
+            </div>
+            <div class="btn-group" style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="exportInvoicePDF()" style="flex: 1; font-size: 15px; padding: 12px;">📄 Download PDF</button>
+                <button class="btn btn-secondary" onclick="closePDFPreviewModal()" style="flex: 1; font-size: 15px; padding: 12px;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // =====================================================
         // DATABASE CONFIGURATION
         // =====================================================
         const DB_NAME = 'PEBLQuotesDB';
-        const DB_VERSION = 2; // Bumped for clients store
+        const DB_VERSION = 3; // Bumped for invoices store
         const QUOTES_STORE = 'quotes';
         const PRICELIST_STORE = 'pricelist';
         const CLIENTS_STORE = 'clients';
+        const INVOICES_STORE = 'invoices';
         let db = null;
 
         // Company Details
@@ -928,8 +1126,11 @@
         let priceList = [];
         let savedQuotes = [];
         let savedClients = [];
+        let savedInvoices = [];
         let editingPriceItemId = null;
         let editingQuoteId = null; // Track which quote is being edited
+        let editingInvoiceId = null; // Track which invoice is being edited
+        let priceListFilter = 'all'; // Filter for price list: 'all', 'R', 'P', 'S'
 
         // Currency configuration
         let currentCurrency = 'GBP';
@@ -967,6 +1168,7 @@
                 loadPriceList();
                 loadSavedQuotes();
                 loadSavedClients();
+                loadSavedInvoices();
             };
 
             request.onupgradeneeded = (event) => {
@@ -993,6 +1195,14 @@
                     clientsStore.createIndex('organisation', 'organisation', { unique: false });
                 }
 
+                // Create invoices store
+                if (!db.objectStoreNames.contains(INVOICES_STORE)) {
+                    const invoicesStore = db.createObjectStore(INVOICES_STORE, { keyPath: 'id', autoIncrement: true });
+                    invoicesStore.createIndex('invoiceNumber', 'invoiceNumber', { unique: true });
+                    invoicesStore.createIndex('date', 'date', { unique: false });
+                    invoicesStore.createIndex('clientName', 'clientName', { unique: false });
+                }
+
                 console.log('Database schema created');
             };
         }
@@ -1001,11 +1211,27 @@
         // TAB NAVIGATION
         // =====================================================
         function showTab(tabName) {
+            // Remove active class from all tabs
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
+            // Hide all tab content (handle both quote and invoice tabs)
+            document.querySelectorAll('.tab-content').forEach(c => {
+                c.classList.remove('active');
+                c.style.display = 'none';
+            });
+
+            // Activate the clicked tab button
+            const tabButton = document.querySelector(`[onclick="showTab('${tabName}')"]`);
+            if (tabButton) {
+                tabButton.classList.add('active');
+            }
+
+            // Show the selected tab content
+            const tabContent = document.getElementById(`tab-${tabName}`);
+            if (tabContent) {
+                tabContent.classList.add('active');
+                tabContent.style.display = 'block';
+            }
         }
 
         // =====================================================
@@ -1835,7 +2061,8 @@ Country (if not UK)`
                         <div class="quote-item-date">${new Date(quote.date).toLocaleDateString('en-GB')} ${quote.currency ? `(${quote.currency})` : ''}</div>
                     </div>
                     <div class="quote-item-amount">${symbol}${quote.total.toFixed(2)}</div>
-                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteQuote(${quote.id})" style="margin-left: 10px;">Delete</button>
+                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); convertQuoteToInvoice(${quote.id})" style="margin-left: 10px; background: #2B7A78;">📄 Convert to Invoice</button>
+                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteQuote(${quote.id})" style="margin-left: 5px;">Delete</button>
                 </div>
             `}).join('');
         }
@@ -1907,6 +2134,50 @@ Country (if not UK)`
             };
         }
 
+        function convertQuoteToInvoice(id) {
+            const quote = savedQuotes.find(q => q.id === id);
+            if (!quote) {
+                showToast('Quote not found', 'error');
+                return;
+            }
+
+            // Convert quote items structure to invoice line items structure
+            // Quote items: { description, amount }
+            // Invoice needs: { description, quantity, unitPrice }
+            const items = quote.items || quote.lineItems || [];
+            const convertedLineItems = items.map(item => ({
+                description: item.description || item.name || '',
+                quantity: item.quantity || 1, // Default to quantity 1 if not specified
+                unitPrice: item.unitPrice || item.price || item.amount || 0, // Use amount as unit price for quote conversion
+                name: item.description || item.name || ''
+            }));
+
+            // Store quote data in localStorage for invoice.html to pick up
+            localStorage.setItem('pebl_convert_quote', JSON.stringify({
+                quoteId: id,
+                quoteReference: quote.reference,
+                quoteTitle: quote.title,
+                clientName: quote.clientName,
+                clientOrg: quote.clientOrg,
+                clientAddress: quote.clientAddress,
+                projectTitle: quote.title,
+                date: quote.date,
+                lineItems: convertedLineItems,
+                subtotal: quote.subtotal,
+                vatRate: quote.vatRate,
+                vatAmount: quote.vatAmount,
+                total: quote.total,
+                currency: quote.currency,
+                additionalNotes: quote.additionalNotes,
+                includeVat: quote.includeVat
+            }));
+
+            // Switch to invoice mode and populate form
+            switchMode('invoice');
+            populateInvoiceFromQuote(convertedLineItems, quote);
+            showToast('Switched to invoice editor', 'success');
+        }
+
         function clearAllQuotes() {
             if (!confirm('Delete ALL saved quotes? This cannot be undone.')) return;
 
@@ -1938,7 +2209,13 @@ Country (if not UK)`
 
         function renderPriceList() {
             const tbody = document.getElementById('priceListBody');
-            document.getElementById('priceItemsCount').textContent = priceList.length;
+
+            // Apply filter
+            const filteredList = priceListFilter === 'all'
+                ? priceList
+                : priceList.filter(item => item.category === priceListFilter);
+
+            document.getElementById('priceItemsCount').textContent = filteredList.length;
 
             // Also update the quick add selector on the Create Quote tab
             const selector = document.getElementById('priceListSelector');
@@ -1947,26 +2224,70 @@ Country (if not UK)`
             } else {
                 selector.innerHTML = '<option value="">-- Quick add from price list --</option>' +
                     priceList.map(item => {
-                        return `<option value="${item.id}">${item.name} - £${parseFloat(item.price).toFixed(2)}</option>`;
+                        const categoryIcon = getCategoryIcon(item.category);
+                        return `<option value="${item.id}">${categoryIcon} ${item.name} - £${parseFloat(item.price).toFixed(2)}</option>`;
                     }).join('');
             }
 
             if (priceList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999; padding: 40px;">No items in price list. Click "+ Add Item" to add one.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999; padding: 20px;">No items in price list. Click "+ Add Item" to add one.</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = priceList.map(item => `
-                <tr>
-                    <td><strong>${item.name}</strong></td>
-                    <td>${item.description || '-'}</td>
+            if (filteredList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999; padding: 20px;">No items match the selected filter.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredList.map(item => {
+                const categoryIcon = getCategoryIcon(item.category);
+                const categoryColor = getCategoryColor(item.category);
+                return `
+                <tr style="height: 45px;">
+                    <td>
+                        <span style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="background: ${categoryColor}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; font-weight: 600; min-width: 20px; text-align: center;">${categoryIcon}</span>
+                            <strong>${item.name}</strong>
+                        </span>
+                    </td>
+                    <td style="font-size: 0.9em;">${item.description || '-'}</td>
                     <td style="text-align: right;">£${parseFloat(item.price).toFixed(2)}</td>
                     <td>
                         <button class="btn btn-secondary btn-sm" onclick="editPriceItem(${item.id})">Edit</button>
                         <button class="btn btn-danger btn-sm" onclick="deletePriceItem(${item.id})">Delete</button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
+        }
+
+        function getCategoryIcon(category) {
+            switch(category) {
+                case 'R': return 'R';
+                case 'P': return 'P';
+                case 'S': return 'S';
+                default: return '-';
+            }
+        }
+
+        function getCategoryColor(category) {
+            switch(category) {
+                case 'R': return '#3b82f6'; // Blue for Rental
+                case 'P': return '#8b5cf6'; // Purple for Purchase
+                case 'S': return '#10b981'; // Green for Service
+                default: return '#6b7280'; // Gray for undefined
+            }
+        }
+
+        function filterPriceList(filter) {
+            priceListFilter = filter;
+
+            // Update button styles
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+
+            renderPriceList();
         }
 
         function addFromPriceList() {
@@ -1995,6 +2316,7 @@ Country (if not UK)`
         function addPriceItem() {
             editingPriceItemId = null;
             document.getElementById('modalItemName').value = '';
+            document.getElementById('modalItemCategory').value = 'S';
             document.getElementById('modalItemDesc').value = '';
             document.getElementById('modalItemPrice').value = '';
             document.getElementById('modalItemKeywords').value = '';
@@ -2007,6 +2329,7 @@ Country (if not UK)`
 
             editingPriceItemId = id;
             document.getElementById('modalItemName').value = item.name || '';
+            document.getElementById('modalItemCategory').value = item.category || 'S';
             document.getElementById('modalItemDesc').value = item.description || '';
             document.getElementById('modalItemPrice').value = item.price || '';
             document.getElementById('modalItemKeywords').value = item.keywords || '';
@@ -2020,6 +2343,7 @@ Country (if not UK)`
 
         function savePriceItem() {
             const name = document.getElementById('modalItemName').value.trim();
+            const category = document.getElementById('modalItemCategory').value;
             const description = document.getElementById('modalItemDesc').value.trim();
             const price = parseFloat(document.getElementById('modalItemPrice').value) || 0;
             const keywords = document.getElementById('modalItemKeywords').value.trim();
@@ -2029,7 +2353,7 @@ Country (if not UK)`
                 return;
             }
 
-            const item = { name, description, price, keywords };
+            const item = { name, category, description, price, keywords };
 
             const transaction = db.transaction([PRICELIST_STORE], 'readwrite');
             const store = transaction.objectStore(PRICELIST_STORE);
@@ -2063,6 +2387,327 @@ Country (if not UK)`
 
         function savePriceList() {
             showToast('Price list saved automatically', 'success');
+        }
+
+        // Bulk import price list items from Budget V2
+        async function bulkImportBudgetItems() {
+            if (!db) {
+                showToast('Database not ready', 'error');
+                return;
+            }
+
+            const budgetItems = [
+                {
+                    name: 'SubCam2 - Benthic Deployment (Annual)',
+                    description: 'SubCam2 camera system for benthic (seafloor) deployment. Annual rental at £750/year (1 unit × £750)',
+                    price: 750.00,
+                    category: 'R',
+                    keywords: 'subcam, camera, benthic, seafloor, deployment, video, monitoring'
+                },
+                {
+                    name: 'SubCam2 - Pelagic Deployment (Annual)',
+                    description: 'SubCam2 camera system for pelagic (water column) deployment. Annual rental at £750/year (1 unit × £750)',
+                    price: 750.00,
+                    category: 'R',
+                    keywords: 'subcam, camera, pelagic, water column, deployment, video, monitoring'
+                },
+                {
+                    name: 'SubCam2 - Benthic Deployment (Quarterly)',
+                    description: 'SubCam2 camera system for benthic deployment. Quarterly rental at £187.50/quarter (1 unit × £187.50)',
+                    price: 187.50,
+                    category: 'R',
+                    keywords: 'subcam, camera, benthic, seafloor, quarterly, video'
+                },
+                {
+                    name: 'SubCam2 - Pelagic Deployment (Quarterly)',
+                    description: 'SubCam2 camera system for pelagic deployment. Quarterly rental at £187.50/quarter (1 unit × £187.50)',
+                    price: 187.50,
+                    category: 'R',
+                    keywords: 'subcam, camera, pelagic, water column, quarterly, video'
+                },
+                {
+                    name: 'SubCam Benthic Mooring Kit (Annual)',
+                    description: 'Mooring equipment for benthic SubCam deployment. Annual rental at £100/year (1 kit × £100)',
+                    price: 100.00,
+                    category: 'R',
+                    keywords: 'mooring, benthic, subcam, mounting, anchor'
+                },
+                {
+                    name: 'SubCam Benthic Mooring Kit (Quarterly)',
+                    description: 'Mooring equipment for benthic SubCam deployment. Quarterly rental at £18.75/quarter (1 kit × £18.75)',
+                    price: 18.75,
+                    category: 'R',
+                    keywords: 'mooring, benthic, subcam, mounting, anchor, quarterly'
+                },
+                {
+                    name: 'SubCam Pelagic Mooring Kit (Annual)',
+                    description: 'Mooring equipment for pelagic SubCam deployment. Annual rental at £50/year (1 kit × £50)',
+                    price: 50.00,
+                    category: 'R',
+                    keywords: 'mooring, pelagic, subcam, mounting, water column'
+                },
+                {
+                    name: 'SubCam Pelagic Mooring Kit (Quarterly)',
+                    description: 'Mooring equipment for pelagic SubCam deployment. Quarterly rental at £18.75/quarter (1 kit × £18.75)',
+                    price: 18.75,
+                    category: 'R',
+                    keywords: 'mooring, pelagic, subcam, mounting, quarterly'
+                },
+                {
+                    name: 'GrowProbe (Annual)',
+                    description: 'GrowProbe monitoring equipment. Annual rental at £300/year (1 unit × £300)',
+                    price: 300.00,
+                    category: 'R',
+                    keywords: 'growprobe, monitoring, sensor, annual'
+                },
+                {
+                    name: 'SeaLens (Quarterly)',
+                    description: 'SeaLens monitoring equipment. Quarterly rental at £750/quarter (1 unit × £750)',
+                    price: 750.00,
+                    category: 'R',
+                    keywords: 'sealens, monitoring, sensor, quarterly'
+                },
+                {
+                    name: 'Equipment Shipping & Maintenance',
+                    description: 'Shipping to/from site for equipment repairs and maintenance. Annual service at £50/year',
+                    price: 50.00,
+                    category: 'S',
+                    keywords: 'shipping, maintenance, transport, logistics, repairs'
+                },
+                {
+                    name: 'Video Processing - 180 days',
+                    description: 'Processing underwater video footage. 180 days of data at £40/10 days (18 × £40 = £720)',
+                    price: 720.00,
+                    category: 'S',
+                    keywords: 'video, processing, analysis, footage, data, 180 days'
+                },
+                {
+                    name: 'Video Processing - 270 days',
+                    description: 'Processing underwater video footage. 270 days of data at £40/10 days (27 × £40 = £1,080)',
+                    price: 1080.00,
+                    category: 'S',
+                    keywords: 'video, processing, analysis, footage, data, 270 days'
+                },
+                {
+                    name: 'Video Processing - 360 days',
+                    description: 'Processing underwater video footage. 360 days of data at £40/10 days (36 × £40 = £1,440)',
+                    price: 1440.00,
+                    category: 'S',
+                    keywords: 'video, processing, analysis, footage, data, 360 days'
+                },
+                {
+                    name: 'Video Processing (per 10 days)',
+                    description: 'Processing underwater video footage. Rate: £40 per 10 days of data',
+                    price: 40.00,
+                    category: 'S',
+                    keywords: 'video, processing, analysis, footage, data'
+                },
+                {
+                    name: 'FPOD Processing - 270 days',
+                    description: 'Processing acoustic data from FPOD devices. 270 days of data at £40/10 days (27 × £40 = £1,080)',
+                    price: 1080.00,
+                    category: 'S',
+                    keywords: 'fpod, acoustic, processing, analysis, marine mammal, 270 days'
+                },
+                {
+                    name: 'FPOD Processing - 360 days',
+                    description: 'Processing acoustic data from FPOD devices. 360 days of data at £40/10 days (36 × £40 = £1,440)',
+                    price: 1440.00,
+                    category: 'S',
+                    keywords: 'fpod, acoustic, processing, analysis, marine mammal, 360 days'
+                },
+                {
+                    name: 'FPOD Processing (per 10 days)',
+                    description: 'Processing acoustic data from FPOD devices. Rate: £40 per 10 days of data',
+                    price: 40.00,
+                    category: 'S',
+                    keywords: 'fpod, acoustic, processing, analysis, marine mammal'
+                },
+                {
+                    name: 'eDNA Sediment Sampling (3 replicates)',
+                    description: 'eDNA sediment sampling with 3 replicates. Cost: £175/sample + £150/1st metabarcode + £75/2nd metabarcode = £400/replicate (3 × £400 = £1,200)',
+                    price: 1200.00,
+                    category: 'S',
+                    keywords: 'edna, dna, sediment, sampling, metabarcode, genetic, molecular'
+                },
+                {
+                    name: 'eDNA Processing - 3 samples',
+                    description: 'Laboratory processing and analysis of eDNA samples. 3 samples at £200/sample (3 × £200 = £600)',
+                    price: 600.00,
+                    category: 'S',
+                    keywords: 'edna, dna, processing, laboratory, analysis, genetic, 3 samples'
+                },
+                {
+                    name: 'eDNA Processing (per sample)',
+                    description: 'Laboratory processing and analysis of eDNA samples. Rate: £200 per sample',
+                    price: 200.00,
+                    category: 'S',
+                    keywords: 'edna, dna, processing, laboratory, analysis, genetic'
+                },
+                {
+                    name: 'Benthic Faunal ID Sampling (3 replicates)',
+                    description: 'Collection and taxonomic identification of benthic fauna. 3 replicates at £590/sample (3 × £590 = £1,770)',
+                    price: 1770.00,
+                    category: 'S',
+                    keywords: 'benthic, fauna, taxonomy, identification, sampling, biodiversity'
+                },
+                {
+                    name: 'Benthic Faunal ID Processing - 9 replicates',
+                    description: 'Laboratory processing and taxonomic ID of benthic fauna. 3 sites with 3 replicates each at £40/replicate (9 × £40 = £360)',
+                    price: 360.00,
+                    category: 'S',
+                    keywords: 'benthic, fauna, taxonomy, identification, processing, laboratory, 9 replicates'
+                },
+                {
+                    name: 'Benthic Faunal ID Processing (per replicate)',
+                    description: 'Laboratory processing and taxonomic identification of benthic fauna samples. Rate: £40 per replicate',
+                    price: 40.00,
+                    category: 'S',
+                    keywords: 'benthic, fauna, taxonomy, identification, processing, laboratory'
+                },
+                {
+                    name: 'Nitrates & Phosphates Analysis - 6 samples',
+                    description: 'Water chemistry analysis for nitrates and phosphates. 6 samples (Mar, May, Jul for 2 sites) at £50/sample (6 × £50 = £300)',
+                    price: 300.00,
+                    category: 'S',
+                    keywords: 'nitrates, phosphates, nutrients, water quality, chemistry, analysis'
+                },
+                {
+                    name: 'Nitrates & Phosphates Analysis (per sample)',
+                    description: 'Water chemistry analysis for nitrates and phosphates. Rate: £50 per sample',
+                    price: 50.00,
+                    category: 'S',
+                    keywords: 'nitrates, phosphates, nutrients, water quality, chemistry, analysis'
+                },
+                {
+                    name: 'Heavy Metals Analysis - 8 samples',
+                    description: 'Analysis of heavy metals (Hg, As, Cd, Pb) in seaweed samples. 8 samples from Control and ArcticFarm sites in July at £50/sample (8 × £50 = £400)',
+                    price: 400.00,
+                    category: 'S',
+                    keywords: 'heavy metals, mercury, arsenic, cadmium, lead, contamination, analysis'
+                },
+                {
+                    name: 'Heavy Metals Analysis (per sample)',
+                    description: 'Analysis of heavy metals (Hg, As, Cd, Pb) in seaweed or sediment samples. Rate: £50 per sample',
+                    price: 50.00,
+                    category: 'S',
+                    keywords: 'heavy metals, mercury, arsenic, cadmium, lead, contamination, analysis'
+                },
+                {
+                    name: 'Salinity & pH Analysis',
+                    description: 'Water quality analysis for salinity and pH measurements. Package rate: £200',
+                    price: 200.00,
+                    category: 'S',
+                    keywords: 'salinity, ph, water quality, chemistry, analysis'
+                },
+                {
+                    name: 'Iodine Analysis - 2 samples',
+                    description: 'Iodine content analysis by Fera Scientific. 2 samples at £200/sample (2 × £200 = £400)',
+                    price: 400.00,
+                    category: 'S',
+                    keywords: 'iodine, analysis, fera, laboratory, seaweed, chemistry'
+                },
+                {
+                    name: 'Iodine Analysis (per sample)',
+                    description: 'Iodine content analysis by Fera Scientific. Rate: £200 per sample',
+                    price: 200.00,
+                    category: 'S',
+                    keywords: 'iodine, analysis, fera, laboratory, seaweed, chemistry'
+                },
+                {
+                    name: 'Data Processing & Chart Creation (per hour)',
+                    description: 'Processing environmental data and creating visualizations and charts. Rate: £40 per hour',
+                    price: 40.00,
+                    category: 'S',
+                    keywords: 'data, processing, charts, visualization, analysis, graphs'
+                },
+                {
+                    name: 'Technical Support & Reporting (per hour)',
+                    description: 'Technical support, data interpretation, and report writing. Rate: £40 per hour',
+                    price: 40.00,
+                    category: 'S',
+                    keywords: 'technical support, reporting, documentation, analysis, consultation'
+                },
+                {
+                    name: 'Technical Support Package (Quarterly)',
+                    description: 'Comprehensive technical support including data processing and reporting. Quarterly rate: £1,260 (approx. 32 hours at £40/hour)',
+                    price: 1260.00,
+                    category: 'S',
+                    keywords: 'technical support, reporting, package, quarterly, documentation'
+                },
+                {
+                    name: 'On-Site Equipment Training',
+                    description: 'On-site training for equipment deployment, use, and maintenance. 2 sessions at £550 each (2 × £550 = £1,100)',
+                    price: 1100.00,
+                    category: 'S',
+                    keywords: 'training, onsite, equipment, deployment, maintenance, instruction'
+                },
+                {
+                    name: 'Remote Equipment Training (per hour)',
+                    description: 'Remote/online training for equipment use and maintenance. Rate: £40 per hour',
+                    price: 40.00,
+                    category: 'S',
+                    keywords: 'training, remote, online, equipment, instruction, virtual'
+                },
+                {
+                    name: 'Pre/Post Deployment Inspection',
+                    description: 'Equipment check-in inspection before and after deployment. 18 inspections at £40 each (18 × £40 = £720)',
+                    price: 720.00,
+                    category: 'S',
+                    keywords: 'inspection, deployment, equipment, check-in, maintenance'
+                },
+                {
+                    name: 'Quarterly Training Package',
+                    description: 'Comprehensive training including on-site and remote sessions. Quarterly rate: £635 (approx. 16 hours at £40/hour)',
+                    price: 635.00,
+                    category: 'S',
+                    keywords: 'training, quarterly, package, comprehensive, onsite, remote'
+                },
+                {
+                    name: 'Quarterly Sampling Package',
+                    description: 'Comprehensive sampling including eDNA, water quality, and analysis. Quarterly rate: £1,850',
+                    price: 1850.00,
+                    category: 'S',
+                    keywords: 'sampling, quarterly, package, comprehensive, edna, water quality'
+                },
+                {
+                    name: 'Quarterly Equipment Rental Package',
+                    description: 'Complete equipment rental including cameras, sensors, and moorings. Quarterly rate: £1,125',
+                    price: 1125.00,
+                    category: 'R',
+                    keywords: 'equipment, rental, quarterly, package, subcam, sensors'
+                }
+            ];
+
+            const transaction = db.transaction([PRICELIST_STORE], 'readwrite');
+            const store = transaction.objectStore(PRICELIST_STORE);
+
+            let addedCount = 0;
+            let skippedCount = 0;
+
+            for (const item of budgetItems) {
+                // Check if item already exists
+                const existingIndex = store.index('name');
+                const existingRequest = existingIndex.get(item.name);
+
+                existingRequest.onsuccess = () => {
+                    if (!existingRequest.result) {
+                        store.add(item);
+                        addedCount++;
+                    } else {
+                        skippedCount++;
+                    }
+                };
+            }
+
+            transaction.oncomplete = () => {
+                showToast(`Import complete: ${addedCount} items added, ${skippedCount} items already existed`, 'success');
+                loadPriceList();
+            };
+
+            transaction.onerror = () => {
+                showToast('Import failed', 'error');
+            };
         }
 
         // =====================================================
@@ -2166,6 +2811,33 @@ Country (if not UK)`
                     resolve(false);
                 };
             });
+        }
+
+        async function saveClientManually() {
+            const name = document.getElementById('clientName').value.trim();
+            const organisation = document.getElementById('clientOrg').value.trim();
+            const address = document.getElementById('clientAddress').value.trim();
+
+            if (!name) {
+                showToast('Please enter a client name', 'error');
+                return;
+            }
+
+            const saved = await saveClient(name, organisation, address);
+            if (saved) {
+                showToast(`Client "${name}" saved successfully`, 'success');
+            } else {
+                // Check if client already exists
+                const existingClient = savedClients.find(c =>
+                    c.name.toLowerCase() === name.toLowerCase() &&
+                    (c.organisation || '').toLowerCase() === (organisation || '').toLowerCase()
+                );
+                if (existingClient) {
+                    showToast('Client already exists in your list', 'info');
+                } else {
+                    showToast('Failed to save client', 'error');
+                }
+            }
         }
 
         function saveItemToPriceList(description, amount) {
@@ -2397,6 +3069,432 @@ Country (if not UK)`
         document.addEventListener('mouseup', () => {
             isDragging = false;
         });
-    </script>
-</body>
-</html>
+
+        // =====================================================
+        // MODE SWITCHING (Quote vs Invoice)
+        // =====================================================
+        let currentMode = 'quote'; // 'quote' or 'invoice'
+
+        function switchMode(mode) {
+            currentMode = mode;
+
+            // Update mode buttons
+            const quoteBtn = document.getElementById('quoteModeBtn');
+            const invoiceBtn = document.getElementById('invoiceModeBtn');
+
+            if (mode === 'quote') {
+                quoteBtn.classList.add('active');
+                invoiceBtn.classList.remove('active');
+
+                // Update main tabs to show quote tabs
+                document.getElementById('mainTabs').innerHTML = `
+                    <button class="tab active" onclick="showTab('create')">Create Quote</button>
+                    <button class="tab" onclick="showTab('saved')">Saved Quotes</button>
+                    <button class="tab" onclick="showTab('pricelist')">Price List</button>
+                `;
+
+                // Hide invoice tabs, show quote tabs
+                document.getElementById('tab-create').style.display = 'block';
+                document.getElementById('tab-saved').style.display = 'none';
+                document.getElementById('tab-pricelist').style.display = 'none';
+                document.getElementById('tab-invoice-create').style.display = 'none';
+                document.getElementById('tab-invoice-saved').style.display = 'none';
+
+                // Show create quote tab
+                showTab('create');
+            } else {
+                invoiceBtn.classList.add('active');
+                quoteBtn.classList.remove('active');
+
+                // Update main tabs to show invoice tabs
+                document.getElementById('mainTabs').innerHTML = `
+                    <button class="tab active" onclick="showTab('invoice-create')">Create Invoice</button>
+                    <button class="tab" onclick="showTab('invoice-saved')">Saved Invoices</button>
+                    <button class="tab" onclick="showTab('pricelist')">Price List</button>
+                `;
+
+                // Hide quote tabs, show invoice tabs
+                document.getElementById('tab-create').style.display = 'none';
+                document.getElementById('tab-saved').style.display = 'none';
+                document.getElementById('tab-pricelist').style.display = 'none';
+                document.getElementById('tab-invoice-create').style.display = 'block';
+                document.getElementById('tab-invoice-saved').style.display = 'none';
+
+                // Show create invoice tab
+                showTab('invoice-create');
+            }
+        }
+
+        // =====================================================
+        // INVOICE LINE ITEMS MANAGEMENT
+        // =====================================================
+        let invoiceLineItems = [];
+        let nextInvoiceLineItemId = 1;
+
+        function addInvoiceLineItem() {
+            const newItem = {
+                id: nextInvoiceLineItemId++,
+                description: '',
+                quantity: 1,
+                unitPrice: 0,
+                total: 0
+            };
+            invoiceLineItems.push(newItem);
+            renderInvoiceLineItems();
+            updateInvoiceTotals();
+        }
+
+        function removeInvoiceLineItem(id) {
+            invoiceLineItems = invoiceLineItems.filter(item => item.id !== id);
+            renderInvoiceLineItems();
+            updateInvoiceTotals();
+        }
+
+        function duplicateInvoiceLineItem(id) {
+            const item = invoiceLineItems.find(i => i.id === id);
+            if (!item) return;
+
+            // Create a copy with a new ID
+            const duplicatedItem = {
+                id: nextInvoiceLineItemId++,
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total
+            };
+
+            // Find the index of the original item and insert the duplicate right after it
+            const index = invoiceLineItems.findIndex(i => i.id === id);
+            invoiceLineItems.splice(index + 1, 0, duplicatedItem);
+
+            renderInvoiceLineItems();
+            updateInvoiceTotals();
+            showToast('Line item duplicated successfully', 'success');
+        }
+
+        function renderInvoiceLineItems() {
+            const container = document.getElementById('invoiceLineItemsContainer');
+
+            if (invoiceLineItems.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #94a3b8;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+                        <p>No line items yet. Click "+ Add Line Item" to get started.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = invoiceLineItems.map(item => {
+                // Calculate dynamic height based on content - more generous calculation
+                // Count actual line breaks
+                const lineBreaks = (item.description.match(/\n/g) || []).length;
+                // Estimate wrapped lines (assuming ~70 chars per line with proper wrapping)
+                const wrappedLines = Math.ceil(item.description.length / 70);
+                // Total estimated lines
+                const totalLines = Math.max(lineBreaks + 1, wrappedLines);
+                // Calculate height with generous spacing (25px per line + base padding)
+                const minHeight = Math.max(120, totalLines * 25 + 40);
+
+                return `
+                <div class="line-item" style="margin-bottom: 20px; padding: 20px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- Description - Full Width -->
+                        <div style="width: 100%;">
+                            <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px; font-weight: 700;">Description</label>
+                            <textarea
+                                   placeholder="Enter detailed item description, calculations, and justification"
+                                   onchange="updateInvoiceLineItem(${item.id}, 'description', this.value)"
+                                   oninput="autoResizeTextarea(this)"
+                                   style="width: 100%; height: ${minHeight}px; min-height: ${minHeight}px; padding: 14px; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; line-height: 1.8; background: #fafafa; overflow-y: hidden;">${item.description}</textarea>
+                        </div>
+
+                        <!-- Quantity, Unit Price, Total, Actions - In a row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap: 12px; align-items: end;">
+                            <div>
+                                <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 600;">Quantity</label>
+                                <input type="number"
+                                       value="${item.quantity}"
+                                       placeholder="Qty"
+                                       onchange="updateInvoiceLineItem(${item.id}, 'quantity', parseFloat(this.value) || 0)"
+                                       style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 600;">Unit Price (£)</label>
+                                <input type="number"
+                                       value="${item.unitPrice}"
+                                       placeholder="0.00"
+                                       step="0.01"
+                                       onchange="updateInvoiceLineItem(${item.id}, 'unitPrice', parseFloat(this.value) || 0)"
+                                       style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 600;">Total</label>
+                                <div style="padding: 10px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 6px; font-weight: 700; text-align: right; color: white; font-size: 16px;">
+                                    £${item.total.toFixed(2)}
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="duplicateInvoiceLineItem(${item.id})" style="padding: 10px 14px; height: 42px; background: #3b82f6; color: white;" title="Duplicate this item">
+                                📋
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="removeInvoiceLineItem(${item.id})" style="padding: 10px 14px; height: 42px;" title="Delete this item">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            // After rendering, ensure all textareas are properly sized
+            setTimeout(() => {
+                container.querySelectorAll('textarea').forEach(textarea => {
+                    autoResizeTextarea(textarea);
+                });
+            }, 10);
+        }
+
+        function updateInvoiceLineItem(id, field, value) {
+            const item = invoiceLineItems.find(i => i.id === id);
+            if (!item) return;
+
+            item[field] = value;
+            item.total = item.quantity * item.unitPrice;
+            renderInvoiceLineItems();
+            updateInvoiceTotals();
+        }
+
+        function autoResizeTextarea(textarea) {
+            // Reset height to allow shrinking
+            textarea.style.height = 'auto';
+            // Set to scrollHeight to fit all content
+            textarea.style.height = (textarea.scrollHeight + 5) + 'px';
+        }
+
+        function updateInvoiceTotals() {
+            const subtotal = invoiceLineItems.reduce((sum, item) => sum + item.total, 0);
+            const vatRate = parseFloat(document.getElementById('invoiceVatRate')?.textContent || 20);
+            const vatAmount = subtotal * (vatRate / 100);
+            const total = subtotal + vatAmount;
+
+            document.getElementById('invoiceSubtotal').textContent = `£${subtotal.toFixed(2)}`;
+            document.getElementById('invoiceVat').textContent = `£${vatAmount.toFixed(2)}`;
+            document.getElementById('invoiceTotal').textContent = `£${total.toFixed(2)}`;
+
+            // Update duplicate total in summary panel
+            const totalDuplicate = document.getElementById('invoiceTotalDuplicate');
+            if (totalDuplicate) {
+                totalDuplicate.textContent = `£${total.toFixed(2)}`;
+            }
+        }
+
+        function populateInvoiceFromQuote(lineItems, quote) {
+            // Set invoice date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('invoiceDate').value = today;
+
+            // Set due date to 30 days from now
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+            document.getElementById('invoiceDueDate').value = dueDate.toISOString().split('T')[0];
+
+            // Populate client details
+            document.getElementById('invoiceClientName').value = quote.clientName || '';
+            document.getElementById('invoiceClientOrg').value = quote.clientOrg || '';
+            document.getElementById('invoiceClientAddress').value = quote.clientAddress || '';
+
+            // Populate project details
+            document.getElementById('invoiceProjectName').value = quote.title || '';
+            document.getElementById('linkedQuoteRef').value = quote.reference || '';
+
+            // Populate line items
+            invoiceLineItems = lineItems.map((item, index) => ({
+                id: index + 1,
+                description: item.description || item.name || '',
+                quantity: item.quantity || 1,
+                unitPrice: item.unitPrice || 0,
+                total: (item.quantity || 1) * (item.unitPrice || 0)
+            }));
+            nextInvoiceLineItemId = invoiceLineItems.length + 1;
+
+            renderInvoiceLineItems();
+            updateInvoiceTotals();
+
+            // Hide import banner
+            if (document.getElementById('sampleImportBannerQuote')) {
+                document.getElementById('sampleImportBannerQuote').style.display = 'none';
+            }
+        }
+
+        function clearInvoiceForm() {
+            invoiceLineItems = [];
+            nextInvoiceLineItemId = 1;
+            document.getElementById('invoiceNumber').value = '';
+            document.getElementById('invoiceDate').value = '';
+            document.getElementById('invoiceDueDate').value = '';
+            document.getElementById('invoiceProjectName').value = '';
+            document.getElementById('linkedQuoteRef').value = '';
+            document.getElementById('invoiceClientName').value = '';
+            document.getElementById('invoiceClientOrg').value = '';
+            document.getElementById('invoiceClientAddress').value = '';
+            document.getElementById('invoiceAdditionalNotes').value = '';
+            renderInvoiceLineItems();
+            updateInvoiceTotals();
+        }
+
+        // =====================================================
+        // IMPORT SAMPLE INVOICE
+        // =====================================================
+        function importAlgapelagoInvoice() {
+            if (!confirm('Import sample Algapelago invoice?\n\nThis will load a complete invoice with all line items from the Marine Monitoring March - November 2025 project. You can then review, edit, and save it.')) {
+                return;
+            }
+
+            // Clear form first
+            clearInvoiceForm();
+
+            // Set invoice details
+            document.getElementById('invoiceNumber').value = 'SAMPLE';
+            document.getElementById('invoiceDate').value = '2026-01-11';
+            document.getElementById('invoiceDueDate').value = '2026-02-11';
+
+            document.getElementById('invoiceProjectName').value = 'Algapelago Marine Monitoring March - November 2025';
+            document.getElementById('linkedQuoteRef').value = '';
+
+            // Client details
+            document.getElementById('invoiceClientName').value = 'Algapelago Marine Ltd';
+            document.getElementById('invoiceClientOrg').value = '';
+            document.getElementById('invoiceClientAddress').value = '';
+
+            // Additional notes
+            document.getElementById('invoiceAdditionalNotes').value = 'Payment Terms: Net 30 days from invoice date';
+
+            // Create line items matching actual invoice
+            invoiceLineItems = [
+                {
+                    id: 1,
+                    description: 'SubCam2 - Benthic Deployment (Datasets: Subcam_Farm_AS_2504-2506, Subcam_Farm_LE_2504-2506)\nDeployment Period: April-June 2025 (3 months)\nUnits Deployed: 2 cameras\nRental Rate: £187.50 per unit per quarter\nCalculation: 1 quarter per unit × 2 units = 2 quarter-units\nCost Breakdown: 2 quarter-units × £187.50 = £375\nJustification: Benthic underwater camera systems for farm site monitoring during spring deployment phase',
+                    quantity: 2,
+                    unitPrice: 187.50,
+                    total: 375.00
+                },
+                {
+                    id: 2,
+                    description: 'SubCam2 - Benthic Deployment (Dataset: Subcam_C_S_2506-2508, Subcam_LE_2506-2508)\nDeployment Period: June-August 2025 (2 months)\nUnits Deployed: 2 cameras\nRental Rate: £187.50 per unit per quarter\nCalculation: 0.67 quarters per unit × 2 units = 1.33 quarter-units\nCost Breakdown: 1.33 quarter-units × £187.50 = £249.38\nJustification: Control site benthic camera deployment for comparative baseline data during summer period',
+                    quantity: 1.33,
+                    unitPrice: 187.50,
+                    total: 249.38
+                },
+                {
+                    id: 3,
+                    description: 'SubCam2 - Pelagic Deployment (Dataset: Subcam_Pel_Farm_LE_2504-2506, Farm_LE_2506-2508, Control_2504-2506, Control_2506-2508)\nDeployment Period: June 2025 (5 month)\nUnits Deployed: 2 camera\nRental Rate: £187.50 per unit per quarter\nCalculation: 2 × 1.67 = 3.33 quarter-units\nCost Breakdown: 3.33 quarter-units × £187.50 = £624.38\nJustification: Single-month pelagic zone monitoring at control site to assess water column biodiversity and validate deployment methodology',
+                    quantity: 3.33,
+                    unitPrice: 187.50,
+                    total: 624.38
+                },
+                {
+                    id: 4,
+                    description: 'SubCam Mooring Kits - Complete Deployment System (Benthic & Pelagic)\nDeployment Period: March-August 2025 (variable duration across 4 moorings)\nUnits Deployed: 4 complete mooring kits\nRental Rate: £18.75 per kit per month\nDeployment Details:\n  - Mooring 1 (Farm AS): 6 months\n  - Mooring 2 (Control): 6 months\n  - Mooring 3 (Farm L): 6 months\n  - Mooring 4 (Pel LE): 6 month\n  - Mooring 4 (Pel Control): 6 month\nCalculation: 30 kit-months = 10 kit-quarters\nCost Breakdown: 10 kit-quarters × £18.75 = £187.50\nJustification: Essential mooring infrastructure including weights, buoys, and rigging for secure camera deployment',
+                    quantity: 10,
+                    unitPrice: 18.75,
+                    total: 187.50
+                },
+                {
+                    id: 5,
+                    description: 'GrowProbe Environmental Sensors - Multi-Parameter Water Quality Monitoring (Dataset: Control_S Pelagic 2410-2412, Farm_LE 2504-2506)\nDeployment Period: (3 months per deployment)\nUnits Deployed: 2 sensors (1 farm site, 1 control site)\nRental Rate: £187.50 per unit per quarter\nCalculation: 2 quarter-units\nCost Breakdown: 2 quarter-units × £187.50 = £375\nParameters Monitored: Temperature, salinity, dissolved oxygen, pH, turbidity, chlorophyll-a\nJustification: Correlating biological observations with environmental conditions and detecting farm-related water quality impacts',
+                    quantity: 2,
+                    unitPrice: 187.50,
+                    total: 375.00
+                },
+                {
+                    id: 6,
+                    description: 'eDNA Sampling Kits - ecoType Sediment Collection System\nSampling Design: 6 sampling sites × 2 metbarcodes per site (COI + 18S)\nKit Type: ecoType Sediment eDNA collection kits with sterile collection apparatus\nUnit Cost Kit: £175.00 per kit (includes preservation buffer, sterile sampling tools, shipping container)\nUnit Cost Analysis: £225.00 for Metataxonomic Analysis - Two Markers (COI and 18S)\nCalculation: 6 samples × (£175.00 + £225) = £2,400.00\nJustification: Molecular biodiversity assessment using environmental DNA from sediment samples to detect species presence without direct observation; replicates ensure statistical robustness',
+                    quantity: 6,
+                    unitPrice: 400.00,
+                    total: 2400.00
+                },
+                {
+                    id: 7,
+                    description: 'Water Quality Analysis - Heavy Metals Panel (ICP-MS), Nitrogen & Carbon Panel (CHN Elemental Analysis)\nAnalysis Type: Inductively Coupled Plasma Mass Spectrometry (ICP-MS) for trace metal detection, Total Carbon, Total Nitrogen, and C:N ratio determination\nSample Count: 3 seaweed samples (Farm_LE)\nAnalyzed: Mercury (Hg), Arsenic (As), Cadmium (Cd), Lead (Pb), Carbon (C), Nitrogen (N)\nUnit Cost: £150.00 per sample for full heavy metals panel\nCalculation: 3 samples × £150.00 = £450.00\nJustification: Essential baseline for detecting potential heavy metal contamination from farm infrastructure or localized pollution sources; regulatory compliance requirement',
+                    quantity: 3,
+                    unitPrice: 150.00,
+                    total: 450.00
+                },
+                {
+                    id: 8,
+                    description: 'Water Quality Analysis - Salinity, pH, Nitrates, Phosphates\nAnalysis Type: Desktop PCE Datalogger Probe, Colorimeter for marine Nitrates and Phosphates\nSample Count: 8 water samples (each 6 replicates)\nUnit Cost: £60.00 per sample with 6 replicates\nCalculation: 8 samples × £60.00 = £480\nJustification: Essential for detecting water quality anomalies that might effect seaweed/bivalve growth conditions',
+                    quantity: 8,
+                    unitPrice: 60.00,
+                    total: 480.00
+                },
+                {
+                    id: 9,
+                    description: 'Seaweed Morphology Analysis - Length, Width, Fouling\nAnalysis Type: Photogrammetry\nSample Count: 6 (March), 6 (April), 1 (June), 1(July), 2 (Aug) = 16 sample bags\nSample cost: 1.5hrs per sample at £40/hr\nCalculation: 16 samples × £60.00 = £960\nJustification: Essential for detecting water quality anomalies that might effect seaweed/bivalve growth conditions',
+                    quantity: 16,
+                    unitPrice: 60.00,
+                    total: 960.00
+                },
+                {
+                    id: 10,
+                    description: 'Sample Courier charges:\neDNA samples: £25 - DHL Express Insured Service\nHeavy Metal: Courier Collection SOCOTEC: £35\nC / N Water Quality : Courier Collection SOCOTEC: £35\nSeaweed Morphology Samples: Evri / DHL Express: £10 x 4',
+                    quantity: 1,
+                    unitPrice: 135.00,
+                    total: 135.00
+                },
+                {
+                    id: 11,
+                    description: 'Subcam footage Analysis rate: £40/hr of usable footage\nSubcam_Alga_Farm_AS_2503-2504-benthic, (10min), 9 files analysed\nSubcam_Alga_Farm_L_2503-2504-benthic, (10min), 10 analysed\nSubCam_Alga_Control_2504-2506-Benthic, (10min), 39 analysed\nSubCam_Alga_Farm_AS_2504-2506-Benthic, (10min), 88 analysed\nSubCam_Alga_Farm_L_2504-2506-Benthic, (10min), 92 analysed\nSubCam_Alga_Control_2506-2508-Benthic, (2min), 67analysed\nSubCam_Alga_Farm_L_2506-2508-Benthic, (2min), 85 analysed\nSubcam_Alga_Control_2503-2504-pelagic, no charge\nSubcam_Alga_Farm_L_2503-2504-pelagic, no charge\nSubCam_Alga_Control_2504-2506-Pelagic, no charge\nSubCam_Alga_Farm_L_2504-2506-Pelagic, no charge\nSubCam_Alga_Control_2506-2508-Pelagic, no charge\nSubCam_Alga_Farm_L_2506-2508-MidPelagic, no charge\nSubCam_Alga_Farm_L_2506-2508-Pelagic, no charge',
+                    quantity: 44.73,
+                    unitPrice: 40.00,
+                    total: 1789.20
+                },
+                {
+                    id: 12,
+                    description: 'FPOD data analysis rate: £40/20days of usable data\nFPOD_Alga_Control_2504-2506 (74days)\nFPOD_Alga_Farm_AS_2503-2506 (90days)\nFPOD_Alga_Farm_L_2503-2506 (89days)\nFPOD_Alga_Control_2506-2508 (59days)\nFPOD_Alga_Farm_AS_2506-2508 (57days)\nFPOD_Alga_Farm_L_2506-2508 (147days)',
+                    quantity: 25.8,
+                    unitPrice: 40.00,
+                    total: 1032.00
+                },
+                {
+                    id: 13,
+                    description: 'GrowProbe Data Analysis rate: £40/quarter of usable data\nGrowProbe Data Processing (3 months × 2 sensor)\nJustification: Taking raw .csv format data, checking for anomalies, cropping data, reformatting for visualisations',
+                    quantity: 2,
+                    unitPrice: 40.00,
+                    total: 80.00
+                },
+                {
+                    id: 14,
+                    description: 'eDNA Data Analysis rate: £80/dataset\nJustification: Taking raw .csv format data, checking for anomalies, cropping data, reformatting for visualisations',
+                    quantity: 1,
+                    unitPrice: 80.00,
+                    total: 80.00
+                },
+                {
+                    id: 15,
+                    description: 'Technical Report - Executive Summary & Recommendations (4 hrs)\nTechnical Report - Methods & Site Descriptions (8 hrs)\nTechnical Report - Results & Discussion: Video Analysis (Species, Abundance, Behavior) (10 hrs)\nTechnical Report - Results & Discussion: Acoustic Monitoring (Marine Mammals) (8 hrs)\nTechnical Report - Results & Discussion: eDNA Biodiversity & Community Analysis (6 hrs)\nTechnical Report - Results & Discussion: Seaweed Morphology Analysis (4 hrs)\nTechnical Report - Results & Discussion: Environmental Data & Water Quality (8 hrs)\nTechnical Report - Results & Discussion: Pelagic Camera Analysis (2 hrs)\nTechnical Report - Data Visualization (30+ Figures, Maps, Charts) (16 hrs)\nTechnical Report - References, Appendices & Final Formatting (8 hrs)',
+                    quantity: 74,
+                    unitPrice: 40.00,
+                    total: 2960.00
+                },
+                {
+                    id: 16,
+                    description: 'Field Support - eDNA sediment sampling support (1 site visits)',
+                    quantity: 1,
+                    unitPrice: 500.00,
+                    total: 500.00
+                },
+                {
+                    id: 17,
+                    description: 'Datapack preperation: Management, Quality Control, Database Organization & Visualisation (£40/hr)\nDatapack_ALGA_2501-2503 (1hrs)\nDatapack_ALGA_2504-2508 (6hrs)',
+                    quantity: 7,
+                    unitPrice: 40.00,
+                    total: 280.00
+                }
+            ];
+
+            nextInvoiceLineItemId = 18;
+
+            renderInvoiceLineItems();
+            updateInvoiceTotals();
+
+            showToast('Sample invoice imported successfully!', 'success');
+        }

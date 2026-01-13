@@ -4,7 +4,11 @@
   "description": "AI-powered image generation app for creating scientific illustrations of marine species using OpenAI's DALL-E 3 API.",
   "main": ".supabase-credentials.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "playwright test tests/sync-validation.spec.js",
+    "test:summary": "playwright test tests/sync-validation.spec.js -g \"Test 9\"",
+    "test:debug": "playwright test tests/sync-validation.spec.js --debug",
+    "test:report": "playwright show-report test-results/html",
+    "dev": "python -m http.server 8000"
   },
   "repository": {
     "type": "git",
@@ -20,5 +24,8 @@
   "homepage": "https://github.com/christian-pebl/PEBLgen#readme",
   "devDependencies": {
     "@playwright/test": "^1.56.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.89.0"
   }
 }

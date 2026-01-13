@@ -958,6 +958,150 @@
             background: #3b82f6;
             color: white;
         }
+
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background: linear-gradient(to bottom, #1a1a2e 0%, #0f0f1e 100%);
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .nav-banner {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+            border-bottom: 1px solid #2a2a3e;
+        }
+
+        body.dark-mode .content-container {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .upload-section {
+            background-color: #1e1e2e;
+            border-color: #3AAFA9;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .upload-section p {
+            color: #b0b0b0;
+        }
+
+        body.dark-mode .tile {
+            background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+            border: 1px solid #3a3a4e;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .tile h3 {
+            color: #3AAFA9;
+        }
+
+        body.dark-mode .tile-grid {
+            background: transparent;
+        }
+
+        body.dark-mode table {
+            background-color: #1e1e2e;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode table thead {
+            background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
+        }
+
+        body.dark-mode table th {
+            color: #3AAFA9;
+            border-bottom: 2px solid #3a3a4e;
+        }
+
+        body.dark-mode table td {
+            border-bottom: 1px solid #2a2a3e;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode table tbody tr:hover {
+            background-color: #2a2a3e;
+        }
+
+        body.dark-mode input[type="text"],
+        body.dark-mode input[type="number"],
+        body.dark-mode input[type="date"],
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background-color: #1e1e2e;
+            color: #e0e0e0;
+            border: 1px solid #3a3a4e;
+        }
+
+        body.dark-mode input[type="text"]:focus,
+        body.dark-mode input[type="number"]:focus,
+        body.dark-mode input[type="date"]:focus,
+        body.dark-mode select:focus,
+        body.dark-mode textarea:focus {
+            border-color: #3AAFA9;
+            background-color: #2a2a3e;
+        }
+
+        body.dark-mode button {
+            background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
+            color: #e0e0e0;
+            border: 1px solid #3a3a4e;
+        }
+
+        body.dark-mode button:hover {
+            background: linear-gradient(135deg, #3a3a4e 0%, #2a2a3e 100%);
+            border-color: #3AAFA9;
+        }
+
+        body.dark-mode .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        body.dark-mode .modal-content {
+            background-color: #1e1e2e;
+            color: #e0e0e0;
+            border: 1px solid #3a3a4e;
+        }
+
+        body.dark-mode .modal-header {
+            border-bottom: 1px solid #3a3a4e;
+        }
+
+        body.dark-mode .modal-footer {
+            border-top: 1px solid #3a3a4e;
+        }
+
+        body.dark-mode .split-screen-overlay {
+            background: #0f0f1e;
+        }
+
+        body.dark-mode .split-pane {
+            background: #1e1e2e;
+            border: 1px solid #3a3a4e;
+        }
+
+        body.dark-mode .split-pane-header {
+            background: #2a2a3e;
+            color: #e0e0e0;
+            border-bottom: 1px solid #3a3a4e;
+        }
+
+        /* Dark Mode Toggle Button */
+        .dark-mode-toggle {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .dark-mode-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
     </style>
 
     <!-- Automatic Cloud Backup System -->
@@ -986,6 +1130,7 @@
             </button>
             <button onclick="openSplitScreenMode()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Split Screen Mode"><span class="split-btn-icon">⫿</span> Split</button>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
+            <button onclick="toggleDarkMode()" class="dark-mode-toggle" id="darkModeToggle" title="Toggle Dark Mode">🌙 Dark</button>
         </div>
     </div>
 
@@ -1800,6 +1945,155 @@
         }
 
         // ========================================
+        // DARK MODE TOGGLE
+        // ========================================
+
+        // Load dark mode preference on page load
+        function loadDarkModePreference() {
+            const darkModeEnabled = localStorage.getItem('darkMode') === 'true';
+            const toggleButton = document.getElementById('darkModeToggle');
+
+            if (darkModeEnabled) {
+                document.body.classList.add('dark-mode');
+                if (toggleButton) {
+                    toggleButton.innerHTML = '☀️ Light';
+                }
+            }
+        }
+
+        // Toggle dark mode
+        function toggleDarkMode() {
+            const isDarkMode = document.body.classList.toggle('dark-mode');
+            const toggleButton = document.getElementById('darkModeToggle');
+
+            // Save preference
+            localStorage.setItem('darkMode', isDarkMode);
+
+            // Update button text
+            if (toggleButton) {
+                toggleButton.innerHTML = isDarkMode ? '☀️ Light' : '🌙 Dark';
+            }
+        }
+
+        // Initialize dark mode on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDarkModePreference();
+        });
+
+        // ========================================
+        // KEYWORD ALIAS SYSTEM
+        // ========================================
+
+        /**
+         * Get keyword aliases from localStorage
+         */
+        function getKeywordAliases() {
+            const aliases = localStorage.getItem('keywordAliases');
+            return aliases ? JSON.parse(aliases) : {};
+        }
+
+        /**
+         * Save keyword alias
+         * @param {string} original - Original keyword from transaction (e.g., "Claude.ai")
+         * @param {string} alias - Alias to also search (e.g., "Anthropic")
+         */
+        function saveKeywordAlias(original, alias) {
+            const aliases = getKeywordAliases();
+
+            // Store as lowercase for case-insensitive matching
+            const key = original.toLowerCase().trim();
+            const value = alias.toLowerCase().trim();
+
+            // Add to alias list (can have multiple aliases per keyword)
+            if (!aliases[key]) {
+                aliases[key] = [];
+            }
+
+            if (!aliases[key].includes(value)) {
+                aliases[key].push(value);
+            }
+
+            localStorage.setItem('keywordAliases', JSON.stringify(aliases));
+            console.log('💾 Saved keyword alias:', { original: key, alias: value });
+        }
+
+        /**
+         * Get aliases for a keyword
+         * @param {string} keyword - The keyword to look up
+         * @returns {string[]} - Array of aliases
+         */
+        function getAliasesForKeyword(keyword) {
+            const aliases = getKeywordAliases();
+            const key = keyword.toLowerCase().trim();
+            return aliases[key] || [];
+        }
+
+        /**
+         * Smart suggestions for common company name variations
+         */
+        function getSuggestedAliases(merchantName) {
+            const suggestions = [];
+            const name = merchantName.toLowerCase().trim();
+
+            // Common known aliases
+            const knownAliases = {
+                'claude.ai': ['anthropic'],
+                'claude': ['anthropic'],
+                'openai': ['chatgpt', 'gpt'],
+                'chatgpt': ['openai'],
+                'gpt': ['openai'],
+                'aws': ['amazon web services', 'amazon'],
+                'amazon web services': ['aws'],
+                'gcp': ['google cloud', 'google'],
+                'google cloud': ['gcp'],
+                'ms': ['microsoft'],
+                'microsoft': ['ms', 'office 365', 'azure'],
+                'github': ['git', 'microsoft'],
+                'stripe': ['payment processing'],
+                'paypal': ['payment processing'],
+                'figma': ['design'],
+                'notion': ['productivity'],
+                'slack': ['communication'],
+                'zoom': ['video conferencing'],
+                'dropbox': ['cloud storage'],
+                'adobe': ['creative cloud']
+            };
+
+            // Check for exact matches or partial matches
+            for (const [key, values] of Object.entries(knownAliases)) {
+                if (name.includes(key) || key.includes(name)) {
+                    suggestions.push(...values);
+                }
+            }
+
+            // Check existing user-defined aliases
+            const existingAliases = getAliasesForKeyword(merchantName);
+            suggestions.push(...existingAliases);
+
+            // Remove duplicates and filter out the original name
+            return [...new Set(suggestions)].filter(s => s.toLowerCase() !== name);
+        }
+
+        /**
+         * Remove a keyword alias
+         */
+        function removeKeywordAlias(original, alias) {
+            const aliases = getKeywordAliases();
+            const key = original.toLowerCase().trim();
+            const value = alias.toLowerCase().trim();
+
+            if (aliases[key]) {
+                aliases[key] = aliases[key].filter(a => a !== value);
+                if (aliases[key].length === 0) {
+                    delete aliases[key];
+                }
+            }
+
+            localStorage.setItem('keywordAliases', JSON.stringify(aliases));
+            console.log('🗑️ Removed keyword alias:', { original: key, alias: value });
+        }
+
+        // ========================================
         // EXCHANGE RATE API CONFIGURATION
         // ========================================
 
@@ -2272,6 +2566,19 @@
 
         // Invoice search variables
         let currentInvoiceSearchIndex = null;
+
+        /**
+         * Get the funding level for a project by projectId
+         * @param {string} projectId - The project ID to look up
+         * @returns {number} - The funding level percentage (0-100)
+         */
+        function getProjectFundingLevel(projectId) {
+            const project = allProjects.find(p => p.projectId === projectId || p.id === projectId);
+            if (!project || !project.financeSummary) {
+                return 100; // Default to 100% if not found or no finance summary
+            }
+            return project.financeSummary.fundingLevel || 100;
+        }
 
         // IndexedDB initialization
         async function initIndexedDB() {
@@ -3079,10 +3386,10 @@
          */
         function getTransactionKey(trans) {
             // Normalize values to handle minor formatting differences
-            const date = (trans.date || '').trim();
-            const description = (trans.description || '').trim().toLowerCase();
-            const spent = (trans.spent || '').trim().replace(/[£$,]/g, '');
-            const received = (trans.received || '').trim().replace(/[£$,]/g, '');
+            const date = String(trans.date || '').trim();
+            const description = String(trans.description || '').trim().toLowerCase();
+            const spent = String(trans.spent || '').trim().replace(/[£$,]/g, '');
+            const received = String(trans.received || '').trim().replace(/[£$,]/g, '');
             return `${date}|${description}|${spent}|${received}`;
         }
 
@@ -4378,6 +4685,27 @@
                     detailHtml = `<span style="font-size: 10px; color: #94a3b8; font-style: italic;">-</span>`;
                 }
 
+                // Calculate total funded coverage across all allocations for this transaction
+                let totalFundedCoverage = 0;
+                if (transaction.assignments && transaction.assignments.length > 0) {
+                    totalFundedCoverage = transaction.assignments.reduce((sum, assignment) => {
+                        const fundingLevel = getProjectFundingLevel(assignment.projectId);
+                        return sum + (assignment.percentage * fundingLevel / 100);
+                    }, 0);
+                } else if (transaction.assignedItemName) {
+                    const fundingLevel = getProjectFundingLevel(transaction.assignedProject);
+                    totalFundedCoverage = fundingLevel;
+                }
+
+                // Create funding status indicator
+                let fundingIndicator = '';
+                if (totalFundedCoverage >= 100) {
+                    fundingIndicator = `<span style="background-color: #10b981; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;" title="Fully funded: 100% of transaction covered by grants">✓ 100%</span>`;
+                } else if (totalFundedCoverage > 0) {
+                    const unfundedPercentage = Math.round(100 - totalFundedCoverage);
+                    fundingIndicator = `<span style="background-color: #dc2626; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;" title="Partially funded: ${Math.round(totalFundedCoverage)}% funded, ${unfundedPercentage}% still claimable">${unfundedPercentage}%❓</span>`;
+                }
+
                 // Handle both old single assignment format and new split assignments array - COMPACT VERSION
                 let categoryBadges = '';
                 if (transaction.assignments && transaction.assignments.length > 0) {
@@ -4388,12 +4716,15 @@
                         const isGeneral = assignment.projectId === 'GENERAL_EXPENSES';
                         const badgeStyle = isGeneral ? 'background-color: #fef3c7; border: 1px solid #fbbf24;' : '';
 
-                        // Tooltip with full details
-                        const tooltipInfo = `${icon}${escapeHtml(assignment.itemName)} • ${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}${quarter}`;
+                        // Get funding level for this assignment
+                        const fundingLevel = getProjectFundingLevel(assignment.projectId);
 
-                        // Badge display: show full details with percentage tag
+                        // Tooltip with full details including funding level
+                        const tooltipInfo = `${icon}${escapeHtml(assignment.itemName)} • ${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}${quarter} | Funding: ${fundingLevel}%`;
+
+                        // Badge display: show full details with percentage tag (including funding level)
                         const displayText = `${icon}${escapeHtml(assignment.itemName)} • ${escapeHtml(assignment.category)} • ${escapeHtml(assignment.projectName || 'Project')}${quarter}`;
-                        const percentageTag = `<span style="background-color: #3b82f6; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 4px; font-size: 9px; font-weight: 600;">${assignment.percentage}%</span>`;
+                        const percentageTag = `<span style="background-color: #3b82f6; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 4px; font-size: 9px; font-weight: 600;">${assignment.percentage}% (${fundingLevel}%)</span>`;
 
                         return `<span class="assigned-category" title="${tooltipInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-flex; align-items: center; margin: 2px 2px 2px 0; white-space: normal; word-wrap: break-word;">
                             <span style="font-size: 10px; font-weight: 500; line-height: 1.3;">${displayText}${percentageTag}</span>
@@ -4408,9 +4739,13 @@
                     // Old format: single assignment (backward compatibility) - compact version with × button
                     const isGeneral = transaction.assignedProject === 'GENERAL_EXPENSES';
                     const badgeStyle = isGeneral ? 'background-color: #fef3c7; border: 1px solid #fbbf24;' : '';
-                    const tooltipInfo = `${escapeHtml(transaction.assignedItemName)} • ${escapeHtml(transaction.assignedCategory)}`;
+
+                    // Get funding level for this assignment
+                    const fundingLevel = getProjectFundingLevel(transaction.assignedProject);
+
+                    const tooltipInfo = `${escapeHtml(transaction.assignedItemName)} • ${escapeHtml(transaction.assignedCategory)} | Funding: ${fundingLevel}%`;
                     const displayText = `${escapeHtml(transaction.assignedItemName)} • ${escapeHtml(transaction.assignedCategory)}`;
-                    const percentageTag = `<span style="background-color: #3b82f6; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 4px; font-size: 9px; font-weight: 600;">100%</span>`;
+                    const percentageTag = `<span style="background-color: #3b82f6; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 4px; font-size: 9px; font-weight: 600;">100% (${fundingLevel}%)</span>`;
                     categoryBadges = `<span class="assigned-category" title="${tooltipInfo}" style="position: relative; padding: 3px 18px 3px 6px; ${badgeStyle} display: inline-flex; align-items: center; margin: 2px 2px 2px 0; white-space: normal; word-wrap: break-word;">
                         <span style="font-size: 10px; font-weight: 500; line-height: 1.3;">${displayText}${percentageTag}</span>
                         <button onclick="handleUnassign(${index}); event.stopPropagation();"
@@ -4473,7 +4808,12 @@
 
                 return `
                 <tr class="${rowClass}" onclick="selectRow(${index}, event)" data-row-index="${index}" tabindex="0">
-                    <td style="text-align: center; font-weight: 600; color: ${transaction.bank === 'R' ? '#3AAFA9' : '#2B7A78'};">${transaction.bank || '?'}</td>
+                    <td style="text-align: center; font-weight: 600; color: ${transaction.bank === 'R' ? '#3AAFA9' : '#2B7A78'};">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            ${fundingIndicator}
+                            <span>${transaction.bank || '?'}</span>
+                        </div>
+                    </td>
                     <td>${escapeHtml(transaction.date)}</td>
                     <td class="description-detail-cell" colspan="2">
                         <div class="description-cell">${descriptionHtml}</div>
@@ -5134,14 +5474,35 @@
             const transaction = allTransactions[currentEditingIndex];
             console.log('📋 [MODAL DEBUG] Transaction:', transaction);
 
-            // Initialize newSplitPercentage based on remaining allocation
+            // Initialize newSplitPercentage based on remaining allocation AND remaining funding
+            let totalAllocatedPercentage = 0;
+            let totalFundedCoverage = 0;
+
             if (transaction.assignments && transaction.assignments.length > 0) {
-                const totalPercentage = transaction.assignments.reduce((sum, a) => sum + (a.percentage || 0), 0);
-                newSplitPercentage = Math.max(0, 100 - totalPercentage);
-            } else {
-                newSplitPercentage = 100;
+                totalAllocatedPercentage = transaction.assignments.reduce((sum, a) => sum + (a.percentage || 0), 0);
+                totalFundedCoverage = transaction.assignments.reduce((sum, assignment) => {
+                    const fundingLevel = getProjectFundingLevel(assignment.projectId);
+                    return sum + (assignment.percentage * fundingLevel / 100);
+                }, 0);
+            } else if (transaction.assignedItemName) {
+                totalAllocatedPercentage = 100;
+                const fundingLevel = getProjectFundingLevel(transaction.assignedProject);
+                totalFundedCoverage = fundingLevel;
             }
-            console.log(`📊 [MODAL DEBUG] Initialized newSplitPercentage to ${newSplitPercentage}%`);
+
+            // If there's unallocated percentage, use that. Otherwise, use unfunded percentage
+            const remainingAllocation = Math.max(0, 100 - totalAllocatedPercentage);
+            const remainingFunded = Math.max(0, 100 - totalFundedCoverage);
+
+            if (remainingAllocation > 0) {
+                newSplitPercentage = remainingAllocation;
+            } else if (remainingFunded > 0) {
+                newSplitPercentage = Math.round(remainingFunded);
+            } else {
+                newSplitPercentage = 0;
+            }
+
+            console.log(`📊 [MODAL DEBUG] Allocated: ${totalAllocatedPercentage}%, Funded: ${Math.round(totalFundedCoverage)}%, Prefilling split with: ${newSplitPercentage}%`);
 
             let content = `
                 <div style="margin-bottom: 12px; padding: 8px; background: #f8f9fa; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
@@ -5212,7 +5573,17 @@
                 `;
 
                 // Add percentage input for new split assignment
-                const remainingPercentage = 100 - totalPercentage;
+                const remainingPercentageAllocation = 100 - totalPercentage;
+                const currentFundedCoverage = transaction.assignments.reduce((sum, assignment) => {
+                    const fundingLevel = getProjectFundingLevel(assignment.projectId);
+                    return sum + (assignment.percentage * fundingLevel / 100);
+                }, 0);
+                const remainingPercentageFunded = Math.max(0, 100 - currentFundedCoverage);
+
+                // Show the most relevant remaining percentage
+                const displayRemaining = remainingPercentageAllocation > 0 ? remainingPercentageAllocation : Math.round(remainingPercentageFunded);
+                const remainingLabel = remainingPercentageAllocation > 0 ? 'Unallocated' : 'Unfunded';
+
                 content += `
                     <div style="margin-bottom: 12px; padding: 10px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px;">
                         <div style="font-size: 12px; color: #166534; margin-bottom: 6px; font-weight: 600;">
@@ -5221,18 +5592,20 @@
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <input type="number"
                                    id="newSplitPercentageInput"
-                                   value="${remainingPercentage > 0 ? remainingPercentage : 0}"
+                                   value="${newSplitPercentage}"
                                    min="0"
                                    max="100"
                                    style="flex: 1; padding: 6px 10px; border: 1px solid #86efac; border-radius: 4px; font-size: 12px; text-align: center;"
                                    oninput="updateNewSplitPercentage(this.value)">
                             <span style="font-size: 12px; color: #166534; font-weight: 600;">%</span>
                             <span style="font-size: 10px; color: #15803d; background: white; padding: 4px 8px; border-radius: 3px; white-space: nowrap;">
-                                Remaining: ${remainingPercentage}%
+                                ${remainingLabel}: ${displayRemaining}%
                             </span>
                         </div>
                         <div style="font-size: 10px; color: #15803d; margin-top: 4px;">
-                            Enter the percentage to allocate to the next project you select
+                            ${remainingPercentageAllocation === 0 && remainingPercentageFunded > 0 ?
+                                `💡 This transaction is 100% allocated but only ${Math.round(currentFundedCoverage)}% funded. Add ${Math.round(remainingPercentageFunded)}% to another grant.` :
+                                'Enter the percentage to allocate to the next project you select'}
                         </div>
                     </div>
                 `;
@@ -10218,15 +10591,88 @@ Return ONLY valid JSON.`;
             resultsContainer.style.display = 'block';
 
             if (results.emailMatches.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 8px;">
-                        <div style="font-size: 48px; margin-bottom: 15px;">🔍</div>
-                        <h4 style="margin: 0 0 10px 0; color: #64748b;">No Invoices Found</h4>
-                        <p style="color: #94a3b8; margin: 0 0 20px 0;">Try searching again with a different date range or merchant name.</p>
+                // Get merchant name for custom search
+                const merchantName = tx.fromTo || tx.description || 'Unknown';
+                const suggestions = getSuggestedAliases(merchantName);
 
-                        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px;">
-                            <p style="color: #64748b; margin: 0 0 15px 0; font-size: 14px; font-weight: 500;">Or upload an invoice manually:</p>
-                            <button onclick="document.getElementById('manualInvoiceUpload').click()" class="modal-btn modal-btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);">
+                // Build suggestions HTML
+                let suggestionsHTML = '';
+                if (suggestions.length > 0) {
+                    suggestionsHTML = suggestions.map((suggestion, index) => {
+                        const checkboxId = `queueSuggestion_${index}`;
+                        return `
+                            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
+                                 onclick="document.getElementById('queueCustomSearchInput').value = '${escapeHtml(suggestion)}'; document.getElementById('queueCustomSearchInput').focus();"
+                                 onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#3AAFA9';"
+                                 onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0';">
+                                <input type="checkbox" id="${checkboxId}" onclick="event.stopPropagation();" style="cursor: pointer;">
+                                <label for="${checkboxId}" style="flex: 1; cursor: pointer; font-size: 13px; color: #1e293b;" onclick="event.stopPropagation();">
+                                    Remember: also search "<strong>${escapeHtml(suggestion)}</strong>"
+                                </label>
+                                <button onclick="event.stopPropagation(); retryQueueSearchWithCustomKeyword('${task.id}', '${escapeHtml(suggestion)}', document.getElementById('${checkboxId}').checked);"
+                                        style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                    Search
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                resultsContainer.innerHTML = `
+                    <div style="padding: 30px; background: #f8fafc; border-radius: 8px;">
+                        <div style="text-align: center; margin-bottom: 25px;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+                            <h4 style="margin: 0 0 10px 0; color: #1e293b;">No Invoices Found</h4>
+                            <p style="color: #64748b; margin: 0;">
+                                Searched for "<strong>${escapeHtml(merchantName)}</strong>"
+                            </p>
+                        </div>
+
+                        <!-- Custom Search Section -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 2px solid #3AAFA9; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                <span style="font-size: 18px;">💡</span>
+                                <h5 style="margin: 0; color: #1e293b; font-size: 14px; font-weight: 600;">Try a Different Search Term</h5>
+                            </div>
+                            <p style="font-size: 12px; color: #64748b; margin: 0 0 12px 0;">
+                                The company name on the invoice might be different from your bank transaction.
+                            </p>
+
+                            <!-- Custom input -->
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                <input
+                                    type="text"
+                                    id="queueCustomSearchInput"
+                                    placeholder="Enter alternative company name (e.g., Anthropic)"
+                                    style="flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
+                                    onkeypress="if(event.key === 'Enter') retryQueueSearchWithCustomKeyword('${task.id}', this.value, document.getElementById('queueRememberCustomKeyword').checked);">
+                                <div style="display: flex; align-items: center; gap: 6px; padding: 0 8px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                    <input type="checkbox" id="queueRememberCustomKeyword" style="cursor: pointer;">
+                                    <label for="queueRememberCustomKeyword" style="font-size: 11px; color: #475569; cursor: pointer; white-space: nowrap;">Remember</label>
+                                </div>
+                                <button
+                                    onclick="retryQueueSearchWithCustomKeyword('${task.id}', document.getElementById('queueCustomSearchInput').value, document.getElementById('queueRememberCustomKeyword').checked);"
+                                    style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap;">
+                                    🔍 Search
+                                </button>
+                            </div>
+
+                            <!-- Suggestions -->
+                            ${suggestionsHTML ? `
+                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                                    <div style="font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500;">
+                                        ✨ Suggested alternatives:
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                                        ${suggestionsHTML}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                            <p style="color: #64748b; margin: 0 0 15px 0; font-size: 14px; font-weight: 500; text-align: center;">Or upload an invoice manually:</p>
+                            <button onclick="document.getElementById('manualInvoiceUpload').click()" class="modal-btn modal-btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); margin: 0 auto;">
                                 <span style="font-size: 18px;">📤</span>
                                 <span>Upload PDF or Image</span>
                             </button>
@@ -10343,6 +10789,84 @@ Return ONLY valid JSON.`;
 
             // Automatically start parallel processing
             autoProcessAllEmails(results, task);
+        }
+
+        /**
+         * Generate a unique task ID
+         */
+        function generateTaskId() {
+            return 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        /**
+         * Retry queue search with custom keyword
+         * @param {string} taskId - The queue task ID
+         * @param {string} customKeyword - The new search term
+         * @param {boolean} rememberAlias - Whether to save as alias
+         */
+        async function retryQueueSearchWithCustomKeyword(taskId, customKeyword, rememberAlias = false) {
+            // Validate input
+            if (!customKeyword || !customKeyword.trim()) {
+                showSimpleToast('⚠️ Please enter a search term', 'warning');
+                document.getElementById('queueCustomSearchInput')?.focus();
+                return;
+            }
+
+            // Find the task in queue
+            const task = invoiceSearchQueue.find(t => t.id === taskId);
+            if (!task) {
+                showSimpleToast('❌ Task not found', 'error');
+                return;
+            }
+
+            const transaction = task.transaction;
+            const originalMerchant = transaction.fromTo || transaction.description || 'Unknown';
+
+            // Save alias if requested
+            if (rememberAlias) {
+                saveKeywordAlias(originalMerchant, customKeyword);
+                showSimpleToast(`✅ Will now search "${customKeyword}" for "${originalMerchant}" transactions`, 'success');
+            }
+
+            // Update transaction with custom search term (temporarily)
+            const originalFromTo = transaction.fromTo;
+            transaction.fromTo = customKeyword.trim();
+
+            // Close current modal
+            closeIntelligentSearchModal();
+
+            // Create a new search task with the custom keyword
+            const newTask = {
+                id: generateTaskId(),
+                transaction: transaction,
+                transactionIndex: task.transactionIndex || 0,
+                status: 'running',
+                logs: [],
+                results: null,
+                customKeyword: customKeyword.trim(),
+                originalMerchant: originalMerchant
+            };
+
+            // Add to queue and start search
+            invoiceSearchQueue.push(newTask);
+            renderQueuePanel();
+
+            // Show toast
+            showSimpleToast(`🔍 Searching with "${customKeyword.trim()}"...`, 'info');
+
+            // Execute the search
+            try {
+                await executeInvoiceSearchTask(newTask);
+
+                // Restore original fromTo value
+                transaction.fromTo = originalFromTo;
+            } catch (error) {
+                console.error('Custom search error:', error);
+                showSimpleToast('Search error: ' + error.message, 'error');
+
+                // Restore original fromTo value
+                transaction.fromTo = originalFromTo;
+            }
         }
 
         // ========================================
@@ -11556,6 +12080,24 @@ Return ONLY valid JSON.`;
 
             // Extract core merchant keyword (e.g., "google" from "Card Purchase Google GSUITE pebl-cic")
             const merchantKeyword = extractCoreMerchantKeyword(context.merchantName);
+
+            // ========================================
+            // USER-DEFINED KEYWORD ALIASES (Highest Priority!)
+            // ========================================
+            // Check if user has saved any aliases for this merchant
+            const savedAliases = getAliasesForKeyword(context.merchantName);
+            if (savedAliases && savedAliases.length > 0) {
+                console.log('🔗 Found saved aliases for', context.merchantName, ':', savedAliases);
+
+                // Add a query for each saved alias
+                savedAliases.forEach(alias => {
+                    queries.push({
+                        query: `"${alias}" (invoice OR receipt OR "order confirmation") has:attachment filename:pdf`,
+                        description: `🔗 Searching saved alias "${alias}"`,
+                        weight: 1.3 // Very high priority - user explicitly mapped this
+                    });
+                });
+            }
 
             // ========================================
             // AI-POWERED QUERIES (Highest Priority!)
@@ -13056,6 +13598,33 @@ Return ONLY valid JSON.`;
             const resultsContainer = document.getElementById('searchResultsContainer');
             resultsContainer.style.display = 'block';
 
+            // Get smart suggestions for the merchant name
+            const suggestions = getSuggestedAliases(context.merchantName);
+
+            // Build suggestions HTML
+            let suggestionsHTML = '';
+            if (suggestions.length > 0) {
+                suggestionsHTML = suggestions.map((suggestion, index) => {
+                    const suggestionId = `suggestion_${index}`;
+                    const checkboxId = `remember_${index}`;
+                    return `
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
+                             onclick="document.getElementById('customSearchInput').value = '${escapeHtml(suggestion)}'; document.getElementById('customSearchInput').focus();"
+                             onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#3AAFA9';"
+                             onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0';">
+                            <input type="checkbox" id="${checkboxId}" onclick="event.stopPropagation();" style="cursor: pointer;">
+                            <label for="${checkboxId}" style="flex: 1; cursor: pointer; font-size: 13px; color: #1e293b;" onclick="event.stopPropagation();">
+                                Remember: also search "<strong>${escapeHtml(suggestion)}</strong>"
+                            </label>
+                            <button onclick="event.stopPropagation(); retrySearchWithCustomKeyword('${escapeHtml(suggestion)}', document.getElementById('${checkboxId}').checked);"
+                                    style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                Search
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
             // Build Gmail account buttons
             let gmailAccountButtons = '';
             if (gmailAccounts && gmailAccounts.length > 0) {
@@ -13078,14 +13647,59 @@ Return ONLY valid JSON.`;
             }
 
             resultsContainer.innerHTML = `
-                <div style="text-align: center; padding: 30px; background: #f8fafc; border-radius: 8px;">
-                    <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
-                    <h4 style="margin: 0 0 10px 0; color: #1e293b;">No Invoices Found</h4>
-                    <p style="color: #64748b; margin: 0 0 15px 0;">
-                        Searched up to ±10 days for "${context.merchantName}"
-                    </p>
+                <div style="padding: 30px; background: #f8fafc; border-radius: 8px;">
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+                        <h4 style="margin: 0 0 10px 0; color: #1e293b;">No Invoices Found</h4>
+                        <p style="color: #64748b; margin: 0;">
+                            Searched up to ±10 days for "<strong>${context.merchantName}</strong>"
+                        </p>
+                    </div>
 
-                    <div style="margin-bottom: 20px;">
+                    <!-- Custom Search Section -->
+                    <div style="background: white; padding: 20px; border-radius: 8px; border: 2px solid #3AAFA9; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <span style="font-size: 18px;">💡</span>
+                            <h5 style="margin: 0; color: #1e293b; font-size: 14px; font-weight: 600;">Try a Different Search Term</h5>
+                        </div>
+                        <p style="font-size: 12px; color: #64748b; margin: 0 0 12px 0;">
+                            The company name on the invoice might be different from your bank transaction.
+                        </p>
+
+                        <!-- Custom input -->
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                            <input
+                                type="text"
+                                id="customSearchInput"
+                                placeholder="Enter alternative company name (e.g., Anthropic)"
+                                style="flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
+                                onkeypress="if(event.key === 'Enter') retrySearchWithCustomKeyword(this.value, document.getElementById('rememberCustomKeyword').checked);">
+                            <div style="display: flex; align-items: center; gap: 6px; padding: 0 8px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                <input type="checkbox" id="rememberCustomKeyword" style="cursor: pointer;">
+                                <label for="rememberCustomKeyword" style="font-size: 11px; color: #475569; cursor: pointer; white-space: nowrap;">Remember</label>
+                            </div>
+                            <button
+                                onclick="retrySearchWithCustomKeyword(document.getElementById('customSearchInput').value, document.getElementById('rememberCustomKeyword').checked);"
+                                style="background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap;">
+                                🔍 Search
+                            </button>
+                        </div>
+
+                        <!-- Suggestions -->
+                        ${suggestionsHTML ? `
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                                <div style="font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500;">
+                                    ✨ Suggested alternatives:
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    ${suggestionsHTML}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Extend Search Button -->
+                    <div style="text-align: center; margin-bottom: 20px;">
                         <button onclick="extendSearch()" class="btn-primary" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 12px 24px; font-size: 14px; font-weight: 600;">
                             🔍 Extend Search to ±30 Days
                         </button>
@@ -13093,7 +13707,7 @@ Return ONLY valid JSON.`;
 
                     ${gmailAccountButtons ? `
                         <div style="margin-bottom: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
-                            <p style="color: #475569; font-size: 14px; font-weight: 500; margin: 0 0 12px 0;">
+                            <p style="color: #475569; font-size: 14px; font-weight: 500; margin: 0 0 12px 0; text-align: center;">
                                 Or open Gmail to search manually:
                             </p>
                             <div style="display: flex; flex-direction: column; gap: 10px; max-width: 400px; margin: 0 auto;">
@@ -13113,7 +13727,7 @@ Return ONLY valid JSON.`;
                 </div>
             `;
 
-            // Store context for extended search
+            // Store context for extended search and custom search
             window._extendedSearchContext = { context, transaction, transactionIndex };
         }
 
@@ -13182,6 +13796,134 @@ Return ONLY valid JSON.`;
                 searchLogger.logProgress(`Error: ${error.message}`, 'error');
                 showSimpleToast('Extended search error: ' + error.message, 'error');
             }
+        }
+
+        /**
+         * Retry search with a custom keyword/merchant name
+         * @param {string} customKeyword - The new search term to try
+         * @param {boolean} rememberAlias - Whether to save this as an alias for future searches
+         */
+        async function retrySearchWithCustomKeyword(customKeyword, rememberAlias = false) {
+            if (!window._extendedSearchContext) {
+                showSimpleToast('❌ Search context lost. Please try again.', 'error');
+                return;
+            }
+
+            // Validate input
+            if (!customKeyword || !customKeyword.trim()) {
+                showSimpleToast('⚠️ Please enter a search term', 'warning');
+                document.getElementById('customSearchInput')?.focus();
+                return;
+            }
+
+            const { context, transaction, transactionIndex } = window._extendedSearchContext;
+            const originalMerchant = context.merchantName;
+
+            // Save alias if requested
+            if (rememberAlias) {
+                saveKeywordAlias(originalMerchant, customKeyword);
+                showSimpleToast(`✅ Will now search "${customKeyword}" for "${originalMerchant}" transactions`, 'success');
+            }
+
+            // Clear results and reset logger
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            resultsContainer.innerHTML = '';
+            resultsContainer.style.display = 'none';
+            searchLogger.clear();
+
+            // Update context with new merchant name
+            const newContext = {
+                ...context,
+                merchantName: customKeyword.trim(),
+                originalMerchantName: originalMerchant, // Keep track of original
+                isCustomSearch: true
+            };
+
+            // Update progress
+            searchLogger.logProgress(`🔍 Retrying search with custom keyword: "${customKeyword}"...`, 'info');
+            updateSearchProgress(0, 'Custom search in progress...');
+
+            try {
+                // Search with the custom keyword using same date window (±10 days)
+                const customStage = {
+                    stage: 2,
+                    name: `Custom Search: "${customKeyword}"`,
+                    dateWindow: 10,
+                    autoExecute: true,
+                    description: `Searching for "${customKeyword}" (±10 days)`
+                };
+
+                searchLogger.logStage(customStage.stage, customStage.name);
+
+                // Execute search with custom keyword
+                const results = await executeSearchStage(newContext, customStage, null);
+
+                if (results && results.length > 0) {
+                    searchLogger.logProgress(`✅ Found ${results.length} result(s) with "${customKeyword}"!`, 'success');
+                    displaySearchResults(results, newContext);
+                    updateSearchProgress(100, `Found ${results.length} result(s)`);
+                } else {
+                    // No results with custom keyword either
+                    searchLogger.logProgress(`No results found with "${customKeyword}"`, 'warning');
+                    updateSearchProgress(100, 'No results');
+
+                    // Show options to extend search or try another term
+                    showNoResultsOptionsAfterCustomSearch(newContext, transaction, transactionIndex, customKeyword);
+                }
+
+            } catch (error) {
+                console.error('Custom search error:', error);
+                searchLogger.logProgress(`Error: ${error.message}`, 'error');
+                showSimpleToast('Search error: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Show no results options after a custom search failed
+         */
+        function showNoResultsOptionsAfterCustomSearch(context, transaction, transactionIndex, triedKeyword) {
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            resultsContainer.style.display = 'block';
+
+            const originalMerchant = context.originalMerchantName || context.merchantName;
+
+            resultsContainer.innerHTML = `
+                <div style="text-align: center; padding: 30px; background: #f8fafc; border-radius: 8px;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+                    <h4 style="margin: 0 0 10px 0; color: #1e293b;">Still No Invoices Found</h4>
+                    <p style="color: #64748b; margin: 0 0 8px 0;">
+                        Original search: "<strong>${escapeHtml(originalMerchant)}</strong>"
+                    </p>
+                    <p style="color: #64748b; margin: 0 0 15px 0;">
+                        Custom search: "<strong>${escapeHtml(triedKeyword)}</strong>" (±10 days)
+                    </p>
+
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
+                        <button onclick="window._extendedSearchContext.context = ${JSON.stringify(context).replace(/"/g, '&quot;')}; extendSearch();"
+                                class="btn-primary"
+                                style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 12px 24px; font-size: 14px; font-weight: 600;">
+                            🔍 Extend to ±30 Days
+                        </button>
+                        <button onclick="showNoResultsOptions(${JSON.stringify(context).replace(/"/g, '&quot;')}, ${JSON.stringify(transaction).replace(/"/g, '&quot;')}, ${transactionIndex});"
+                                class="btn-secondary"
+                                style="padding: 12px 24px; font-size: 14px; font-weight: 600;">
+                            ← Try Different Term
+                        </button>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                        <button onclick="document.getElementById('manualInvoiceUpload').click()" class="btn-primary">
+                            📎 Upload PDF Manually
+                        </button>
+                        <button onclick="closeIntelligentSearchModal()" class="btn-secondary">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Update stored context
+            window._extendedSearchContext = { context, transaction, transactionIndex };
         }
 
         /**
