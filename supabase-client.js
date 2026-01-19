@@ -24,13 +24,16 @@ async function initSupabase() {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log('✅ [SUPABASE] Client initialized');
 
+        // Set up authentication state listener
+        setupAuthListener();
+
         // Check for existing session
         const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
+        if (session && session.user) {
             currentUser = session.user;
-            console.log('✅ [SUPABASE] User authenticated:', currentUser.email);
+            console.log('✅ [AUTH] User authenticated:', currentUser.email);
         } else {
-            console.log('ℹ️ [SUPABASE] No active session');
+            console.log('ℹ️ [AUTH] No active session');
         }
 
         isSupabaseReady = true;
@@ -62,52 +65,49 @@ function waitForSupabase() {
 }
 
 /**
- * Create anonymous user for migration phase
- * Uses Supabase's built-in anonymous authentication
- */
-async function signInAnonymously() {
-    try {
-        await waitForSupabase();
-
-        console.log('🔐 [SUPABASE] Signing in anonymously...');
-
-        // Use Supabase's built-in anonymous authentication
-        const { data, error } = await supabaseClient.auth.signInAnonymously();
-
-        if (error) {
-            throw error;
-        }
-
-        currentUser = data.user;
-        console.log('✅ [SUPABASE] Authenticated successfully as anonymous user');
-        console.log(`   User ID: ${currentUser.id}`);
-
-        // Expose to window for other scripts
-        window.currentUser = currentUser;
-
-        // Trigger event to notify other scripts
-        window.dispatchEvent(new CustomEvent('userAuthenticated', { detail: { user: currentUser } }));
-
-        return currentUser;
-
-    } catch (error) {
-        console.error('❌ [SUPABASE] Authentication failed:', error);
-        console.error('   Make sure anonymous sign-ins are enabled in Supabase dashboard');
-        console.error('   Go to: Authentication → Settings → Allow anonymous sign-ins');
-        return null;
-    }
-}
-
-/**
- * Ensure user is authenticated before making requests
+ * Ensure user is authenticated with email/password
+ * Redirects to login page if not authenticated
  */
 async function ensureAuthenticated() {
     await waitForSupabase();
 
-    if (!currentUser) {
-        currentUser = await signInAnonymously();
+    // Check if we have a valid session
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+
+    if (error || !session || !session.user) {
+        console.warn('⚠️ [AUTH] Not authenticated. Redirecting to login...');
+
+        // Save current page to redirect back after login
+        sessionStorage.setItem('redirectAfterLogin', window.location.href);
+
+        // Redirect to login page
+        window.location.href = 'login.html';
+        return null;
     }
+
+    currentUser = session.user;
+    window.currentUser = currentUser;
+
+    console.log('✅ [AUTH] User authenticated:', currentUser.email);
     return currentUser;
+}
+
+/**
+ * Check authentication status without redirecting
+ * Returns user object if authenticated, null otherwise
+ */
+async function checkAuthStatus() {
+    await waitForSupabase();
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (session && session.user) {
+        currentUser = session.user;
+        window.currentUser = currentUser;
+        return currentUser;
+    }
+
+    return null;
 }
 
 /**
@@ -140,10 +140,38 @@ async function signOut() {
     try {
         await supabaseClient.auth.signOut();
         currentUser = null;
-        console.log('✅ [SUPABASE] Signed out');
+        window.currentUser = null;
+        console.log('✅ [AUTH] Signed out successfully');
+
+        // Redirect to login page
+        window.location.href = 'login.html';
     } catch (error) {
-        console.error('❌ [SUPABASE] Sign out failed:', error);
+        console.error('❌ [AUTH] Sign out failed:', error);
+        throw error;
     }
+}
+
+/**
+ * Listen for authentication state changes
+ */
+function setupAuthListener() {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        console.log(`🔐 [AUTH] State changed: ${event}`);
+
+        if (event === 'SIGNED_IN') {
+            currentUser = session.user;
+            window.currentUser = currentUser;
+            console.log('✅ [AUTH] User signed in:', currentUser.email);
+        } else if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            window.currentUser = null;
+            console.log('ℹ️ [AUTH] User signed out');
+        } else if (event === 'TOKEN_REFRESHED') {
+            currentUser = session.user;
+            window.currentUser = currentUser;
+            console.log('🔄 [AUTH] Session refreshed');
+        }
+    });
 }
 
 // Log when script is loaded

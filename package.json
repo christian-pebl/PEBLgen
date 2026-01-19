@@ -8,7 +8,9 @@
     "test:summary": "playwright test tests/sync-validation.spec.js -g \"Test 9\"",
     "test:debug": "playwright test tests/sync-validation.spec.js --debug",
     "test:report": "playwright show-report test-results/html",
-    "dev": "python -m http.server 8000"
+    "dev": "python -m http.server 8000",
+    "export": "node export-to-excel.js",
+    "server": "node server/excel-server.js"
   },
   "repository": {
     "type": "git",
@@ -26,6 +28,10 @@
     "@playwright/test": "^1.56.1"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.89.0"
+    "@supabase/supabase-js": "^2.89.0",
+    "xlsx": "^0.18.5",
+    "express": "^4.18.2",
+    "chokidar": "^3.5.3",
+    "ws": "^8.14.2"
   }
 }

@@ -1226,6 +1226,17 @@
     <script src="supabase-client.js"></script>
     <script src="auto-sync-manager.js"></script>
     <script src="sync-status-indicator.js"></script>
+    <script>
+        // Authentication guard - redirect to login if not authenticated
+        window.addEventListener('supabaseReady', async () => {
+            const user = await checkAuthStatus();
+            if (!user) {
+                console.warn('⚠️ [AUTH] Not authenticated, redirecting to login...');
+                sessionStorage.setItem('redirectAfterLogin', window.location.href);
+                window.location.href = 'login.html';
+            }
+        });
+    </script>
 </head>
 <body>
     <!-- Navigation Banner -->
@@ -1240,10 +1251,11 @@
             <a href="exploit.html" class="nav-btn">Exploit</a>
             <a href="risks.html" class="nav-btn">Risks</a>
             <a href="quote.html" class="nav-btn">Quote</a>
-            <button onclick="refreshTransactionData()" class="nav-btn" style="background-color: rgba(76, 175, 80, 0.8); margin-left: auto;" title="Refresh transactions and PDFs from Spend page">🔄 Sync Spend Data</button>
-            <button onclick="resetBackupAuth()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Reset cloud backup authentication">🔄 Reset Backup</button>
+            <!-- Sync indicators removed - now handled by unified sync-status-indicator.js -->
+            <!-- The cloud icon with dropdown will appear here automatically -->
             <button onclick="openSplitScreenMode()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Split Screen Mode"><span class="split-btn-icon">⫿</span> Split</button>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
+            <button onclick="signOut()" class="nav-btn" style="background-color: rgba(239, 68, 68, 0.8); color: white;" title="Sign out">🚪 Sign Out</button>
         </div>
     </div>
 
@@ -5468,13 +5480,247 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
 
                 console.log(`☁️ [SUPABASE SYNC] ✅ Project ${projectBudget.projectId} synced to cloud`);
                 addLog(`☁️ Synced to cloud: ${projectBudget.projectName || projectBudget.projectNumber || 'Project'}`);
+
+                // Update unified backup status
+                if (typeof updateBackupStatus === 'function') {
+                    updateBackupStatus('synced', projectBudget.projectName || projectBudget.projectNumber);
+                }
+
                 return true;
 
             } catch (error) {
                 console.error('☁️ [SUPABASE SYNC] Error:', error);
+
+                // Update unified backup status on error
+                if (typeof updateBackupStatus === 'function') {
+                    updateBackupStatus('error', projectBudget.projectName || projectBudget.projectNumber, error.message);
+                }
+
                 return false;
             }
         }
+
+        // ============================================================================
+        // UNIFIED BACKUP STATUS SYSTEM
+        // ============================================================================
+
+        let backupStatus = {
+            state: 'unknown', // unknown, synced, syncing, unsaved, error
+            lastSync: null,
+            projectName: null,
+            error: null
+        };
+
+        // Update the backup status indicator
+        function updateBackupStatus(state, projectName = null, error = null) {
+            backupStatus.state = state;
+            backupStatus.projectName = projectName || projectBudget?.projectName || projectBudget?.projectNumber;
+            backupStatus.error = error;
+
+            const icon = document.getElementById('backupStatusIcon');
+            const text = document.getElementById('backupStatusText');
+            const indicator = document.getElementById('backupStatusIndicator');
+
+            switch (state) {
+                case 'synced':
+                    icon.textContent = '✅';
+                    text.textContent = 'All Saved';
+                    indicator.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                    backupStatus.lastSync = new Date();
+                    break;
+                case 'syncing':
+                    icon.innerHTML = '<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span>';
+                    text.textContent = 'Syncing...';
+                    indicator.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+                    break;
+                case 'unsaved':
+                    icon.textContent = '⚠️';
+                    text.textContent = 'Unsaved';
+                    indicator.style.backgroundColor = 'rgba(245, 158, 11, 0.2)';
+                    break;
+                case 'error':
+                    icon.textContent = '❌';
+                    text.textContent = 'Error';
+                    indicator.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                    backupStatus.error = error;
+                    break;
+                case 'no_project':
+                    icon.textContent = '☁️';
+                    text.textContent = 'No Project';
+                    indicator.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                    break;
+                default:
+                    icon.textContent = '☁️';
+                    text.textContent = 'Checking...';
+                    indicator.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+            }
+
+            updateBackupDetailsDropdown();
+        }
+
+        // Toggle backup status dropdown
+        function toggleBackupStatusDropdown() {
+            const dropdown = document.getElementById('backupStatusDropdown');
+            const isVisible = dropdown.style.display !== 'none';
+
+            // Close all other dropdowns first
+            document.querySelectorAll('.projects-dropdown').forEach(d => d.style.display = 'none');
+
+            dropdown.style.display = isVisible ? 'none' : 'block';
+
+            if (!isVisible) {
+                updateBackupDetailsDropdown();
+            }
+        }
+
+        // Update backup details dropdown content
+        function updateBackupDetailsDropdown() {
+            const details = document.getElementById('backupDetails');
+
+            let html = '';
+
+            if (backupStatus.state === 'synced') {
+                html = `
+                    <div style="color: #10b981; margin-bottom: 8px; font-weight: 600;">
+                        ✅ All changes saved to cloud
+                    </div>
+                    <div style="color: #64748b; font-size: 12px;">
+                        <strong>Project:</strong> ${backupStatus.projectName || 'Unknown'}<br>
+                        <strong>Last sync:</strong> ${backupStatus.lastSync ? backupStatus.lastSync.toLocaleTimeString() : 'Never'}
+                    </div>
+                `;
+            } else if (backupStatus.state === 'syncing') {
+                html = `
+                    <div style="color: #3b82f6; margin-bottom: 8px; font-weight: 600;">
+                        ⏳ Syncing to cloud...
+                    </div>
+                    <div style="color: #64748b; font-size: 12px;">
+                        Please wait while we save your changes
+                    </div>
+                `;
+            } else if (backupStatus.state === 'unsaved') {
+                html = `
+                    <div style="color: #f59e0b; margin-bottom: 8px; font-weight: 600;">
+                        ⚠️ You have unsaved changes
+                    </div>
+                    <div style="color: #64748b; font-size: 12px; margin-bottom: 8px;">
+                        <strong>Project:</strong> ${backupStatus.projectName || 'Unknown'}
+                    </div>
+                    <div style="color: #64748b; font-size: 12px;">
+                        Click "Sync Now" to save to cloud
+                    </div>
+                `;
+            } else if (backupStatus.state === 'error') {
+                html = `
+                    <div style="color: #ef4444; margin-bottom: 8px; font-weight: 600;">
+                        ❌ Sync failed
+                    </div>
+                    <div style="color: #64748b; font-size: 12px; margin-bottom: 8px;">
+                        ${backupStatus.error || 'Unknown error'}
+                    </div>
+                    <div style="color: #64748b; font-size: 12px;">
+                        Click "Sync Now" to try again
+                    </div>
+                `;
+            } else if (backupStatus.state === 'no_project') {
+                html = `
+                    <div style="color: #64748b; margin-bottom: 8px;">
+                        No project loaded
+                    </div>
+                    <div style="color: #94a3b8; font-size: 12px;">
+                        Load or create a project to enable cloud sync
+                    </div>
+                `;
+            } else {
+                html = `
+                    <div style="color: #64748b;">
+                        Checking backup status...
+                    </div>
+                `;
+            }
+
+            details.innerHTML = html;
+        }
+
+        // Manual backup sync
+        async function manualBackupSync() {
+            if (!projectBudget || !projectBudget.projectId) {
+                updateBackupStatus('no_project');
+                return;
+            }
+
+            updateBackupStatus('syncing', projectBudget.projectName || projectBudget.projectNumber);
+
+            try {
+                // Save to IndexedDB first
+                await saveToIndexedDB();
+
+                // Then save to Supabase
+                const success = await saveToSupabase();
+
+                if (success) {
+                    updateBackupStatus('synced', projectBudget.projectName || projectBudget.projectNumber);
+                } else {
+                    updateBackupStatus('error', projectBudget.projectName || projectBudget.projectNumber, 'Cloud save failed - check console');
+                }
+            } catch (error) {
+                console.error('Manual sync error:', error);
+                updateBackupStatus('error', projectBudget.projectName || projectBudget.projectNumber, error.message);
+            }
+        }
+
+        // Auto-save after changes (debounced)
+        let autoSaveTimeout = null;
+        function scheduleAutoSave() {
+            if (!projectBudget || !projectBudget.projectId) {
+                updateBackupStatus('no_project');
+                return;
+            }
+
+            updateBackupStatus('unsaved', projectBudget.projectName || projectBudget.projectNumber);
+
+            // Clear existing timeout
+            if (autoSaveTimeout) {
+                clearTimeout(autoSaveTimeout);
+            }
+
+            // Schedule auto-save after 2 seconds of no changes
+            autoSaveTimeout = setTimeout(async () => {
+                await manualBackupSync();
+            }, 2000);
+        }
+
+        // Initialize backup status on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (projectBudget && projectBudget.projectId) {
+                    updateBackupStatus('synced', projectBudget.projectName || projectBudget.projectNumber);
+                } else {
+                    updateBackupStatus('no_project');
+                }
+            }, 500); // Wait for project to load
+        });
+
+        // Also check on Supabase ready
+        window.addEventListener('supabaseReady', () => {
+            setTimeout(() => {
+                if (projectBudget && projectBudget.projectId) {
+                    updateBackupStatus('synced', projectBudget.projectName || projectBudget.projectNumber);
+                } else {
+                    updateBackupStatus('no_project');
+                }
+            }, 1000);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            const dropdown = document.getElementById('backupStatusDropdown');
+            const indicator = document.getElementById('backupStatusIndicator');
+
+            if (dropdown && indicator && !indicator.contains(event.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
 
         async function saveToIndexedDB() {
             if (!db) {
@@ -5991,8 +6237,18 @@ let activeQuarter = 1; // Default quarter (will be set to previous quarter when 
                 await displayDetailedBudget();
                 document.getElementById('detailedBudgetResults').classList.add('show');
                 addLog(`✅ Loaded project: ${project.projectName || project.projectNumber || 'Unnamed'}`);
+
+                // Update backup status after project loaded
+                if (typeof updateBackupStatus === 'function') {
+                    updateBackupStatus('synced', project.projectName || project.projectNumber);
+                }
             } else {
                 console.error(`❌ [LOAD] Failed to load project ${projectId}`);
+
+                // Update backup status to no project
+                if (typeof updateBackupStatus === 'function') {
+                    updateBackupStatus('no_project');
+                }
             }
         }
 

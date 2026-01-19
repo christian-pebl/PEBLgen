@@ -50,7 +50,7 @@ function createSyncIndicator() {
         return;
     }
 
-    // Create indicator as a nav button
+    // Create indicator as a nav button with dropdown
     const indicator = document.createElement('button');
     indicator.id = 'sync-status-indicator';
     indicator.className = 'nav-btn sync-status-btn';
@@ -58,6 +58,38 @@ function createSyncIndicator() {
         <span class="sync-icon" id="syncIcon">☁️</span>
     `;
     indicator.title = 'Initializing backup...';
+    indicator.style.position = 'relative';
+
+    // Create dropdown panel
+    const dropdown = document.createElement('div');
+    dropdown.id = 'sync-status-dropdown';
+    dropdown.className = 'sync-dropdown';
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = `
+        <div class="sync-dropdown-header">
+            <span id="syncDropdownTitle">☁️ Backup Status</span>
+        </div>
+        <div class="sync-dropdown-content" id="syncDropdownContent">
+            <div class="sync-status-text" id="syncStatusDetails">Loading...</div>
+            <div class="sync-data-list">
+                <div class="sync-data-label">📊 What's backed up:</div>
+                <div class="sync-data-items">
+                    • Project budgets<br>
+                    • Transactions & PDFs<br>
+                    • Gantt charts<br>
+                    • Sketcher data
+                </div>
+            </div>
+        </div>
+        <div class="sync-dropdown-actions">
+            <button id="syncNowBtn" class="sync-action-btn sync-primary-btn" onclick="handleManualSync()">
+                🔄 Sync Now
+            </button>
+            <button id="refreshSpendBtn" class="sync-action-btn sync-secondary-btn" onclick="handleRefreshSpendData()" style="display: none;">
+                💰 Refresh Spend Data
+            </button>
+        </div>
+    `;
 
     // Insert before the "↑ Top" button or "Reset Backup" button (or at the end if neither exists)
     const topButton = Array.from(navBar.children).find(btn =>
@@ -69,10 +101,28 @@ function createSyncIndicator() {
         navBar.appendChild(indicator);
     }
 
+    // Append dropdown to indicator
+    indicator.appendChild(dropdown);
+
     statusIndicator = indicator;
 
-    // Add click handler to show details
-    indicator.addEventListener('click', showSyncDetails);
+    // Add click handler to toggle dropdown
+    indicator.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSyncDropdown();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!indicator.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+
+    // Show "Refresh Spend Data" button only on grants.html
+    if (window.location.pathname.includes('grants.html')) {
+        document.getElementById('refreshSpendBtn').style.display = 'block';
+    }
 
     console.log('✅ [SYNC STATUS] Indicator created');
 
@@ -216,57 +266,135 @@ function setSyncStatus(status, tooltipText) {
 }
 
 /**
- * Show detailed sync information
+ * Toggle sync dropdown visibility
  */
-function showSyncDetails() {
+function toggleSyncDropdown() {
+    const dropdown = document.getElementById('sync-status-dropdown');
+    if (!dropdown) return;
+
+    const isVisible = dropdown.style.display === 'block';
+    dropdown.style.display = isVisible ? 'none' : 'block';
+
+    if (!isVisible) {
+        updateDropdownContent();
+    }
+}
+
+/**
+ * Update dropdown content with current status
+ */
+function updateDropdownContent() {
+    const detailsEl = document.getElementById('syncStatusDetails');
+    if (!detailsEl) return;
+
     const lastSync = window.autoSync?.getLastSyncTime();
     const isSyncing = window.autoSync?.isSyncing();
     const isEnabled = window.autoSync?.config?.enabled;
     const hasError = window.autoSync?.hasSetupError?.();
-    const errorMsg = window.autoSync?.getLastError?.();
 
-    let details = '☁️ Cloud Backup Status\n\n';
+    let statusHTML = '';
 
     if (!window.autoSync) {
-        details += '⚪ Status: Not initialized\n';
+        statusHTML = '<div class="sync-status-item">⚪ <strong>Not initialized</strong></div>';
     } else if (!window.currentUser) {
-        details += '⚪ Status: Not authenticated\n';
+        statusHTML = '<div class="sync-status-item">⚪ <strong>Not authenticated</strong></div>';
     } else if (hasError) {
-        details += '❌ Status: Setup Required\n\n';
-        details += '⚠️ Problem: Database tables not created\n\n';
-        details += '📝 Solution:\n';
-        details += '1. Open Supabase Dashboard\n';
-        details += '2. Go to SQL Editor\n';
-        details += '3. Run the table creation scripts\n';
-        details += '4. Run the storage bucket creation scripts\n';
-        details += '5. Refresh this page\n\n';
-        details += 'See SUPABASE_MIGRATION_README.md for full instructions.\n';
+        statusHTML = `
+            <div class="sync-status-item sync-error-item">
+                ❌ <strong>Setup Required</strong>
+            </div>
+            <div class="sync-error-details">
+                ⚠️ Database tables not created<br><br>
+                📝 <strong>Solution:</strong><br>
+                1. Open Supabase Dashboard<br>
+                2. Go to SQL Editor<br>
+                3. Run the table creation scripts<br>
+                4. Refresh this page<br><br>
+                <small>See SUPABASE_MIGRATION_README.md for details</small>
+            </div>
+        `;
     } else if (!isEnabled) {
-        details += '⚪ Status: Disabled\n';
+        statusHTML = '<div class="sync-status-item">⚪ <strong>Disabled</strong></div>';
     } else if (isSyncing) {
-        details += '⟳ Status: Backing up now...\n';
+        statusHTML = '<div class="sync-status-item sync-syncing">⟳ <strong>Backing up now...</strong></div>';
     } else if (lastSync) {
         const timeAgo = Math.floor((Date.now() - lastSync.getTime()) / 1000);
-        details += `✅ Status: All backed up\n`;
-        details += `📅 Last backup: ${lastSync.toLocaleTimeString()}\n`;
-        details += `⏱️ Time ago: ${timeAgo} seconds\n`;
+        const minutesAgo = Math.floor(timeAgo / 60);
+        const timeText = minutesAgo > 0 ? `${minutesAgo} min ago` : `${timeAgo} sec ago`;
+
+        statusHTML = `
+            <div class="sync-status-item sync-synced">✅ <strong>All backed up</strong></div>
+            <div class="sync-time-info">
+                📅 Last backup: ${lastSync.toLocaleTimeString()}<br>
+                ⏱️ ${timeText}
+            </div>
+        `;
     } else {
-        details += '⏳ Status: Waiting for first backup\n';
+        statusHTML = '<div class="sync-status-item">⏳ <strong>Waiting for first backup</strong></div>';
     }
 
-    details += '\n📊 What gets backed up:\n';
-    details += '• Project budgets\n';
-    details += '• CSV transaction files\n';
-    details += '• PDF invoices\n';
-    details += '• All text entries\n';
-    details += '• Gantt charts\n';
-    details += '• Sketcher data\n';
+    detailsEl.innerHTML = statusHTML;
+}
 
-    details += '\n⚙️ Settings:\n';
-    details += `• Auto-sync: ${isEnabled ? 'Enabled' : 'Disabled'}\n`;
-    details += `• Sync delay: ${window.autoSync?.config?.syncDelay || 0}ms\n`;
+/**
+ * Handle manual sync button click
+ */
+function handleManualSync() {
+    if (!window.autoSync) {
+        alert('⚠️ Auto-sync not initialized');
+        return;
+    }
 
-    alert(details);
+    if (window.autoSync.isSyncing()) {
+        alert('⚠️ Sync already in progress');
+        return;
+    }
+
+    console.log('🔄 [SYNC STATUS] Manual sync triggered');
+    window.autoSync.queueFullSync();
+
+    // Update UI
+    updateDropdownContent();
+
+    // Show feedback
+    const btn = document.getElementById('syncNowBtn');
+    if (btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⟳ Syncing...';
+        btn.disabled = true;
+
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            updateDropdownContent();
+        }, 3000);
+    }
+}
+
+/**
+ * Handle refresh spend data button click (grants.html only)
+ */
+function handleRefreshSpendData() {
+    console.log('💰 [SYNC STATUS] Refresh spend data triggered');
+
+    if (typeof refreshTransactionData === 'function') {
+        refreshTransactionData();
+
+        // Update button state
+        const btn = document.getElementById('refreshSpendBtn');
+        if (btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⟳ Refreshing...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }
+    } else {
+        alert('⚠️ This function is only available on the Grants page');
+    }
 }
 
 // Add CSS styles
@@ -349,6 +477,160 @@ style.textContent = `
         opacity: 0.6;
     }
 
+    /* Dropdown Panel */
+    .sync-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        background: white;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        min-width: 320px;
+        max-width: 380px;
+        z-index: 10000;
+        color: #1e293b;
+        font-size: 13px;
+    }
+
+    .sync-dropdown-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        font-weight: 600;
+        font-size: 14px;
+        color: #0f172a;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 8px 8px 0 0;
+    }
+
+    .sync-dropdown-content {
+        padding: 16px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .sync-status-text {
+        margin-bottom: 16px;
+    }
+
+    .sync-status-item {
+        padding: 8px 12px;
+        background: #f8fafc;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .sync-status-item.sync-synced {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #15803d;
+    }
+
+    .sync-status-item.sync-syncing {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e40af;
+    }
+
+    .sync-status-item.sync-error-item {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+    }
+
+    .sync-time-info {
+        padding: 8px 12px;
+        background: #f8fafc;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.6;
+    }
+
+    .sync-error-details {
+        padding: 12px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.8;
+        color: #7f1d1d;
+    }
+
+    .sync-data-list {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .sync-data-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 8px;
+    }
+
+    .sync-data-items {
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.8;
+        padding-left: 8px;
+    }
+
+    .sync-dropdown-actions {
+        padding: 12px 16px;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: #f8fafc;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .sync-action-btn {
+        width: 100%;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 13px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .sync-primary-btn {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+
+    .sync-primary-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        transform: translateY(-1px);
+    }
+
+    .sync-secondary-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+    }
+
+    .sync-secondary-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
+        transform: translateY(-1px);
+    }
+
+    .sync-action-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
     /* Animations */
     @keyframes spin {
         from { transform: rotate(0deg); }
@@ -386,6 +668,12 @@ style.textContent = `
             font-size: 10px;
             bottom: -2px;
             right: -2px;
+        }
+
+        .sync-dropdown {
+            min-width: 280px;
+            max-width: 320px;
+            right: -10px;
         }
     }
 `;

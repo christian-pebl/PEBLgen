@@ -203,10 +203,12 @@ npm run lint
 
 Project-specific guides:
 
-- **CLAUDE.md** - Task tracker and development guidelines
+- **CLAUDE.md** - Comprehensive development documentation, current application state, feature reference, and TODOs
 - **START_HERE.md** - How to start the app with shortcuts
 - **HYBRID_BACKUP_SETUP.md** - Supabase backup system details
 - **EMAIL_SEARCH_FEATURE.md** - Gmail integration documentation
+
+**📋 For Developers:** See [CLAUDE.md](CLAUDE.md) for complete feature documentation, recent updates, code examples, and development guidelines
 
 ---
 

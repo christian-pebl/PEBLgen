@@ -1107,13 +1107,16 @@
     <!-- Automatic Cloud Backup System -->
     <script src="supabase-client.js"></script>
     <script src="auto-sync-manager.js"></script>
+    <script src="instant-invoice-sync.js"></script>
     <script src="sync-status-indicator.js"></script>
+    <script src="universal-backup.js"></script>
 </head>
 <body>
     <!-- Navigation Banner -->
     <div class="nav-banner">
         <h1>PEBLGen</h1>
         <div class="nav-buttons">
+            <a href="v2.html" class="nav-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;">✨ Try V2 Excel View</a>
             <a href="grants.html" class="nav-btn">Grants</a>
             <a href="spend.html" class="nav-btn active">Spend</a>
             <a href="gantt.html" class="nav-btn">Gantt</a>
@@ -1195,10 +1198,10 @@
             <div style="padding: 10px;">
                 <h4 style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">API Configuration</h4>
 
-                <!-- OpenAI API -->
+                <!-- Gemini API -->
                 <div style="margin-bottom: 5px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                        <label style="font-size: 10px; font-weight: 500; color: #555;">OpenAI</label>
+                        <label style="font-size: 10px; font-weight: 500; color: #555;">Gemini</label>
                         <div id="apiKeyStatus" style="font-size: 9px; color: #666;">
                             <!-- Populated dynamically -->
                         </div>
@@ -1894,16 +1897,16 @@
         // ========================================
         // API KEY MANAGEMENT (Secure - Not Exposed)
         // ========================================
-        // OpenAI API Key is stored in localStorage, not hardcoded
-        let API_KEY = localStorage.getItem('openai_api_key');
+        // Gemini API Key is stored in localStorage, not hardcoded
+        let API_KEY = localStorage.getItem('gemini_api_key');
 
         // Function to get or prompt for API key
         function getOpenAIKey() {
             if (!API_KEY || API_KEY === '') {
-                API_KEY = prompt('Please enter your OpenAI API Key:\n\n(Get one from: https://platform.openai.com/api-keys)\n\nYour key will be stored locally in your browser.');
+                API_KEY = prompt('Please enter your Gemini API Key:\n\n(Get one from: https://makersuite.google.com/app/apikey)\n\nYour key will be stored locally in your browser.');
                 if (API_KEY && API_KEY.trim() !== '') {
-                    localStorage.setItem('openai_api_key', API_KEY.trim());
-                    showSimpleToast('✅ OpenAI API Key saved', 'success');
+                    localStorage.setItem('gemini_api_key', API_KEY.trim());
+                    showSimpleToast('✅ Gemini API Key saved', 'success');
                     return API_KEY.trim();
                 } else {
                     return null;
@@ -1914,22 +1917,22 @@
 
         // Function to update API key
         function updateOpenAIKey() {
-            const newKey = prompt('Enter your new OpenAI API Key:', API_KEY || '');
+            const newKey = prompt('Enter your new Gemini API Key:', API_KEY || '');
             if (newKey && newKey.trim() !== '') {
                 API_KEY = newKey.trim();
-                localStorage.setItem('openai_api_key', API_KEY);
+                localStorage.setItem('gemini_api_key', API_KEY);
                 updateAPIKeyStatus();
-                showSimpleToast('✅ OpenAI API Key updated', 'success');
+                showSimpleToast('✅ Gemini API Key updated', 'success');
             }
         }
 
         // Function to clear API key
         function clearOpenAIKey() {
-            if (confirm('Are you sure you want to remove your stored OpenAI API Key?')) {
-                localStorage.removeItem('openai_api_key');
+            if (confirm('Are you sure you want to remove your stored Gemini API Key?')) {
+                localStorage.removeItem('gemini_api_key');
                 API_KEY = null;
                 updateAPIKeyStatus();
-                showSimpleToast('✅ OpenAI API Key removed', 'success');
+                showSimpleToast('✅ Gemini API Key removed', 'success');
             }
         }
 
@@ -1978,6 +1981,7 @@
         // Initialize dark mode on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadDarkModePreference();
+            updateAPIKeyStatus(); // Show API key status on load
         });
 
         // ========================================
@@ -2843,6 +2847,9 @@
             console.log(`✅ [AUTO-LOAD CSV] Total loaded: ${totalLoaded} transactions`);
             console.log(`📊 [AUTO-LOAD CSV] allTransactions.length: ${allTransactions.length}`);
             console.log(`🔍 [AUTO-LOAD CSV] First 3 transactions in allTransactions:`, allTransactions.slice(0, 3));
+
+            // Save to localStorage to trigger backup
+            localStorage.setItem('allTransactions', JSON.stringify(allTransactions));
 
             // Log spent vs received breakdown
             const spentCount = allTransactions.filter(t => t.spent && t.spent.trim()).length;
@@ -3720,6 +3727,9 @@
             // Add to allTransactions
             allTransactions.push(...transactionsToImport);
 
+            // Save to localStorage to trigger backup
+            localStorage.setItem('allTransactions', JSON.stringify(allTransactions));
+
             // Save to IndexedDB
             await saveCSVFileToDB(fileName, transactionsToImport, bankIdentifier);
 
@@ -4001,6 +4011,107 @@
             showSimpleToast(`📥 Downloaded ${transactionsWithIndices.length} transactions`, 'success');
         }
 
+        // ========================================
+        // REALTIME CLI SYNC
+        // ========================================
+
+        // Initialize Supabase Realtime channel for CLI synchronization
+        function initializeRealtimeSync() {
+            console.log('🔄 [REALTIME] Initializing CLI sync listener...');
+
+            const channel = supabase.channel('cli-events');
+
+            channel
+                .on('broadcast', { event: 'data-changed' }, (payload) => {
+                    console.log('🔄 [REALTIME] Data changed from CLI:', payload);
+
+                    // Show notification
+                    showSimpleToast('🔄 Data updated from CLI', 'info');
+
+                    // Refresh data based on what changed
+                    const command = payload.payload?.command || '';
+
+                    if (command.includes('transaction') || command.includes('categorize') || command.includes('add')) {
+                        console.log('🔄 [REALTIME] Refreshing transactions from database...');
+                        loadTransactionsFromSupabase();
+                    }
+
+                    if (command.includes('labour')) {
+                        console.log('🔄 [REALTIME] Refreshing labour data...');
+                        // Add labour refresh logic if needed
+                    }
+                })
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ [REALTIME] CLI sync listener active');
+                    } else if (status === 'CLOSED') {
+                        console.log('⚠️ [REALTIME] CLI sync listener closed');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('❌ [REALTIME] CLI sync listener error');
+                    }
+                });
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                console.log('🔄 [REALTIME] Unsubscribing from CLI sync...');
+                channel.unsubscribe();
+            });
+
+            return channel;
+        }
+
+        // Load transactions from Supabase (for realtime sync)
+        async function loadTransactionsFromSupabase() {
+            try {
+                console.log('🔄 [REALTIME] Fetching transactions from Supabase...');
+
+                const { data, error } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .order('date', { ascending: false });
+
+                if (error) {
+                    console.error('❌ [REALTIME] Error loading transactions:', error);
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    console.log('⚠️ [REALTIME] No transactions found in database');
+                    return;
+                }
+
+                // Update allTransactions array
+                console.log(`🔄 [REALTIME] Loaded ${data.length} transactions from database`);
+
+                // Merge with existing transactions, avoiding duplicates
+                const existingIds = new Set(allTransactions.map(t => t.id).filter(id => id));
+                const newTransactions = data.filter(t => !existingIds.has(t.id));
+
+                if (newTransactions.length > 0) {
+                    console.log(`🔄 [REALTIME] Adding ${newTransactions.length} new transactions`);
+                    allTransactions = [...allTransactions, ...newTransactions];
+                }
+
+                // Update existing transactions that may have changed
+                allTransactions = allTransactions.map(existingTx => {
+                    if (!existingTx.id) return existingTx;
+                    const updated = data.find(t => t.id === existingTx.id);
+                    return updated || existingTx;
+                });
+
+                // Re-render UI
+                renderTransactions();
+                updateSummary();
+                updateBudgetInfo();
+
+                console.log('✅ [REALTIME] Transactions refreshed from database');
+                showSimpleToast('✅ Transactions updated', 'success');
+
+            } catch (error) {
+                console.error('❌ [REALTIME] Failed to refresh transactions:', error);
+            }
+        }
+
         // Initialize on page load
         let isPageInitialized = false;
         document.addEventListener('DOMContentLoaded', async () => {
@@ -4043,6 +4154,9 @@
                     toggle.checked = completionMode === 'complete';
                     updateCompletionModeUI();
                 }
+
+                // Initialize realtime sync for CLI changes
+                initializeRealtimeSync();
 
                 isPageInitialized = true;
             } catch (error) {
@@ -4198,6 +4312,10 @@
                     const content = e.target.result;
                     const transactions = parseCSV(content);
                     allTransactions.push(...transactions);
+
+                    // Save to localStorage to trigger backup
+                    localStorage.setItem('allTransactions', JSON.stringify(allTransactions));
+
                     resolve();
                 };
                 reader.onerror = reject;
@@ -4231,6 +4349,9 @@
 
                         // APPEND transactions instead of replacing
                         allTransactions.push(...transactions);
+
+                        // Save to localStorage to trigger backup
+                        localStorage.setItem('allTransactions', JSON.stringify(allTransactions));
 
                         // Save to IndexedDB
                         await saveCSVFileToDB(file.name, transactions, bankIdentifier);
@@ -6964,7 +7085,7 @@
                 const detailedSummary = summary +
                     `\n\n💡 Next Steps:\n` +
                     `1. Switch to grants.html tab\n` +
-                    `2. Click "🔄 Sync Spend Data" if needed\n` +
+                    `2. Click the cloud icon (☁️) and select "Refresh Spend Data" if needed\n` +
                     `3. Check Q5 (2507-2509) for your transactions`;
 
                 alert(detailedSummary);
