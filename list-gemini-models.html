@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>List Gemini Models</title>
+    <script src="api-config.js"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .result { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #1e3d1e; color: #89d185; }
+        .error { background: #3d1e1e; color: #f48771; }
+        .info { background: #1e2837; color: #9cdcfe; }
+        pre { background: #0d1117; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { background: #10b981; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; margin: 10px 5px 0 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 List Available Gemini Models</h1>
+    <button onclick="listModels()">Get Available Models</button>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = msg;
+            results.appendChild(div);
+        }
+
+        async function listModels() {
+            results.innerHTML = '';
+            log('Fetching available Gemini models...', 'info');
+
+            const apiKey = API_CONFIG.keys.gemini;
+            log(`API Key: ${apiKey.substring(0, 10)}...`, 'info');
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    log(`❌ Error ${response.status}:`, 'error');
+                    log(`<pre>${JSON.stringify(errorData, null, 2)}</pre>`, 'error');
+                    return;
+                }
+
+                const data = await response.json();
+
+                log('✅ Models retrieved successfully!', 'success');
+                log(`<br><strong>Total models: ${data.models ? data.models.length : 0}</strong><br>`, 'success');
+
+                if (data.models && data.models.length > 0) {
+                    log('<strong>Models that support generateContent:</strong>', 'info');
+
+                    const generateContentModels = data.models.filter(model =>
+                        model.supportedGenerationMethods &&
+                        model.supportedGenerationMethods.includes('generateContent')
+                    );
+
+                    if (generateContentModels.length > 0) {
+                        generateContentModels.forEach(model => {
+                            const isRecommended = model.name.includes('flash') || model.name.includes('1.5');
+                            const label = isRecommended ? '⭐ RECOMMENDED' : '';
+                            log(`<br><strong>${label} ${model.name}</strong>`, isRecommended ? 'success' : 'info');
+                            log(`  Display Name: ${model.displayName}`, 'info');
+                            log(`  Description: ${model.description}`, 'info');
+                            log(`  Methods: ${model.supportedGenerationMethods.join(', ')}`, 'info');
+                        });
+
+                        log('<br><strong>🎯 COPY ONE OF THESE MODEL NAMES:</strong>', 'success');
+                        const recommended = generateContentModels.find(m => m.name.includes('flash') || m.name.includes('1.5'));
+                        if (recommended) {
+                            const modelName = recommended.name.replace('models/', '');
+                            log(`<code style="background:#0d1117;padding:5px 10px;border-radius:4px;font-size:16px;">${modelName}</code>`, 'success');
+                            log('<br>Copy this and paste it into api-config.js under models.gemini', 'success');
+                        }
+                    } else {
+                        log('No models support generateContent!', 'error');
+                    }
+
+                    log('<br><br><strong>Full model list:</strong>', 'info');
+                    log(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+                log(`<pre>${error.stack}</pre>`, 'error');
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            setTimeout(listModels, 500);
+        });
+    </script>
+</body>
+</html>
