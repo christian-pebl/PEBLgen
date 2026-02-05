@@ -16,6 +16,15 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+    <!-- Excel parsing for invoice auto-matcher -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Invoice Auto-Matcher Modules -->
+    <script src="excel-invoice-parser.js"></script>
+    <script src="invoice-matcher-agent.js"></script>
+    <script src="bulk-gmail-invoice-search.js"></script>
+    <script src="validate-invoice-pdf.js"></script>
+
     <!-- Unified AI API Helper (Permanent API Key Storage) -->
     <script src="api-config.js?v=3"></script>
     <script src="unified-ai-helper.js?v=3"></script>
@@ -1273,6 +1282,9 @@
                         <button id="gmailConnectBtn" onclick="signInToGmail()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 3px 6px; font-size: 8px; white-space: nowrap; flex-shrink: 0; writing-mode: horizontal-tb;">
                             + Add
                         </button>
+                        <button id="copyTokenBtn" onclick="copyGmailTokens()" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 3px 6px; font-size: 8px; white-space: nowrap; flex-shrink: 0; writing-mode: horizontal-tb; background: #10b981; color: white;" title="Copy API tokens to give to Claude">
+                            📋 Get Token
+                        </button>
                         <div id="gmailAccountsList" style="flex: 1; max-height: 60px; overflow-y: auto; font-size: 8px; border: 1px solid #e5e7eb; border-radius: 3px; padding: 2px;">
                             <!-- Populated dynamically -->
                         </div>
@@ -1376,6 +1388,12 @@
                     </button>
                     <button onclick="downloadCurrentTableAsCSV()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 5px 8px; font-size: 10px; grid-column: span 2; background: #10b981; color: white;" title="Download current view as CSV">
                         Download Table
+                    </button>
+                    <button onclick="openInvoiceMatcherModal()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 5px 8px; font-size: 10px; grid-column: span 2; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;" title="Auto-match invoices to transactions using AI">
+                        🤖 Auto-Match Invoices
+                    </button>
+                    <button onclick="startBulkGmailSearch()" class="modal-btn modal-btn-primary" style="margin: 0; padding: 5px 8px; font-size: 10px; grid-column: span 2; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;" title="Search all Gmail accounts for invoices in January">
+                        📧 Gmail Bulk Search
                     </button>
                     <button onclick="regenerateTransactionRefs(event)" class="modal-btn modal-btn-secondary" style="margin: 0; padding: 5px 8px; font-size: 10px; grid-column: span 2; background: #8b5cf6; color: white;" title="Regenerate all transaction reference numbers">
                         🔄 Regen Transaction Refs
@@ -1843,21 +1861,9 @@
                 <button onclick="closeInvoiceManager()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">&times;</button>
             </div>
             <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                <!-- Action Buttons -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb;">
-                    <button onclick="addAnotherInvoice()" class="btn-primary" style="flex: 1; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <span>➕</span>
-                        <span>Add Another Document</span>
-                    </button>
-                    <button onclick="handleInvoiceFetch(currentInvoiceManagerTransactionIndex, null)" class="btn-secondary" style="flex: 1; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; background: #3b82f6; color: white; border: none;">
-                        <span>🔍</span>
-                        <span>Search Gmail</span>
-                    </button>
-                </div>
-
-                <!-- Invoice List -->
+                <!-- Invoice List or PDF Viewer (dynamically updated) -->
                 <div id="invoiceListContainer">
-                    <!-- Invoices will be populated here -->
+                    <!-- Content will be populated here (list view or PDF view) -->
                 </div>
             </div>
         </div>
@@ -1915,6 +1921,79 @@
                 </button>
                 <button onclick="proceedWithImport()" class="btn-primary" style="padding: 10px 20px; background: #10b981;">
                     ✅ Proceed with Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Auto-Matcher Modal -->
+    <div id="invoiceMatcherModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>🤖</span>
+                    <span>Auto-Match Invoices</span>
+                </h3>
+                <button onclick="closeInvoiceMatcherModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: white;">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="margin-bottom: 20px; color: #666; font-size: 13px;">
+                    Automatically match invoices to transactions using AI. Select your invoice folder containing Excel summaries and PDF files.
+                </p>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">
+                        📂 Select Invoice Folder:
+                    </label>
+                    <input
+                        type="file"
+                        id="invoiceFolderInput"
+                        webkitdirectory
+                        directory
+                        multiple
+                        style="width: 100%; padding: 12px; border: 2px dashed #667eea; border-radius: 8px; font-size: 13px; background: #f8f9ff; cursor: pointer;"
+                    />
+                    <small style="color: #888; font-size: 11px; display: block; margin-top: 6px;">
+                        📁 Example: "Invoices 2601" folder<br>
+                        The folder should contain Excel summary files (.xlsx) and invoice PDFs<br>
+                        The app will automatically find and process all files
+                    </small>
+                </div>
+
+                <div id="fileCountSummary" style="margin-bottom: 20px; padding: 15px; background: #f0f4ff; border-radius: 8px; display: none; border-left: 4px solid #667eea;">
+                    <div style="font-size: 13px; color: #444; font-weight: 500; margin-bottom: 8px;">
+                        📊 Files Found:
+                    </div>
+                    <div style="font-size: 12px; color: #666; line-height: 1.6;">
+                        <div>📊 Excel files: <span id="excelCount" style="font-weight: 600; color: #10b981;">0</span></div>
+                        <div>📄 PDF invoices: <span id="pdfCount" style="font-weight: 600; color: #10b981;">0</span></div>
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e7ff; color: #888; font-size: 11px;">
+                            ✓ Ready to process
+                        </div>
+                    </div>
+                </div>
+
+                <div id="matcherProgress" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+                    <div style="font-weight: 500; margin-bottom: 8px; font-size: 12px;">Progress:</div>
+                    <div id="matcherStatus" style="font-size: 12px; color: #666;">Initializing...</div>
+                    <div style="margin-top: 10px;">
+                        <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="matcherProgressBar" style="background: #667eea; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="matcherResults" style="display: none; margin-top: 20px;">
+                    <div style="font-weight: 500; margin-bottom: 10px; font-size: 12px;">Results:</div>
+                    <div id="matcherResultsContent"></div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 15px; border-top: 1px solid #e5e7eb;">
+                <button onclick="closeInvoiceMatcherModal()" class="btn-secondary" style="padding: 10px 20px; font-size: 12px;">
+                    Cancel
+                </button>
+                <button onclick="runInvoiceMatching()" id="runMatcherBtn" class="btn-primary" style="padding: 10px 20px; font-size: 13px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-weight: 600;">
+                    🚀 Start Auto-Matching
                 </button>
             </div>
         </div>
@@ -2853,7 +2932,18 @@
                                 assignedItemName: txData.assignedItemName,
                                 assignedProject: tx.allocation || txData.assignedProject,
                                 completed: txData.completed || false,
-                                transactionRef: tx.transaction_ref
+                                transactionRef: tx.transaction_ref,
+                                // CRITICAL FIX: Restore all custom properties from transaction_data
+                                flagged: txData.flagged || null,  // Red/Blue flags
+                                invoices: txData.invoices || [],  // Attached invoices
+                                detail: txData.detail || '',  // Inline edit detail
+                                zeroVAT: txData.zeroVAT || false,  // 0% VAT toggle
+                                spent_ex_vat: txData.spent_ex_vat || '',  // Ex-VAT amount
+                                originalSpentExVAT: txData.originalSpentExVAT,  // Original ex-VAT for revert
+                                convertedCurrency: txData.convertedCurrency,  // USD conversion
+                                convertedAmount: txData.convertedAmount,
+                                conversionRate: txData.conversionRate,
+                                conversionDate: txData.conversionDate
                             });
                             fileGroups[fileName].transactionCount++;
                         });
@@ -2861,6 +2951,17 @@
                         savedCSVFiles = Object.values(fileGroups);
                         console.log(`[LOAD] ✅ Formatted into ${savedCSVFiles.length} CSV file groups`);
                         console.log('[LOAD] 📊 Sample transaction with allocations:', savedCSVFiles[0]?.transactions[0]);
+
+                        // Debug: Check if flags were loaded
+                        const flaggedTransactions = transactions.filter(t => t.transaction_data?.flagged);
+                        if (flaggedTransactions.length > 0) {
+                            console.log(`🚩 [LOAD] Found ${flaggedTransactions.length} flagged transactions in Supabase`);
+                            flaggedTransactions.slice(0, 3).forEach(t => {
+                                console.log(`   🚩 ${t.description.substring(0, 30)}... - Flag: ${t.transaction_data.flagged}`);
+                            });
+                        } else {
+                            console.log('⚠️ [LOAD] No flagged transactions found in Supabase data');
+                        }
 
                         // Load invoices from Supabase and attach to transactions
                         console.log('[LOAD] 📄 Loading invoices from Supabase...');
@@ -2893,6 +2994,62 @@
                             });
                         } else {
                             console.log('[LOAD] ℹ️ No invoices found in Supabase');
+                        }
+
+                        // ALSO load invoices from IndexedDB (in case Supabase sync failed)
+                        console.log('[LOAD] 📄 Loading invoices from IndexedDB...');
+                        if (!db) await initIndexedDB();
+                        try {
+                            const invTx = db.transaction([INVOICES_STORE_NAME], 'readonly');
+                            const invStore = invTx.objectStore(INVOICES_STORE_NAME);
+                            const getAllInvReq = invStore.getAll();
+
+                            const indexedDBInvoices = await new Promise((resolve, reject) => {
+                                getAllInvReq.onsuccess = () => resolve(getAllInvReq.result || []);
+                                getAllInvReq.onerror = () => reject(getAllInvReq.error);
+                            });
+
+                            console.log(`[LOAD] ✅ Loaded ${indexedDBInvoices.length} invoices from IndexedDB`);
+
+                            // Attach IndexedDB invoices to transactions by matching date + description
+                            // (transactionIndex is unreliable across page reloads)
+                            savedCSVFiles.forEach(file => {
+                                file.transactions.forEach((tx, txIndex) => {
+                                    const matchingInvoices = indexedDBInvoices.filter(inv => {
+                                        // Match by date AND description (unique combination)
+                                        const dateMatch = inv.transactionDate === tx.date;
+                                        const descMatch = inv.description === tx.description;
+                                        return dateMatch && descMatch;
+                                    });
+
+                                    if (matchingInvoices.length > 0) {
+                                        // Merge with existing invoices from Supabase (if any)
+                                        const existingInvoices = tx.invoices || [];
+                                        const newInvoices = matchingInvoices.map(inv => ({
+                                            id: inv.id,
+                                            filename: inv.filename,
+                                            pdfBlob: inv.pdfBlob,
+                                            extractedText: inv.extractedText,
+                                            aiDescription: inv.aiDescription,
+                                            uploadDate: inv.uploadDate,
+                                            gmailMessageId: inv.gmailMessageId
+                                        }));
+
+                                        // Combine and deduplicate by filename
+                                        const allInvoices = [...existingInvoices, ...newInvoices];
+                                        const uniqueInvoices = allInvoices.filter((inv, index, self) =>
+                                            index === self.findIndex(i => i.filename === inv.filename)
+                                        );
+
+                                        tx.invoices = uniqueInvoices;
+                                        console.log(`[LOAD] 📎 Attached ${matchingInvoices.length} IndexedDB invoice(s) to transaction (date: ${tx.date}, desc: ${tx.description.substring(0, 30)}...)`);
+                                    }
+                                });
+                            });
+
+                            console.log(`[LOAD] ✅ Finished loading invoices from IndexedDB`);
+                        } catch (error) {
+                            console.error('[LOAD] ❌ Failed to load invoices from IndexedDB:', error);
                         }
 
                         // Save to IndexedDB so Fix Dupes button works in incognito mode
@@ -4177,6 +4334,437 @@
             showSimpleToast(`✅ Imported ${transactionsToImport.length} transactions (${skipDuplicates.size} duplicates skipped)`, 'success');
         }
 
+        // ========================================
+        // INVOICE AUTO-MATCHER FUNCTIONS
+        // ========================================
+
+        /**
+         * Open the invoice matcher modal
+         */
+        function openInvoiceMatcherModal() {
+            const modal = document.getElementById('invoiceMatcherModal');
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+        }
+
+        /**
+         * Close the invoice matcher modal and reset state
+         */
+        function closeInvoiceMatcherModal() {
+            const modal = document.getElementById('invoiceMatcherModal');
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+
+            // Reset progress
+            document.getElementById('matcherProgress').style.display = 'none';
+            document.getElementById('matcherResults').style.display = 'none';
+
+            // Reset button to original state
+            const btn = document.getElementById('runMatcherBtn');
+            btn.textContent = '🚀 Start Auto-Matching';
+            btn.onclick = runInvoiceMatching;
+            btn.disabled = false;
+        }
+
+        /**
+         * Start bulk Gmail search for invoices
+         */
+        async function startBulkGmailSearch() {
+            console.log('📧 [BULK-SEARCH] Starting bulk Gmail invoice search...');
+
+            // Check if function is available
+            if (typeof bulkSearchGmailInvoices !== 'function') {
+                showSimpleToast('❌ Bulk search module not loaded', 'error');
+                console.error('❌ bulkSearchGmailInvoices function not found');
+                return;
+            }
+
+            // Check if accounts are authenticated
+            if (gmailAccounts.length === 0) {
+                showSimpleToast('❌ No Gmail accounts connected. Click + Add to connect accounts.', 'error');
+                return;
+            }
+
+            const now = Date.now();
+            const validAccounts = gmailAccounts.filter(acc =>
+                acc.accessToken && acc.tokenExpiresAt && acc.tokenExpiresAt > now
+            );
+
+            if (validAccounts.length === 0) {
+                showSimpleToast('⚠️ All tokens expired. Please re-authenticate accounts first.', 'warning');
+                return;
+            }
+
+            // Set date range for January 2026 (full month)
+            const startDate = new Date('2026-01-01');
+            const endDate = new Date('2026-01-31');
+
+            // Keywords to search for
+            const keywords = [
+                'invoice',
+                'receipt',
+                'order confirmation',
+                'purchase',
+                'payment',
+                'bill',
+                'statement'
+            ];
+
+            showSimpleToast('🔍 Searching Gmail accounts for invoices...', 'info');
+
+            try {
+                const results = await bulkSearchGmailInvoices(startDate, endDate, keywords);
+
+                if (results.success === false) {
+                    showSimpleToast(`❌ Search failed: ${results.error}`, 'error');
+                    return;
+                }
+
+                // Display results
+                displayBulkSearchResults(results);
+
+            } catch (error) {
+                console.error('❌ [BULK-SEARCH] Error:', error);
+                showSimpleToast('❌ Search failed: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Update file count display when folder is selected
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            const folderInput = document.getElementById('invoiceFolderInput');
+            const summary = document.getElementById('fileCountSummary');
+
+            if (folderInput) {
+                folderInput.addEventListener('change', () => {
+                    const files = Array.from(folderInput.files);
+
+                    // Count Excel files
+                    const excelFiles = files.filter(f =>
+                        f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
+                    );
+
+                    // Count PDF files
+                    const pdfFiles = files.filter(f => f.name.endsWith('.pdf'));
+
+                    // Update counts
+                    document.getElementById('excelCount').textContent = excelFiles.length;
+                    document.getElementById('pdfCount').textContent = pdfFiles.length;
+
+                    // Show summary if files found
+                    if (excelFiles.length > 0 || pdfFiles.length > 0) {
+                        summary.style.display = 'block';
+                    } else {
+                        summary.style.display = 'none';
+                    }
+                });
+            }
+        });
+
+        /**
+         * Update progress display
+         */
+        function updateMatcherStatus(message, progress) {
+            document.getElementById('matcherStatus').textContent = message;
+            document.getElementById('matcherProgressBar').style.width = `${progress}%`;
+        }
+
+        /**
+         * Run the invoice matching process
+         */
+        async function runInvoiceMatching() {
+            const folderInput = document.getElementById('invoiceFolderInput');
+
+            if (!folderInput.files.length) {
+                showSimpleToast('Please select an invoice folder', 'error');
+                return;
+            }
+
+            // Disable button and show progress
+            document.getElementById('runMatcherBtn').disabled = true;
+            document.getElementById('matcherProgress').style.display = 'block';
+            document.getElementById('matcherResults').style.display = 'none';
+
+            try {
+                // Separate files by type
+                const allFiles = Array.from(folderInput.files);
+                const excelFiles = allFiles.filter(f =>
+                    f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
+                );
+                const pdfFilesArray = allFiles.filter(f => f.name.endsWith('.pdf'));
+
+                console.log(`[Auto-Matcher] Found ${excelFiles.length} Excel file(s) and ${pdfFilesArray.length} PDF file(s) in folder`);
+
+                if (excelFiles.length === 0) {
+                    throw new Error('No Excel files found in folder. Please check your folder contains .xlsx or .xls files.');
+                }
+
+                if (pdfFilesArray.length === 0) {
+                    throw new Error('No PDF files found in folder. Please check your folder contains invoice PDFs.');
+                }
+
+                // Step 1: Parse all Excel files
+                updateMatcherStatus('Reading Excel files...', 5);
+                const parser = new ExcelInvoiceParser();
+                parser.setExcelFiles(excelFiles);
+
+                const invoices = await parser.parseAllExcelFiles();
+                console.log(`[Auto-Matcher] Loaded ${invoices.length} invoices from ${parser.spreadsheetFiles.length} spreadsheet(s)`);
+
+                if (invoices.length === 0) {
+                    throw new Error('No invoices found in Excel files. Please check your files contain invoice data.');
+                }
+
+                // Step 2: Load PDF files into map
+                updateMatcherStatus('Loading PDF files...', 10);
+                const pdfFiles = new Map();
+                for (const file of pdfFilesArray) {
+                    // Store with full filename
+                    pdfFiles.set(file.name, file);
+
+                    // ALSO store with invoice reference prefix for easy lookup
+                    // E.g., "INV_001_001_2026-01-30_christiannberger_42-00.pdf" → also store as "INV_001"
+                    const match = file.name.match(/^(INV_\d+)/);
+                    if (match) {
+                        const invoiceRef = match[1];
+                        pdfFiles.set(invoiceRef, file);
+                        pdfFiles.set(`${invoiceRef}.pdf`, file); // Also with .pdf extension
+                    }
+                }
+                console.log(`[Auto-Matcher] Loaded ${pdfFilesArray.length} PDF files with multiple lookup keys`);
+
+                if (pdfFiles.size === 0) {
+                    throw new Error('No PDF files found in selected folder.');
+                }
+
+                // Step 3: Find matches with PDF validation
+                updateMatcherStatus(`Matching ${invoices.length} invoices...`, 15);
+                const apiKey = API_CONFIG.keys.gemini;
+                if (!apiKey) {
+                    throw new Error('Gemini API key not configured. Please set it up first.');
+                }
+
+                const matcher = new InvoiceMatcherAgent(invoices, allTransactions, apiKey);
+                matcher.pdfFiles = pdfFiles; // Provide PDF files for validation
+
+                const matches = await matcher.findMatches((current, total, status) => {
+                    // Progress callback
+                    const progress = 15 + (45 * current / total); // 15% to 60%
+                    updateMatcherStatus(`${status} (${current}/${total})`, progress);
+                });
+
+                console.log(`[Auto-Matcher] Found ${matches.length} validated matches`);
+
+                // Step 4: Attach invoices
+                updateMatcherStatus(`Attaching ${matches.length} invoices...`, 60);
+
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (let i = 0; i < matches.length; i++) {
+                    const match = matches[i];
+                    const transactionIndex = allTransactions.indexOf(match.transaction);
+
+                    try {
+                        // Get PDF blob from map
+                        // Normalize reference to strip ellipses and extra suffixes
+                        // E.g., "INV_001_..." → "INV_001"
+                        const normalizedRef = match.invoice.reference.replace(/[._]*$/, '').match(/^(INV_\d+)/)?.[1] || match.invoice.reference;
+
+                        const possibleFilenames = [
+                            match.invoice.pdfPath,
+                            match.invoice.reference,
+                            `${match.invoice.reference}.pdf`,
+                            normalizedRef,  // Try normalized version (INV_001)
+                            `${normalizedRef}.pdf`  // Try normalized with .pdf (INV_001.pdf)
+                        ];
+
+                        console.log(`[Auto-Matcher] Looking for PDF for ${match.invoice.reference} (normalized: ${normalizedRef})`);
+                        console.log(`[Auto-Matcher] Trying keys: ${possibleFilenames.join(', ')}`);
+
+                        let pdfBlob = null;
+                        let usedFilename = null;
+                        for (const filename of possibleFilenames) {
+                            if (!filename) continue; // Skip empty filenames
+
+                            if (pdfFiles.has(filename)) {
+                                pdfBlob = pdfFiles.get(filename);
+                                usedFilename = filename;
+                                console.log(`[Auto-Matcher] ✅ Found PDF with key: ${filename}`);
+                                break;
+                            }
+                            if (!filename.endsWith('.pdf')) {
+                                const withExt = `${filename}.pdf`;
+                                if (pdfFiles.has(withExt)) {
+                                    pdfBlob = pdfFiles.get(withExt);
+                                    usedFilename = withExt;
+                                    console.log(`[Auto-Matcher] ✅ Found PDF with key: ${withExt}`);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!pdfBlob) {
+                            console.error(`[Auto-Matcher] ❌ PDF not found. Tried: ${possibleFilenames.join(', ')}`);
+                            console.error(`[Auto-Matcher] Available keys sample:`, Array.from(pdfFiles.keys()).slice(0, 10));
+                            throw new Error(`PDF file not found: ${match.invoice.pdfPath} (tried ${possibleFilenames.length} variations)`);
+                        }
+
+                        // Extract text from PDF
+                        const extractedText = match.pdfValidation?.data?.pdfText || await extractTextFromPDF(pdfBlob);
+
+                        // Generate AI description using validated data
+                        const context = match.pdfValidation?.data?.additionalContext || '';
+                        const enhancedTransaction = {
+                            ...allTransactions[transactionIndex],
+                            _aiContext: context
+                        };
+                        const aiDescription = await generateDescriptionFromInvoice(extractedText, enhancedTransaction);
+
+                        // Save to database
+                        await saveInvoiceToDB(
+                            transactionIndex,
+                            pdfBlob,
+                            match.invoice.reference,
+                            null // No Gmail message ID
+                        );
+
+                        successCount++;
+
+                        // Update progress
+                        const progress = 60 + (40 * (i + 1) / matches.length);
+                        updateMatcherStatus(`Attached ${i + 1}/${matches.length} invoices...`, progress);
+                    } catch (error) {
+                        console.error(`[Auto-Matcher] Failed to attach invoice:`, error);
+                        errorCount++;
+                    }
+                }
+
+                // Step 5: Build detailed validation table
+                updateMatcherStatus('Complete!', 100);
+
+                // Create match status map for each invoice
+                const matchStatusMap = new Map();
+                const attachedInvoices = new Set();
+
+                // Mark matched and attached
+                matches.forEach(match => {
+                    const status = attachedInvoices.has(match.invoice.reference) ?
+                        { status: 'attached', transaction: match.transaction } :
+                        { status: 'matched', transaction: match.transaction };
+                    matchStatusMap.set(match.invoice.reference, status);
+                });
+
+                // Mark successfully attached
+                for (let i = 0; i < matches.length; i++) {
+                    if (i < successCount) {
+                        const match = matches[i];
+                        matchStatusMap.set(match.invoice.reference, {
+                            status: 'attached',
+                            transaction: match.transaction
+                        });
+                        attachedInvoices.add(match.invoice.reference);
+                    }
+                }
+
+                // Build validation table HTML
+                const validationTableHTML = `
+                    <div style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                            <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+                                <tr style="border-bottom: 2px solid #dee2e6;">
+                                    <th style="padding: 8px; text-align: left; font-weight: 600;">Status</th>
+                                    <th style="padding: 8px; text-align: left; font-weight: 600;">Invoice Ref</th>
+                                    <th style="padding: 8px; text-align: left; font-weight: 600;">Supplier</th>
+                                    <th style="padding: 8px; text-align: right; font-weight: 600;">Amount</th>
+                                    <th style="padding: 8px; text-align: left; font-weight: 600;">Date</th>
+                                    <th style="padding: 8px; text-align: left; font-weight: 600;">Matched To</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${invoices.map(invoice => {
+                                    const matchStatus = matchStatusMap.get(invoice.reference);
+                                    const isAttached = matchStatus?.status === 'attached';
+                                    const isMatched = matchStatus?.status === 'matched';
+                                    const isUnmatched = !matchStatus;
+
+                                    const statusIcon = isAttached ? '✅' : isMatched ? '🔵' : '⚠️';
+                                    const statusText = isAttached ? 'Attached' : isMatched ? 'Matched' : 'Unmatched';
+                                    const statusColor = isAttached ? '#28a745' : isMatched ? '#17a2b8' : '#ffc107';
+                                    const bgColor = isAttached ? '#d4edda' : isMatched ? '#d1ecf1' : '#fff3cd';
+
+                                    return `
+                                        <tr style="border-bottom: 1px solid #e9ecef; background: ${bgColor};">
+                                            <td style="padding: 8px;">
+                                                <span style="color: ${statusColor}; font-weight: 600;">${statusIcon} ${statusText}</span>
+                                            </td>
+                                            <td style="padding: 8px; font-family: monospace;">${invoice.reference}</td>
+                                            <td style="padding: 8px;">${invoice.supplier}</td>
+                                            <td style="padding: 8px; text-align: right; font-weight: 500;">£${invoice.netAmount.toFixed(2)}</td>
+                                            <td style="padding: 8px;">${invoice.date}</td>
+                                            <td style="padding: 8px; color: #666; font-size: 10px;">
+                                                ${matchStatus ?
+                                                    `${matchStatus.transaction.fromTo} (${matchStatus.transaction.date})` :
+                                                    '<em>No match found</em>'}
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                const summaryHTML = `
+                    <div style="padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; margin-bottom: 15px;">
+                        <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">📊 Matching Summary</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 12px;">
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 6px;">
+                                <div style="font-size: 24px; font-weight: 700;">${successCount}</div>
+                                <div style="opacity: 0.9;">✅ Attached</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 6px;">
+                                <div style="font-size: 24px; font-weight: 700;">${matches.length - successCount}</div>
+                                <div style="opacity: 0.9;">🔵 Matched</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 6px;">
+                                <div style="font-size: 24px; font-weight: 700;">${invoices.length - matches.length}</div>
+                                <div style="opacity: 0.9;">⚠️ Unmatched</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 11px; opacity: 0.9;">
+                            Total: ${invoices.length} invoices processed in ${matches.length > 0 ? 'success' : 'completed'}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('matcherResultsContent').innerHTML = summaryHTML + validationTableHTML;
+                document.getElementById('matcherResults').style.display = 'block';
+
+                // Refresh table to show new invoices
+                await renderTransactions();
+
+                // Change button to "Accept & Continue" after completion
+                const btn = document.getElementById('runMatcherBtn');
+                btn.textContent = '✅ Accept & Continue';
+                btn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                btn.onclick = closeInvoiceMatcherModal;
+                btn.disabled = false;
+
+                showSimpleToast(
+                    `Auto-matching complete: ${successCount} invoices attached (PDF validated)`,
+                    'success'
+                );
+
+            } catch (error) {
+                console.error('[Auto-Matcher] Error:', error);
+                updateMatcherStatus(`Error: ${error.message}`, 0);
+                showSimpleToast(`Auto-matching failed: ${error.message}`, 'error');
+                document.getElementById('runMatcherBtn').disabled = false;
+            }
+        }
+
         /**
          * Clear CSV files and transactions only (preserve project budgets)
          */
@@ -5197,6 +5785,17 @@
                 console.log(`🔍 [RENDER] Transaction keys:`, Object.keys(allTransactions[0]));
                 console.log(`👤 [RENDER] First transaction fromTo:`, allTransactions[0].fromTo);
                 console.log(`🔍 [RENDER] Sample transactions:`, allTransactions.slice(0, 3));
+
+                // CRITICAL DEBUG: Check for flagged transactions
+                const flaggedInMemory = allTransactions.filter(t => t.flagged);
+                if (flaggedInMemory.length > 0) {
+                    console.log(`🚩 [RENDER] Found ${flaggedInMemory.length} flagged transactions in memory`);
+                    flaggedInMemory.slice(0, 3).forEach((t, i) => {
+                        console.log(`   🚩 ${t.description?.substring(0, 30)}... - Flag: ${t.flagged}`);
+                    });
+                } else {
+                    console.log('⚠️ [RENDER] No flagged transactions in memory');
+                }
             }
 
             const tbody = document.getElementById('tableBody');
@@ -5816,6 +6415,9 @@
             // Save to storage
             await saveTransactionsToStorage();
 
+            // Update Supabase
+            await updateTransactionInSupabase(allTransactions[index]);
+
             // Re-render to show the detail
             renderTransactions();
 
@@ -5889,8 +6491,12 @@
                 console.log('🚩 [FLAG] Legacy flag converted to red:', index);
             }
 
-            // Save to storage
+            // Save to storage (IndexedDB)
             await saveTransactionsToStorage();
+
+            // CRITICAL FIX: Save flag state to Supabase to persist across reloads
+            console.log('💾 [FLAG] Saving flag state to Supabase...');
+            await updateTransactionInSupabase(transaction);
 
             // Re-render to show flag state
             renderTransactions();
@@ -5939,6 +6545,9 @@
             // Save to storage
             await saveTransactionsToStorage();
 
+            // Update Supabase
+            await updateTransactionInSupabase(transaction);
+
             // Re-render to show updated amounts
             renderTransactions();
         }
@@ -5962,6 +6571,7 @@
 
                 // Save and re-render
                 await saveTransactionsToStorage();
+                await updateTransactionInSupabase(transaction);
                 renderTransactions();
 
                 showToast({
@@ -6012,6 +6622,7 @@
 
                 // Save and re-render
                 await saveTransactionsToStorage();
+                await updateTransactionInSupabase(transaction);
                 renderTransactions();
 
                 showToast({
@@ -7041,6 +7652,50 @@
         }
 
         /**
+         * Helper: Update a single transaction in Supabase
+         */
+        async function updateTransactionInSupabase(transaction) {
+            if (typeof supabaseClient === 'undefined' || !currentUser) {
+                console.warn('⚠️ [SUPABASE UPDATE] Skipped - Supabase not available or user not logged in');
+                return { success: false, error: 'Not authenticated' };
+            }
+
+            try {
+                const transactionDate = transaction.date;
+                const transactionDesc = transaction.description;
+
+                // Convert DD/MM/YYYY to YYYY-MM-DD for Supabase
+                let supabaseDate = transactionDate;
+                if (transactionDate.includes('/')) {
+                    const [day, month, year] = transactionDate.split('/');
+                    supabaseDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+
+                const { error: updateError } = await supabaseClient
+                    .from('transactions')
+                    .update({
+                        transaction_data: transaction,  // Update entire transaction object
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', currentUser.id)
+                    .eq('date', supabaseDate)
+                    .eq('description', transactionDesc);
+
+                if (updateError) {
+                    console.error('❌ [SUPABASE UPDATE] Failed:', updateError);
+                    return { success: false, error: updateError };
+                }
+
+                console.log('✅ [SUPABASE UPDATE] Transaction updated:', transactionDesc.substring(0, 30) + '...');
+                return { success: true };
+
+            } catch (error) {
+                console.error('❌ [SUPABASE UPDATE] Exception:', error);
+                return { success: false, error };
+            }
+        }
+
+        /**
          * Save all transactions to IndexedDB
          */
         async function saveTransactionsToStorage() {
@@ -7727,7 +8382,18 @@
                                 assignedItemName: txData.assignedItemName,
                                 assignedProject: tx.allocation || txData.assignedProject,
                                 completed: txData.completed || false,
-                                transactionRef: tx.transaction_ref
+                                transactionRef: tx.transaction_ref,
+                                // CRITICAL FIX: Restore all custom properties from transaction_data
+                                flagged: txData.flagged || null,  // Red/Blue flags
+                                invoices: txData.invoices || [],  // Attached invoices
+                                detail: txData.detail || '',  // Inline edit detail
+                                zeroVAT: txData.zeroVAT || false,  // 0% VAT toggle
+                                spent_ex_vat: txData.spent_ex_vat || '',  // Ex-VAT amount
+                                originalSpentExVAT: txData.originalSpentExVAT,  // Original ex-VAT for revert
+                                convertedCurrency: txData.convertedCurrency,  // USD conversion
+                                convertedAmount: txData.convertedAmount,
+                                conversionRate: txData.conversionRate,
+                                conversionDate: txData.conversionDate
                             });
                         });
 
@@ -9133,6 +9799,52 @@
             updateGmailStatus();
         }
 
+        /**
+         * Copy Gmail access tokens to clipboard for Claude to use
+         */
+        function copyGmailTokens() {
+            if (gmailAccounts.length === 0) {
+                showSimpleToast('❌ No Gmail accounts connected', 'error');
+                return;
+            }
+
+            const now = Date.now();
+            const validAccounts = gmailAccounts.filter(acc =>
+                acc.accessToken && acc.tokenExpiresAt && acc.tokenExpiresAt > now
+            );
+
+            if (validAccounts.length === 0) {
+                showSimpleToast('⚠️ All tokens expired. Please re-authenticate accounts first.', 'warning');
+                return;
+            }
+
+            // Format tokens in JSON for easy parsing
+            const tokenData = {
+                accounts: validAccounts.map(acc => ({
+                    email: acc.email,
+                    accessToken: acc.accessToken,
+                    expiresAt: acc.tokenExpiresAt,
+                    expiresIn: Math.floor((acc.tokenExpiresAt - now) / 1000 / 60) // minutes
+                })),
+                timestamp: new Date().toISOString(),
+                totalAccounts: validAccounts.length
+            };
+
+            const tokenJson = JSON.stringify(tokenData, null, 2);
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(tokenJson).then(() => {
+                showSimpleToast(
+                    `✅ Copied ${validAccounts.length} token(s) to clipboard! Give this to Claude.`,
+                    'success'
+                );
+                console.log('📋 [COPY-TOKENS] Tokens copied to clipboard:', tokenData);
+            }).catch(err => {
+                console.error('❌ Failed to copy tokens:', err);
+                showSimpleToast('❌ Failed to copy to clipboard', 'error');
+            });
+        }
+
         function updateGmailStatus() {
             const statusDiv = document.getElementById('gmailConnectionStatus');
             const accountsList = document.getElementById('gmailAccountsList');
@@ -9786,7 +10498,7 @@ IMPORTANT: Return ONLY the description (4-10 words), nothing else.`;
                                 contents: [{ parts: [{ text: descPrompt }] }],
                                 generationConfig: {
                                     temperature: 0.3,
-                                    maxOutputTokens: 100,
+                                    maxOutputTokens: 200, // Increased to account for thinking tokens
                                     responseMimeType: "text/plain"
                                 }
                             })
@@ -15936,11 +16648,23 @@ Return ONLY valid JSON.`;
 
             titleEl.textContent = `Attached Documents (${invoices.length})`;
 
-            // Build invoice list HTML
-            let html = '';
+            // Build invoice list HTML with action buttons at top
+            let html = `
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb;">
+                    <button onclick="document.getElementById('addInvoiceInput').click();" class="btn-primary" style="flex: 1; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>➕</span>
+                        <span>Add Another Document</span>
+                    </button>
+                    <button onclick="handleInvoiceFetch(${transactionIndex}, null)" class="btn-secondary" style="flex: 1; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; background: #3b82f6; color: white; border: none;">
+                        <span>🔍</span>
+                        <span>Search Gmail</span>
+                    </button>
+                </div>
+            `;
 
             if (invoices.length === 0) {
-                html = `
+                html += `
                     <div style="text-align: center; padding: 40px; color: #94a3b8;">
                         <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
                         <p style="margin: 0;">No documents attached yet</p>
@@ -15989,16 +16713,32 @@ Return ONLY valid JSON.`;
         }
 
         /**
-         * View specific invoice from manager
+         * View specific invoice from manager (now updates the same modal)
          */
         async function viewInvoiceFromManager(invoiceIndex) {
+            console.log('📄 [VIEW] Function called, invoiceIndex:', invoiceIndex);
             const transactionIndex = currentInvoiceManagerTransactionIndex;
-            if (transactionIndex === null) return;
+            console.log('📄 [VIEW] Transaction index:', transactionIndex);
+
+            if (transactionIndex === null) {
+                console.error('❌ [VIEW] Transaction index is null!');
+                return;
+            }
 
             const transaction = allTransactions[transactionIndex];
-            const invoice = transaction.invoices[invoiceIndex];
+            console.log('📄 [VIEW] Transaction:', transaction);
+
+            if (!transaction) {
+                console.error('❌ [VIEW] Transaction not found!');
+                showSimpleToast('❌ Transaction not found', 'error');
+                return;
+            }
+
+            const invoice = transaction.invoices ? transaction.invoices[invoiceIndex] : null;
+            console.log('📄 [VIEW] Invoice:', invoice);
 
             if (!invoice) {
+                console.error('❌ [VIEW] Invoice not found in transaction!');
                 showSimpleToast('❌ Invoice not found', 'error');
                 return;
             }
@@ -16014,46 +16754,77 @@ Return ONLY valid JSON.`;
                     return;
                 }
 
-                // Show PDF preview modal
-                const modal = document.getElementById('pdfPreviewModal');
-                const iframe = document.getElementById('pdfViewerIframe');
-                document.getElementById('pdfPreviewTitle').textContent = `Invoice: ${invoice.filename}`;
+                // SINGLE MODAL APPROACH: Update the existing invoice manager modal instead of opening new modal
+                const modal = document.getElementById('invoiceManagerModal');
+                const titleEl = document.getElementById('invoiceManagerTitle');
+                const listContainer = document.getElementById('invoiceListContainer');
 
-                modal.style.display = 'flex';
+                console.log('📄 [VIEW] Modal element:', modal);
+                console.log('📄 [VIEW] Title element:', titleEl);
+                console.log('📄 [VIEW] List container:', listContainer);
 
-                // Create blob URL and load in iframe
+                if (!modal || !titleEl || !listContainer) {
+                    console.error('❌ [VIEW] Required DOM elements not found!');
+                    showSimpleToast('❌ Error: Modal elements not found', 'error');
+                    return;
+                }
+
+                // Update title
+                titleEl.textContent = `Invoice: ${invoice.filename}`;
+                console.log('📄 [VIEW] Title updated');
+
+                // Create blob URL for PDF
                 const blobUrl = URL.createObjectURL(invoiceData.pdfBlob);
-                iframe.src = blobUrl;
 
-                // Update footer buttons to show all options
-                const footerButtons = document.getElementById('pdfPreviewButtons');
-                const transaction = allTransactions[transactionIndex];
+                // Replace modal content with PDF viewer
                 const hasMultipleInvoices = transaction.invoices && transaction.invoices.length > 1;
 
-                if (footerButtons) {
-                    footerButtons.innerHTML = `
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; width: 100%;">
-                            ${hasMultipleInvoices ? `
-                                <button onclick="closePDFPreview(); openAttachedInvoiceManager(${transactionIndex})" class="btn-secondary" style="padding: 10px; font-size: 13px;">
-                                    ← Back
-                                </button>
-                            ` : `
-                                <button onclick="closePDFPreview()" class="btn-secondary" style="padding: 10px; font-size: 13px;">
-                                    ← Close
-                                </button>
-                            `}
-                            <button onclick="generateAIDescriptionForAttached(${transactionIndex})" class="btn-primary" style="padding: 10px; font-size: 13px; font-weight: 600; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none;">
-                                🤖 AI Desc
-                            </button>
-                            <button onclick="closePDFPreview(); document.getElementById('addInvoiceInput').click();" class="modal-btn modal-btn-primary" style="padding: 10px; font-size: 13px; margin: 0;">
-                                + Add
-                            </button>
-                        </div>
-                        <button onclick="deleteInvoiceFromViewer(${invoiceIndex})" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #ef4444; color: white; border: none; margin-top: 10px;">
-                            🗑️ Delete Invoice
+                listContainer.innerHTML = `
+                    <!-- Action Buttons at top (Add/Search) -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb;">
+                        <button onclick="document.getElementById('addInvoiceInput').click();" class="btn-primary" style="flex: 1; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <span>➕</span>
+                            <span>Add Another Document</span>
                         </button>
-                    `;
-                }
+                        <button onclick="handleInvoiceFetch(${transactionIndex}, null)" class="btn-secondary" style="flex: 1; padding: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; background: #3b82f6; color: white; border: none;">
+                            <span>🔍</span>
+                            <span>Search Gmail</span>
+                        </button>
+                    </div>
+
+                    <!-- PDF Viewer -->
+                    <div style="width: 100%; background: #f3f4f6; border-radius: 8px; overflow: hidden; margin-bottom: 15px;">
+                        <iframe src="${blobUrl}" style="width: 100%; height: 60vh; border: none;"></iframe>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        ${hasMultipleInvoices ? `
+                            <button onclick="openAttachedInvoiceManager(${transactionIndex})" class="btn-secondary" style="padding: 10px; font-size: 13px;">
+                                ← Back to List
+                            </button>
+                        ` : `
+                            <button onclick="closeInvoiceManager()" class="btn-secondary" style="padding: 10px; font-size: 13px;">
+                                ← Close
+                            </button>
+                        `}
+                        <button onclick="generateAIDescriptionForAttached(${transactionIndex})" class="btn-primary" style="padding: 10px; font-size: 13px; font-weight: 600; background: linear-gradient(135deg, #3AAFA9 0%, #2B7A78 100%); color: white; border: none;">
+                            🤖 AI Desc
+                        </button>
+                        <button onclick="document.getElementById('addInvoiceInput').click();" class="modal-btn modal-btn-primary" style="padding: 10px; font-size: 13px; margin: 0;">
+                            + Add
+                        </button>
+                    </div>
+
+                    <!-- Delete Button -->
+                    <button onclick="deleteInvoiceFromViewer(${invoiceIndex})" class="btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #ef4444; color: white; border: none;">
+                        🗑️ Delete Invoice
+                    </button>
+                `;
+
+                // CRITICAL FIX: Ensure modal is visible (important for single-invoice case)
+                modal.style.display = 'flex';
+                console.log('✅ [VIEW] Modal displayed');
 
             } catch (error) {
                 console.error('Error viewing invoice:', error);
@@ -16076,13 +16847,61 @@ Return ONLY valid JSON.`;
                 return;
             }
 
-            const confirmDelete = confirm(`Delete "${invoice.filename}"?\n\nThis will remove the invoice attachment from this transaction.`);
-            if (!confirmDelete) return;
-
-            console.log('🗑️ [DELETE] Deleting invoice:', invoice.filename);
+            // Show loading toast (no confirmation dialog for faster UX)
+            showSimpleToast('🗑️ Deleting invoice...', 'info');
+            console.log('🗑️ [DELETE] Deleting invoice:', invoice.filename, 'ID:', invoice.id);
 
             try {
-                // Delete from IndexedDB
+                // Step 1: Delete from Supabase Storage (CRITICAL FIX)
+                if (typeof supabaseClient !== 'undefined' && currentUser) {
+                    console.log('🗑️ [DELETE] Deleting from Supabase Storage...');
+
+                    // Construct storage path
+                    const storagePath = `${currentUser.id}/${invoice.id}`;
+
+                    const { error: storageError } = await supabaseClient.storage
+                        .from('invoices')
+                        .remove([storagePath]);
+
+                    if (storageError) {
+                        console.warn('⚠️ [DELETE] Supabase Storage deletion failed:', storageError.message);
+                        // Continue anyway - might not exist in storage
+                    } else {
+                        console.log('✅ [DELETE] Deleted from Supabase Storage');
+                    }
+                }
+
+                // Step 2: Delete from Supabase database table (if exists)
+                if (typeof supabaseClient !== 'undefined' && currentUser) {
+                    console.log('🗑️ [DELETE] Deleting from Supabase database...');
+                    console.log('🗑️ [DELETE] Invoice ID:', invoice.id, 'Type:', typeof invoice.id);
+                    console.log('🗑️ [DELETE] User ID:', currentUser.id);
+
+                    const { data: deleteData, error: dbError } = await supabaseClient
+                        .from('invoices')
+                        .delete()
+                        .eq('id', invoice.id)
+                        .eq('user_id', currentUser.id)
+                        .select();  // Return deleted rows to confirm
+
+                    if (dbError) {
+                        console.error('❌ [DELETE] Supabase DB deletion failed:', dbError);
+                        console.error('❌ [DELETE] Error details:', {
+                            message: dbError.message,
+                            code: dbError.code,
+                            details: dbError.details,
+                            hint: dbError.hint
+                        });
+                    } else {
+                        console.log('✅ [DELETE] Deleted from Supabase database');
+                        console.log('✅ [DELETE] Deleted rows:', deleteData);
+                        if (!deleteData || deleteData.length === 0) {
+                            console.warn('⚠️ [DELETE] No rows deleted - invoice may not exist in Supabase');
+                        }
+                    }
+                }
+
+                // Step 3: Delete from IndexedDB
                 if (!db) await initIndexedDB();
 
                 await new Promise((resolve, reject) => {
@@ -16093,38 +16912,90 @@ Return ONLY valid JSON.`;
                     request.onsuccess = () => resolve();
                     request.onerror = () => reject(request.error);
                 });
+                console.log('✅ [DELETE] Deleted from IndexedDB');
 
-                // Remove from array
+                // Step 4: Remove from local array
                 transaction.invoices.splice(invoiceIndex, 1);
 
                 // If no invoices left, clean up old format fields
-                if (transaction.invoices.length === 0) {
+                const hasNoInvoices = transaction.invoices.length === 0;
+                if (hasNoInvoices) {
                     delete transaction.invoiceId;
                     delete transaction.invoiceFilename;
                 }
 
-                // Save transactions
+                // Step 5: Save transactions to IndexedDB
                 await saveTransactionsToStorage();
 
-                // Refresh manager modal
-                await openAttachedInvoiceManager(transactionIndex);
+                // Step 6: CRITICAL FIX - Update Supabase transactions table explicitly
+                if (typeof supabaseClient !== 'undefined' && currentUser) {
+                    console.log('💾 [DELETE] Updating transaction in Supabase...');
 
-                showSimpleToast('✅ Invoice deleted successfully', 'success');
-                console.log('✅ [DELETE] Invoice deleted successfully');
+                    // Find unique identifier for this transaction
+                    const transactionDate = transaction.date;
+                    const transactionDesc = transaction.description;
+
+                    // Convert DD/MM/YYYY to YYYY-MM-DD for Supabase
+                    let supabaseDate = transactionDate;
+                    if (transactionDate.includes('/')) {
+                        const [day, month, year] = transactionDate.split('/');
+                        supabaseDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    }
+
+                    const { error: updateError } = await supabaseClient
+                        .from('transactions')
+                        .update({
+                            transaction_data: transaction,  // Update entire transaction object
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('user_id', currentUser.id)
+                        .eq('date', supabaseDate)
+                        .eq('description', transactionDesc);
+
+                    if (updateError) {
+                        console.warn('⚠️ [DELETE] Supabase transaction update failed:', updateError.message);
+                        // Continue anyway - IndexedDB is updated
+                    } else {
+                        console.log('✅ [DELETE] Updated transaction in Supabase');
+                    }
+                }
+
+                // Step 7: Update UI
+                if (hasNoInvoices) {
+                    // Close manager if no invoices left (better UX)
+                    closeInvoiceManager();
+                    showSimpleToast('✅ Invoice deleted (no invoices remaining)', 'success');
+
+                    // Refresh table to remove attachment icon
+                    renderTransactions();
+                } else {
+                    // Refresh manager to show remaining invoices (single modal approach)
+                    await openAttachedInvoiceManager(transactionIndex);
+                    showSimpleToast('✅ Invoice deleted', 'success');
+                }
+
+                console.log('✅ [DELETE] Invoice deleted successfully (all sources)');
 
             } catch (error) {
-                console.error('Error deleting invoice:', error);
-                showSimpleToast('❌ Failed to delete invoice', 'error');
+                console.error('❌ [DELETE] Error deleting invoice:', error);
+                showSimpleToast('❌ Failed to delete invoice: ' + error.message, 'error');
             }
         }
 
         /**
-         * Delete invoice from PDF viewer
+         * Delete invoice from PDF viewer (single modal approach)
          */
         async function deleteInvoiceFromViewer(invoiceIndex) {
+            const transactionIndex = currentInvoiceManagerTransactionIndex;
+            const transaction = allTransactions[transactionIndex];
+
+            // Delete the invoice (this will handle Supabase, IndexedDB, and UI updates)
             await deleteInvoiceFromManager(invoiceIndex);
-            closePDFPreview();
-            await openAttachedInvoiceManager(currentInvoiceManagerTransactionIndex);
+
+            // NOTE: No need to close PDF viewer or re-open manager
+            // deleteInvoiceFromManager already handles the UI update:
+            // - If no invoices left, it closes the modal
+            // - If invoices remain, it re-opens the manager in list view
         }
 
         /**
