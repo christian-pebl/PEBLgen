@@ -1,8 +1,36 @@
 # CLAUDE.md - PEBLGen Development Documentation
 
-**Last Updated:** January 19, 2026
+**Last Updated:** February 3, 2026
 **Application Version:** Current Production State
 **Port:** localhost:8000
+
+---
+
+## ⚠️ CRITICAL: Data Storage Policy
+
+**PRIMARY STORAGE: Supabase (Cloud Database)**
+- ✅ ALL data MUST be stored in Supabase as the primary source of truth
+- ✅ Projects, transactions, invoices, CSV files → Supabase database & storage
+- ✅ Cross-device sync, backup, and recovery capabilities
+- ✅ Survives browser cache clears, port changes, and system reinstalls
+
+**DEPRECATED: IndexedDB (Local Browser Storage)**
+- ❌ Do NOT use IndexedDB as primary storage
+- ❌ IndexedDB data is lost when cache is cleared
+- ❌ No cross-device sync or backup
+- ⚠️ Only use IndexedDB for temporary caching/offline mode (NOT implemented yet)
+
+**Migration Status:**
+- 🔄 Legacy code still uses IndexedDB - needs migration to Supabase
+- 📋 TODO: Migrate all storage operations to Supabase-first architecture
+- 🛡️ Backup systems exist but may not be actively syncing
+
+**For Developers:**
+When implementing new features, ALWAYS:
+1. Save data to Supabase first
+2. Use Supabase as the source of truth for data retrieval
+3. Do NOT rely on IndexedDB for persistent storage
+4. Test data persistence across browser sessions and devices
 
 ---
 
@@ -34,9 +62,15 @@ npm run dev
 - **Quote:** http://localhost:8000/quote.html
 
 ### Database
-- **Provider:** Supabase
+- **Provider:** Supabase (PRIMARY - cloud database)
 - **Config File:** `supabase-client.js` (root directory)
 - **URL:** https://gamsynrzeixorftnivps.supabase.co
+- **⚠️ Current Issue:** Some data may still be in IndexedDB only - use `export-all-data.html` to backup before clearing cache
+
+### Data Export/Backup
+- **Manual Export:** Open `export-all-data.html` in browser to download complete data backup (JSON format)
+- **Automatic Backup:** Backup systems monitoring but may not be actively syncing to Supabase
+- **Recommendation:** Export data regularly until Supabase-first migration is complete
 
 ---
 

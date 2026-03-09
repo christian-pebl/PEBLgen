@@ -84,6 +84,61 @@
             border-color: rgba(255, 255, 255, 0.9);
         }
 
+        /* Account Dropdown */
+        .account-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .account-dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 8px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 200px;
+            z-index: 1000;
+        }
+        .account-dropdown-menu.show {
+            display: block;
+        }
+        .account-dropdown-item {
+            display: block;
+            padding: 12px 16px;
+            color: #374151;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .account-dropdown-item:hover {
+            background: #f3f4f6;
+        }
+        .account-dropdown-item:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+        .account-dropdown-item:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+        .account-dropdown-item.danger {
+            color: #dc2626;
+        }
+        .account-dropdown-item.danger:hover {
+            background: #fee2e2;
+        }
+        .account-dropdown-divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 4px 0;
+        }
+
         /* Split Screen Mode */
         .split-screen-overlay {
             display: none;
@@ -694,7 +749,20 @@
             <a href="quote.html" class="nav-btn">Quote</a>
             <button onclick="openSplitScreenMode()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15); margin-left: auto;" title="Split Screen Mode"><span class="split-btn-icon">⫿</span> Split</button>
             <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.15);" title="Scroll to top">↑ Top</button>
-            <button onclick="signOut()" class="nav-btn" style="background-color: rgba(239, 68, 68, 0.8); color: white;" title="Sign out">🚪 Sign Out</button>
+            <div class="account-dropdown">
+                <button onclick="toggleAccountMenu()" class="nav-btn" style="background-color: rgba(255, 255, 255, 0.25);" title="Account settings">
+                    👤 Account
+                </button>
+                <div id="accountMenu" class="account-dropdown-menu">
+                    <button onclick="showResetPasswordDialog()" class="account-dropdown-item">
+                        🔑 Reset Password
+                    </button>
+                    <div class="account-dropdown-divider"></div>
+                    <button onclick="signOut()" class="account-dropdown-item danger">
+                        🚪 Sign Out
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -765,56 +833,20 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
 
             <!-- Month Selection -->
             <div style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 12px; color: #374151;">Select Months:</label>
+                <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 12px; color: #374151;">Select Months:</label>
 
-                <!-- Quarter Quick Select -->
-                <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                    <button type="button" onclick="selectQuarter(1)" class="btn" style="background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; padding: 4px 12px; font-size: 11px;">Q1 (Jan-Mar)</button>
-                    <button type="button" onclick="selectQuarter(2)" class="btn" style="background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 4px 12px; font-size: 11px;">Q2 (Apr-Jun)</button>
-                    <button type="button" onclick="selectQuarter(3)" class="btn" style="background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 4px 12px; font-size: 11px;">Q3 (Jul-Sep)</button>
-                    <button type="button" onclick="selectQuarter(4)" class="btn" style="background: #fce4ec; color: #c2185b; border: 1px solid #f48fb1; padding: 4px 12px; font-size: 11px;">Q4 (Oct-Dec)</button>
-                    <button type="button" onclick="clearMonthSelection()" class="btn" style="background: #f5f5f5; color: #666; border: 1px solid #ccc; padding: 4px 12px; font-size: 11px;">Clear</button>
+                <!-- Quick Select shortcuts -->
+                <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; align-items: center;">
+                    <button type="button" onclick="selectLastNMonths(3)" class="btn" style="background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; padding: 3px 10px; font-size: 11px;">Last 3</button>
+                    <button type="button" onclick="selectLastNMonths(6)" class="btn" style="background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 3px 10px; font-size: 11px;">Last 6</button>
+                    <button type="button" onclick="selectCurrentQuarter()" class="btn" style="background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 3px 10px; font-size: 11px;">This Quarter</button>
+                    <button type="button" onclick="clearMonthSelection()" class="btn" style="background: #f5f5f5; color: #666; border: 1px solid #ccc; padding: 3px 10px; font-size: 11px;">Clear</button>
+                    <span id="selectedMonthCount" style="font-size: 11px; color: #6b7280; margin-left: 4px;"></span>
                 </div>
 
-                <!-- Month Checkboxes -->
-                <div id="monthCheckboxContainer" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px;">
-                    <!-- Hidden checkboxes for form data -->
-                    <input type="checkbox" id="month-01" class="month-checkbox" value="01" data-quarter="1" style="display: none;">
-                    <input type="checkbox" id="month-02" class="month-checkbox" value="02" data-quarter="1" style="display: none;">
-                    <input type="checkbox" id="month-03" class="month-checkbox" value="03" data-quarter="1" style="display: none;">
-                    <input type="checkbox" id="month-04" class="month-checkbox" value="04" data-quarter="2" style="display: none;">
-                    <input type="checkbox" id="month-05" class="month-checkbox" value="05" data-quarter="2" style="display: none;">
-                    <input type="checkbox" id="month-06" class="month-checkbox" value="06" data-quarter="2" style="display: none;">
-                    <input type="checkbox" id="month-07" class="month-checkbox" value="07" data-quarter="3" style="display: none;">
-                    <input type="checkbox" id="month-08" class="month-checkbox" value="08" data-quarter="3" style="display: none;">
-                    <input type="checkbox" id="month-09" class="month-checkbox" value="09" data-quarter="3" style="display: none;">
-                    <input type="checkbox" id="month-10" class="month-checkbox" value="10" data-quarter="4" style="display: none;">
-                    <input type="checkbox" id="month-11" class="month-checkbox" value="11" data-quarter="4" style="display: none;">
-                    <input type="checkbox" id="month-12" class="month-checkbox" value="12" data-quarter="4" style="display: none;">
-
-                    <!-- Large clickable month buttons -->
-                    <button type="button" class="month-btn" data-month="01" onclick="toggleMonth('01')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Jan</button>
-                    <button type="button" class="month-btn" data-month="02" onclick="toggleMonth('02')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Feb</button>
-                    <button type="button" class="month-btn" data-month="03" onclick="toggleMonth('03')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Mar</button>
-                    <button type="button" class="month-btn" data-month="04" onclick="toggleMonth('04')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Apr</button>
-                    <button type="button" class="month-btn" data-month="05" onclick="toggleMonth('05')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">May</button>
-                    <button type="button" class="month-btn" data-month="06" onclick="toggleMonth('06')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Jun</button>
-                    <button type="button" class="month-btn" data-month="07" onclick="toggleMonth('07')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Jul</button>
-                    <button type="button" class="month-btn" data-month="08" onclick="toggleMonth('08')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Aug</button>
-                    <button type="button" class="month-btn" data-month="09" onclick="toggleMonth('09')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Sep</button>
-                    <button type="button" class="month-btn" data-month="10" onclick="toggleMonth('10')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Oct</button>
-                    <button type="button" class="month-btn" data-month="11" onclick="toggleMonth('11')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Nov</button>
-                    <button type="button" class="month-btn" data-month="12" onclick="toggleMonth('12')" style="padding: 12px 8px; font-size: 13px; font-weight: 500; border: 2px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; transition: all 0.2s;">Dec</button>
-                </div>
-
-                <!-- Year Selection -->
-                <div style="margin-top: 8px;">
-                    <label style="font-size: 11px; color: #666; margin-right: 6px;">Year:</label>
-                    <select id="forecastYearSelect" style="padding: 4px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px;">
-                        <option value="2024">2024</option>
-                        <option value="2025" selected>2025</option>
-                        <option value="2026">2026</option>
-                    </select>
+                <!-- Multi-year month timeline -->
+                <div id="monthTimelineContainer" style="background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 10px; overflow-x: auto;">
+                    <!-- Rows injected by buildMonthTimeline() -->
                 </div>
             </div>
 
@@ -937,12 +969,12 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
             </div>
 
             <div style="margin-bottom: 8px; overflow-x: auto;">
-                <div style="margin-bottom: 6px;">
-                    <label style="font-weight: 500; font-size: 11px; margin-right: 6px;">Year:</label>
-                    <select id="payslipYear" style="padding: 3px; font-size: 11px; border-radius: 3px; border: 1px solid #ccc;">
-                        <option value="2025" selected>2025</option>
-                        <option value="2026">2026</option>
-                    </select>
+                <div style="margin-bottom: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <label style="font-weight: 500; font-size: 11px;">Years:</label>
+                    <div id="payslipYearTags" style="display: flex; gap: 4px; flex-wrap: wrap;"></div>
+                    <input id="payslipYearInput" type="number" value="2026" min="2020" max="2099" style="width: 58px; padding: 2px 4px; font-size: 11px; border-radius: 3px; border: 1px solid #ccc;">
+                    <button onclick="addPayslipYearToTable()" style="padding: 2px 8px; font-size: 11px; background: #4caf50; color: white; border: none; border-radius: 3px; cursor: pointer;">+ Year</button>
+                    <button onclick="clearPayslipYears()" style="padding: 2px 8px; font-size: 11px; background: #9e9e9e; color: white; border: none; border-radius: 3px; cursor: pointer;">Clear</button>
                 </div>
                 <table style="border-collapse: collapse; width: 100%; font-size: 11px;">
                     <thead>
@@ -1480,20 +1512,26 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                 'nov': 11, 'november': 11,
                 'dec': 12, 'december': 12
             };
-            
+
             const lower = monthStr.toLowerCase().trim();
-            
+
             // Check if it's already a month name
             if (monthMap[lower] !== undefined) {
                 return monthMap[lower];
             }
-            
+
+            // Handle "Mon YY" format like "Dec 25", "Jan 26"
+            const firstWord = lower.split(/\s+/)[0];
+            if (monthMap[firstWord] !== undefined) {
+                return monthMap[firstWord];
+            }
+
             // Check if it's YYYY-MM format
             if (monthStr.includes('-')) {
                 const parts = monthStr.split('-');
                 return parseInt(parts[1]) - 1;
             }
-            
+
             return -1;
         }
 
@@ -1556,6 +1594,8 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                 document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
                 // Populate the forecast project dropdown with labour projects
                 populateForecastProjectDropdown();
+                // Ensure timeline is built (safe to call multiple times)
+                if (!document.querySelector('.month-btn-ym')) buildMonthTimeline();
             } else if (tabName === 'allocation') {
                 document.getElementById('allocation-tab').classList.add('active');
                 document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
@@ -1569,6 +1609,7 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
             loadPayslipFolder();
             renderPayslipMembersTable(); // Render payslip members table
             updateTimesheetAPIStatus(); // Show API key status on load
+            buildMonthTimeline(); // Build multi-year month picker
         });
 
         // Save/Load system prompt from localStorage
@@ -1612,60 +1653,107 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
             updateCostEstimate();
         }
 
-        // Toggle individual month button
-        function toggleMonth(monthValue) {
-            const checkbox = document.getElementById(`month-${monthValue}`);
-            const button = document.querySelector(`.month-btn[data-month="${monthValue}"]`);
+        // ---- Multi-year month timeline ----
+        const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-            // Toggle checkbox state
-            checkbox.checked = !checkbox.checked;
+        function buildMonthTimeline() {
+            const container = document.getElementById('monthTimelineContainer');
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            // Show previous year, current year, and next year
+            const years = [currentYear - 1, currentYear, currentYear + 1];
 
-            // Update button appearance
-            updateMonthButtonStyle(button, checkbox.checked);
+            container.innerHTML = '';
+            years.forEach(year => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; align-items: center; gap: 4px; margin-bottom: 4px;';
+
+                const yearLabel = document.createElement('span');
+                yearLabel.textContent = year;
+                yearLabel.style.cssText = 'font-size: 11px; font-weight: 600; color: #374151; width: 34px; flex-shrink: 0; text-align: right;';
+                row.appendChild(yearLabel);
+
+                MONTH_NAMES_SHORT.forEach((name, idx) => {
+                    const mm = String(idx + 1).padStart(2, '0');
+                    const ym = `${year}-${mm}`;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = name;
+                    btn.className = 'month-btn-ym';
+                    btn.dataset.yearmonth = ym;
+                    btn.style.cssText = 'flex: 1; min-width: 36px; padding: 5px 2px; font-size: 11px; font-weight: 500; border: 1.5px solid #d1d5db; border-radius: 5px; background: white; color: #6b7280; cursor: pointer; transition: all 0.15s;';
+                    btn.onclick = () => toggleMonthYM(ym);
+                    row.appendChild(btn);
+                });
+
+                container.appendChild(row);
+            });
         }
 
-        // Update button visual state
-        function updateMonthButtonStyle(button, isSelected) {
-            if (isSelected) {
-                button.style.background = '#3b82f6';
-                button.style.color = 'white';
-                button.style.borderColor = '#2563eb';
-                button.style.fontWeight = '600';
+        function toggleMonthYM(ym) {
+            const btn = document.querySelector(`.month-btn-ym[data-yearmonth="${ym}"]`);
+            if (!btn) return;
+            const isSelected = btn.classList.contains('ym-selected');
+            applyMonthYMStyle(btn, !isSelected);
+            updateSelectedMonthCount();
+        }
+
+        function applyMonthYMStyle(btn, selected) {
+            if (selected) {
+                btn.classList.add('ym-selected');
+                btn.style.background = '#3b82f6';
+                btn.style.color = 'white';
+                btn.style.borderColor = '#2563eb';
+                btn.style.fontWeight = '700';
             } else {
-                button.style.background = 'white';
-                button.style.color = '#6b7280';
-                button.style.borderColor = '#d1d5db';
-                button.style.fontWeight = '500';
+                btn.classList.remove('ym-selected');
+                btn.style.background = 'white';
+                btn.style.color = '#6b7280';
+                btn.style.borderColor = '#d1d5db';
+                btn.style.fontWeight = '500';
             }
         }
 
-        // Select months for a specific quarter (1=Q1, 2=Q2, 3=Q3, 4=Q4)
-        function selectQuarter(quarter) {
-            const checkboxes = document.querySelectorAll('.month-checkbox');
-            checkboxes.forEach(cb => {
-                if (parseInt(cb.dataset.quarter) === quarter) {
-                    cb.checked = true;
-                    // Update corresponding button
-                    const monthValue = cb.value;
-                    const button = document.querySelector(`.month-btn[data-month="${monthValue}"]`);
-                    if (button) updateMonthButtonStyle(button, true);
-                }
-            });
+        function updateSelectedMonthCount() {
+            const count = document.querySelectorAll('.month-btn-ym.ym-selected').length;
+            const el = document.getElementById('selectedMonthCount');
+            if (el) el.textContent = count > 0 ? `${count} selected` : '';
         }
 
-        // Clear all month selections
+        function selectLastNMonths(n) {
+            clearMonthSelection();
+            const today = new Date();
+            // Start from last completed month (month - 1), not the current month
+            for (let i = 1; i <= n; i++) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                const btn = document.querySelector(`.month-btn-ym[data-yearmonth="${ym}"]`);
+                if (btn) applyMonthYMStyle(btn, true);
+            }
+            updateSelectedMonthCount();
+        }
+
+        function selectCurrentQuarter() {
+            clearMonthSelection();
+            const today = new Date();
+            const qStartMonth = Math.floor(today.getMonth() / 3) * 3; // 0, 3, 6, or 9
+            for (let i = 0; i < 3; i++) {
+                const d = new Date(today.getFullYear(), qStartMonth + i, 1);
+                const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                const btn = document.querySelector(`.month-btn-ym[data-yearmonth="${ym}"]`);
+                if (btn) applyMonthYMStyle(btn, true);
+            }
+            updateSelectedMonthCount();
+        }
+
         function clearMonthSelection() {
-            const checkboxes = document.querySelectorAll('.month-checkbox');
-            const buttons = document.querySelectorAll('.month-btn');
-
-            checkboxes.forEach(cb => {
-                cb.checked = false;
-            });
-
-            buttons.forEach(btn => {
-                updateMonthButtonStyle(btn, false);
-            });
+            document.querySelectorAll('.month-btn-ym.ym-selected').forEach(btn => applyMonthYMStyle(btn, false));
+            updateSelectedMonthCount();
         }
+
+        // Legacy stubs (kept for any references elsewhere)
+        function toggleMonth(monthValue) {}
+        function selectQuarter(quarter) {}
 
         // Month number to short name mapping (for forecast display)
         const monthShortNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -1673,24 +1761,20 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
         // Load allocation data from labourRows
         function loadAllocationData() {
             const projectIdx = parseInt(document.getElementById('forecastProjectSelect').value);
-            const selectedYear = document.getElementById('forecastYearSelect').value;
-            const selectedMonths = Array.from(document.querySelectorAll('.month-checkbox:checked')).map(cb => cb.value);
+            const targetMonths = Array.from(document.querySelectorAll('.month-btn-ym.ym-selected')).map(btn => btn.dataset.yearmonth);
 
             if (isNaN(projectIdx)) {
                 showToast('Please select a project first', 'error');
                 return;
             }
 
-            if (selectedMonths.length === 0) {
+            if (targetMonths.length === 0) {
                 showToast('Please select at least one month', 'error');
                 return;
             }
 
             const projectName = labourProjects[projectIdx]?.name || '';
             forecastData = [];
-
-            // Build list of YYYY-MM strings for filtering
-            const targetMonths = selectedMonths.map(m => `${selectedYear}-${m}`);
 
             // Scan labourRows for matching entries
             labourRows.forEach(row => {
@@ -1711,12 +1795,14 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
                 // Calculate hours (days * hoursPerDay)
                 const hours = days * hoursPerDay;
 
-                // Parse month for display (YYYY-MM -> "Apr")
-                const monthNum = parseInt(row.month.split('-')[1]);
-                const monthShort = monthShortNames[monthNum] || row.month;
+                // Parse month for display (YYYY-MM -> "Apr 26")
+                const [yearStr, monthNumStr] = row.month.split('-');
+                const monthNum = parseInt(monthNumStr);
+                const monthShort = (monthShortNames[monthNum] || row.month) + ' ' + String(yearStr).slice(-2);
 
                 forecastData.push({
                     month: monthShort,
+                    monthYM: row.month,
                     staff: row.staff || '',
                     daysForecast: days,
                     ratePerDay: rate,
@@ -1734,16 +1820,49 @@ Do not include markdown, code blocks, or explanatory text.</textarea>
             }
 
             // Sort by month then staff
-            const monthOrder = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12};
             forecastData.sort((a, b) => {
-                const monthDiff = (monthOrder[a.month] || 0) - (monthOrder[b.month] || 0);
-                if (monthDiff !== 0) return monthDiff;
+                const ymDiff = (a.monthYM || '').localeCompare(b.monthYM || '');
+                if (ymDiff !== 0) return ymDiff;
                 return a.staff.localeCompare(b.staff);
             });
 
             displayForecastPreview();
             updateCostEstimate();
             showToast(`Loaded ${forecastData.length} allocation entries for "${projectName}"`, 'success');
+            autoPopulatePayslipCheckboxes();
+        }
+
+        function autoPopulatePayslipCheckboxes() {
+            if (!forecastData || forecastData.length === 0) return;
+
+            // Get unique years from forecastData
+            const years = [...new Set(
+                forecastData.filter(e => e.monthYM).map(e => e.monthYM.split('-')[0])
+            )].sort();
+
+            // Rebuild the payslip table with the correct years (also clears existing ticks)
+            renderPayslipMembersTable(years);
+
+            // Tick the relevant checkboxes
+            let count = 0;
+            forecastData.forEach(entry => {
+                if (!entry.monthYM || !entry.staff) return;
+                // Staff format: "Role / CODE" — extract the code after " / "
+                const staffCode = entry.staff.includes('/')
+                    ? entry.staff.split('/').pop().trim()
+                    : entry.staff.trim();
+                const cb = document.querySelector(
+                    `#payslipMembersTableBody input[data-member="${staffCode}"][data-yearmonth="${entry.monthYM}"]`
+                );
+                if (cb && !cb.checked) {
+                    cb.checked = true;
+                    count++;
+                }
+            });
+
+            if (count > 0) {
+                showToast(`Auto-ticked ${count} payslip month${count > 1 ? 's' : ''} in Merge Payslips`, 'info');
+            }
         }
 
         // Legacy: Parse forecast data from textarea (kept for backwards compatibility)
@@ -3060,7 +3179,8 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
                     metadata: {
                         staff_count: [...new Set(timesheetData.map(e => e.staff))].length,
                         total_entries: timesheetData.length,
-                        total_hours: timesheetData.reduce((sum, e) => sum + e.weeks.reduce((s, w) => s + (parseFloat(w.hours) || 0), 0), 0)
+                        total_hours: timesheetData.reduce((sum, e) => sum + e.weeks.reduce((s, w) => s + (parseFloat(w.hours) || 0), 0), 0),
+                        staff_signatures: staffSignatures
                     }
                 };
 
@@ -3093,7 +3213,8 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
                     created_at: new Date().toISOString(),
                     metadata: {
                         staff_count: [...new Set(timesheetData.map(e => e.staff))].length,
-                        total_entries: timesheetData.length
+                        total_entries: timesheetData.length,
+                        staff_signatures: staffSignatures
                     }
                 });
 
@@ -3180,6 +3301,12 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
             timesheetData = ts.timesheet_data;
             timesheetApproved = ts.is_approved;
             currentTimesheetProject = ts.project_name || 'Unknown Project'; // Restore project name
+
+            // Restore signatures if saved
+            if (ts.metadata?.staff_signatures) {
+                staffSignatures = ts.metadata.staff_signatures;
+                saveSignatures(); // Persist to localStorage
+            }
 
             if (timesheetApproved) {
                 displayTimesheetOutputWithSignatures();
@@ -3712,6 +3839,23 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
                 db.close();
 
                 console.log('✅ Loaded grant projects for budget dropdown:', allProjects.length);
+
+                // AUTO-RESTORE: If IndexedDB is empty, try to restore from Supabase
+                if (!allProjects || allProjects.length === 0) {
+                    console.log('🔄 [AUTO-RESTORE] GrantsDB is empty - attempting restore from Supabase...');
+                    try {
+                        const restored = await syncGrantsFromSupabase();
+                        if (restored && restored.length > 0) {
+                            console.log(`✅ [AUTO-RESTORE] Restored ${restored.length} labour budget projects from cloud backup!`);
+                            showToast(`✅ Restored ${restored.length} labour budget project(s) from cloud backup`, 'success');
+                            return; // syncGrantsFromSupabase() already calls populateBudgetProjectDropdown()
+                        } else {
+                            console.log('ℹ️ [AUTO-RESTORE] No backup data found in Supabase');
+                        }
+                    } catch (err) {
+                        console.error('❌ [AUTO-RESTORE] Failed to restore from Supabase:', err);
+                    }
+                }
 
                 if (allProjects && allProjects.length > 0) {
                     allProjects.forEach(project => {
@@ -9857,32 +10001,74 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
             console.log('Payslip members saved to localStorage');
         }
 
-        // Render the payslip members table
-        function renderPayslipMembersTable() {
+        // Track which years are shown in the payslip table
+        let payslipDisplayYears = [new Date().getFullYear().toString()];
+
+        function renderPayslipYearTags() {
+            const container = document.getElementById('payslipYearTags');
+            if (!container) return;
+            container.innerHTML = payslipDisplayYears.map(y =>
+                `<span style="display:inline-flex;align-items:center;background:#4caf50;color:white;border-radius:3px;padding:2px 6px;font-size:11px;gap:4px;">
+                    ${y}
+                    <span onclick="removePayslipYear('${y}')" style="cursor:pointer;font-weight:bold;opacity:0.8;" title="Remove year">×</span>
+                </span>`
+            ).join('');
+        }
+
+        function addPayslipYearToTable() {
+            const val = document.getElementById('payslipYearInput').value.trim();
+            if (!val || isNaN(parseInt(val))) return;
+            if (!payslipDisplayYears.includes(val)) {
+                payslipDisplayYears.push(val);
+                payslipDisplayYears.sort();
+            }
+            renderPayslipMembersTable();
+        }
+
+        function removePayslipYear(year) {
+            payslipDisplayYears = payslipDisplayYears.filter(y => y !== year);
+            renderPayslipMembersTable();
+        }
+
+        function clearPayslipYears() {
+            payslipDisplayYears = [];
+            renderPayslipMembersTable();
+        }
+
+        // Render the payslip members table (multi-year, grouped by year)
+        function renderPayslipMembersTable(years) {
+            if (years) {
+                payslipDisplayYears = [...years].sort();
+            }
+            renderPayslipYearTags();
+
             const tbody = document.getElementById('payslipMembersTableBody');
             if (!tbody) return;
 
             let html = '';
+            const yearsToShow = payslipDisplayYears.length > 0 ? payslipDisplayYears : [new Date().getFullYear().toString()];
 
-            for (const [code, fullName] of Object.entries(teamMembers)) {
-                const displayName = code + ' - ' + fullName.split(' ')[0]; // e.g., "CW - Craig"
+            for (const year of yearsToShow) {
+                // Year header row
+                html += `<tr><td colspan="13" style="border: 1px solid #b2dfdb; padding: 4px 6px; background: #c8e6c9; font-weight: 700; font-size: 11px; color: #1b5e20;">${year}</td></tr>`;
 
-                html += '<tr>';
-                html += `<td style="border: 1px solid #ddd; padding: 4px; font-weight: 500;">${displayName}</td>`;
-
-                // Generate 12 checkboxes for each month
-                for (let month = 1; month <= 12; month++) {
-                    const monthStr = month.toString().padStart(2, '0');
-                    html += `<td style="border: 1px solid #ddd; padding: 4px; text-align: center;">
-                        <input type="checkbox" data-member="${code}" data-month="${monthStr}">
-                    </td>`;
+                for (const [code, fullName] of Object.entries(teamMembers)) {
+                    const displayName = code + ' - ' + fullName.split(' ')[0];
+                    html += '<tr>';
+                    html += `<td style="border: 1px solid #ddd; padding: 4px; font-weight: 500; padding-left: 12px;">${displayName}</td>`;
+                    for (let month = 1; month <= 12; month++) {
+                        const monthStr = month.toString().padStart(2, '0');
+                        const ym = `${year}-${monthStr}`;
+                        html += `<td style="border: 1px solid #ddd; padding: 4px; text-align: center;">
+                            <input type="checkbox" data-member="${code}" data-yearmonth="${ym}">
+                        </td>`;
+                    }
+                    html += '</tr>';
                 }
-
-                html += '</tr>';
             }
 
             tbody.innerHTML = html;
-            console.log('Payslip members table rendered');
+            console.log('Payslip members table rendered for years:', yearsToShow);
         }
 
         // Add new staff member
@@ -10010,20 +10196,22 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
                 return;
             }
 
-            const memberMonths = {};
-            for (const code in teamMembers) {
-                const checkboxes = document.querySelectorAll('input[type="checkbox"][data-member="' + code + '"]:checked');
-                if (checkboxes.length > 0) {
-                    memberMonths[code] = Array.from(checkboxes).map(cb => cb.getAttribute('data-month'));
-                }
-            }
+            // Collect checked checkboxes as {code: [{year, month}, ...]}
+            const memberYearMonths = {};
+            document.querySelectorAll('#payslipMembersTableBody input[type="checkbox"]:checked').forEach(cb => {
+                const code = cb.dataset.member;
+                const ym = cb.dataset.yearmonth; // "2026-01"
+                if (!code || !ym) return;
+                const [year, month] = ym.split('-');
+                if (!memberYearMonths[code]) memberYearMonths[code] = [];
+                memberYearMonths[code].push({year, month});
+            });
 
-            if (Object.keys(memberMonths).length === 0) {
+            if (Object.keys(memberYearMonths).length === 0) {
                 showToast('Select at least one month for a member', 'error');
                 return;
             }
 
-            const year = document.getElementById('payslipYear').value;
             showToast('Searching subfolders...', 'info');
             fetchedPayslips = [];
 
@@ -10037,8 +10225,8 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
                         console.log('[Payslip] Found subfolder:', entry.name);
                         const memberCode = matchFolderToMember(entry.name);
                         console.log("[Payslip] Match result for", entry.name, "->", memberCode);
-                        if (memberCode && memberMonths[memberCode]) {
-                            await searchSubfolderForPayslips(entry, memberCode, memberMonths[memberCode], year);
+                        if (memberCode && memberYearMonths[memberCode]) {
+                            await searchSubfolderForPayslips(entry, memberCode, memberYearMonths[memberCode]);
                         }
                     }
                 }
@@ -10074,13 +10262,14 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
             return null;
         }
 
-        async function searchSubfolderForPayslips(folderHandle, memberCode, months, year) {
+        // yearMonths: [{year, month}, ...]
+        async function searchSubfolderForPayslips(folderHandle, memberCode, yearMonths) {
             try {
                 for await (const entry of folderHandle.values()) {
                     if (entry.kind === 'file' && entry.name.endsWith('.pdf')) {
-                            console.log('[Payslip] Found PDF:', entry.name);
-                        const match = matchPayslipFile(entry.name, memberCode, months, year);
-                            console.log("[Payslip] Match result:", match ? "YES" : "NO");
+                        console.log('[Payslip] Found PDF:', entry.name);
+                        const match = matchPayslipFile(entry.name, memberCode, yearMonths);
+                        console.log("[Payslip] Match result:", match ? "YES" : "NO");
                         if (match) {
                             const file = await entry.getFile();
                             fetchedPayslips.push({
@@ -10100,9 +10289,9 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
             }
         }
 
-        function matchPayslipFile(filename, memberCode, months, year) {
+        function matchPayslipFile(filename, memberCode, yearMonths) {
             const memberName = teamMembers[memberCode];
-            for (const month of months) {
+            for (const {year, month} of yearMonths) {
                 const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
                 const dateStr = lastDay.toString().padStart(2, '0') + '-' + month + '-' + year;
                 const pattern = 'Payslip - ' + memberName + ' - Month Ending ' + dateStr;
@@ -10170,8 +10359,8 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
                 const mergedPdfBytes = await mergedPdf.save();
                 const blob = new Blob([mergedPdfBytes], {type: 'application/pdf'});
                 const url = URL.createObjectURL(blob);
-                const year = document.getElementById('payslipYear').value;
-                const filename = 'Merged_Payslips_' + year + '_' + new Date().toISOString().split('T')[0] + '.pdf';
+                const years = [...new Set(fetchedPayslips.map(p => p.year))].sort().join('_');
+                const filename = 'Merged_Payslips_' + years + '_' + new Date().toISOString().split('T')[0] + '.pdf';
 
                 const link = document.createElement('a');
                 link.href = url;
@@ -10375,6 +10564,63 @@ OUTPUT FORMAT: Return ONLY valid JSON with no markdown blocks, no explanations:
                 }
             }
         });
+
+        // Account Menu Functions
+        function toggleAccountMenu() {
+            const menu = document.getElementById('accountMenu');
+            menu.classList.toggle('show');
+        }
+
+        // Close account menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const accountDropdown = document.querySelector('.account-dropdown');
+            const menu = document.getElementById('accountMenu');
+
+            if (accountDropdown && !accountDropdown.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+
+        // Reset Password Dialog
+        async function showResetPasswordDialog() {
+            // Close the account menu
+            document.getElementById('accountMenu').classList.remove('show');
+
+            const newPassword = prompt('Enter your new password (min 6 characters):');
+
+            if (!newPassword) {
+                return; // User cancelled
+            }
+
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            const confirmPassword = prompt('Confirm your new password:');
+
+            if (newPassword !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            try {
+                await ensureAuthenticated();
+
+                const { data, error } = await supabaseClient.auth.updateUser({
+                    password: newPassword
+                });
+
+                if (error) throw error;
+
+                alert('✅ Password updated successfully!');
+                console.log('✅ Password reset successful');
+
+            } catch (error) {
+                console.error('❌ Password reset failed:', error);
+                alert('❌ Failed to reset password: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html>
